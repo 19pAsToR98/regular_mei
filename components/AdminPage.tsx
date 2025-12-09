@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Offer, NewsItem, MaintenanceConfig, AppNotification, PollOption, ConnectionConfig, ApiFieldMapping, User } from '../types';
 
@@ -85,6 +84,10 @@ const AdminPage: React.FC<AdminPageProps> = ({
   const [showNewsPreview, setShowNewsPreview] = useState(false);
   
   const contentInputRef = useRef<HTMLTextAreaElement>(null);
+  
+  // News Pagination
+  const [newsPage, setNewsPage] = useState(1);
+  const newsPerPage = 5;
 
   // --- OFFERS STATE ---
   const initialOfferForm: Omit<Offer, 'id'> = {
@@ -235,7 +238,18 @@ const AdminPage: React.FC<AdminPageProps> = ({
       setUserForm({ name: '', email: '', phone: '', role: 'user', status: 'active', cnpj: '' });
   };
 
-  // --- NEWS HANDLERS ---
+  // --- NEWS LOGIC & HANDLERS ---
+  
+  // Paginated News List
+  const paginatedNews = useMemo(() => {
+      // Sort news by date descending first
+      const sortedNews = [...news].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const startIndex = (newsPage - 1) * newsPerPage;
+      return sortedNews.slice(startIndex, startIndex + newsPerPage);
+  }, [news, newsPage]);
+
+  const totalNewsPages = Math.ceil(news.length / newsPerPage);
+
   const handleEditNewsClick = (e: React.MouseEvent, item: NewsItem) => {
       e.stopPropagation();
       setEditingNewsId(item.id);
@@ -977,22 +991,51 @@ const AdminPage: React.FC<AdminPageProps> = ({
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm h-fit">
             <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Gerenciar Notícias</h3>
             <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
-              {news.map(item => (
-                <div key={item.id} onClick={(e) => handleEditNewsClick(e, item)} className={`p-3 rounded-lg border cursor-pointer transition-colors ${editingNewsId === item.id ? 'bg-blue-50 border-blue-200' : 'border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800'}`}>
-                  <h4 className="font-semibold text-slate-800 dark:text-white text-sm line-clamp-1">{item.title}</h4>
-                  <div className="flex justify-between items-center mt-2">
-                    <div className="flex gap-2">
-                        <span className="text-xs text-slate-500 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded">{item.category}</span>
-                        {item.status === 'draft' && <span className="text-xs text-slate-500 bg-yellow-100 px-2 py-0.5 rounded">Rascunho</span>}
+              {news.length === 0 ? (
+                  <p className="text-slate-400 text-sm text-center py-4">Nenhuma notícia cadastrada.</p>
+              ) : (
+                  paginatedNews.map(item => (
+                    <div key={item.id} onClick={(e) => handleEditNewsClick(e, item)} className={`p-3 rounded-lg border cursor-pointer transition-colors ${editingNewsId === item.id ? 'bg-blue-50 border-blue-200' : 'border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800'}`}>
+                      <h4 className="font-semibold text-slate-800 dark:text-white text-sm line-clamp-1">{item.title}</h4>
+                      <div className="flex justify-between items-center mt-2">
+                        <div className="flex gap-2">
+                            <span className="text-xs text-slate-500 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded">{item.category}</span>
+                            {item.status === 'draft' && <span className="text-xs text-slate-500 bg-yellow-100 px-2 py-0.5 rounded">Rascunho</span>}
+                        </div>
+                        <div className="flex gap-1">
+                          <button type="button" onClick={(e) => handleEditNewsClick(e, item)} className="p-1 text-slate-400 hover:text-primary"><span className="material-icons text-sm">edit</span></button>
+                          <button type="button" onClick={(e) => handleDeleteNewsClick(e, item.id)} className="p-1 text-slate-400 hover:text-red-500"><span className="material-icons text-sm">delete</span></button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex gap-1">
-                      <button type="button" onClick={(e) => handleEditNewsClick(e, item)} className="p-1 text-slate-400 hover:text-primary"><span className="material-icons text-sm">edit</span></button>
-                      <button type="button" onClick={(e) => handleDeleteNewsClick(e, item.id)} className="p-1 text-slate-400 hover:text-red-500"><span className="material-icons text-sm">delete</span></button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  ))
+              )}
             </div>
+            
+            {/* Pagination Controls */}
+            {totalNewsPages > 1 && (
+                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                        Página <span className="font-bold text-slate-800 dark:text-white">{newsPage}</span> de {totalNewsPages}
+                    </span>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setNewsPage(p => Math.max(1, p - 1))}
+                            disabled={newsPage === 1}
+                            className="px-3 py-1 text-xs font-medium rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Anterior
+                        </button>
+                        <button 
+                            onClick={() => setNewsPage(p => Math.min(totalNewsPages, p + 1))}
+                            disabled={newsPage === totalNewsPages}
+                            className="px-3 py-1 text-xs font-medium rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Próxima
+                        </button>
+                    </div>
+                </div>
+            )}
           </div>
         </div>
       )}
