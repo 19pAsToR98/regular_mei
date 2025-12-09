@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { AppNotification, User } from '../types';
 import PollModal from './PollModal';
@@ -25,18 +26,10 @@ const Header: React.FC<HeaderProps> = ({
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  // Filter notifications to only show active ones that haven't expired
-  const activeNotifications = notifications.filter(n => {
-      if (n.expiresAt) {
-          return new Date(n.expiresAt) > new Date();
-      }
-      return n.active !== false; // Ensure active is true or undefined
-  });
-
-  const unreadCount = activeNotifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.read).length;
   
   // Derive the selected poll object from the current props
-  const selectedPoll = selectedPollId ? activeNotifications.find(n => n.id === selectedPollId) : null;
+  const selectedPoll = selectedPollId ? notifications.find(n => n.id === selectedPollId) : null;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -52,7 +45,6 @@ const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const handleNotificationClick = (n: AppNotification) => {
-    // Mark as read immediately upon clicking
     if (!n.read) onMarkAsRead(n.id);
     
     if (n.type === 'poll') {
@@ -132,14 +124,14 @@ const Header: React.FC<HeaderProps> = ({
                     {unreadCount > 0 && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">{unreadCount} novas</span>}
                 </div>
                 <div className="max-h-[400px] overflow-y-auto">
-                    {activeNotifications.length === 0 ? (
+                    {notifications.length === 0 ? (
                         <div className="p-8 text-center text-slate-400">
                             <span className="material-icons text-4xl mb-2 opacity-50">notifications_off</span>
                             <p className="text-sm">Nenhuma notificação no momento.</p>
                         </div>
                     ) : (
                         <ul>
-                            {activeNotifications.map(n => (
+                            {notifications.map(n => (
                                 <li key={n.id}>
                                     <button 
                                         onClick={() => handleNotificationClick(n)}
