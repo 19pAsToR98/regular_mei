@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { User, CNPJResponse } from '../types';
 
@@ -9,7 +8,7 @@ interface OnboardingPageProps {
 
 const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => {
   const [step, setStep] = useState(1);
-  const [cnpj, setCnpj] = useState('58.556.538/0001-67');
+  const [cnpj, setCnpj] = useState(''); // CNPJ inicializado como vazio
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   // CNPJ Fetch State
