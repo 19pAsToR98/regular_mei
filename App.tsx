@@ -236,7 +236,22 @@ const App: React.FC = () => {
         .order('is_featured', { ascending: false });
     
     if (!offersError) {
-        setOffers(offersData as Offer[]);
+        const mappedOffers: Offer[] = offersData.map(o => ({
+            id: o.id,
+            partnerName: o.partner_name,
+            partnerColor: o.partner_color,
+            partnerIcon: o.partner_icon,
+            discount: o.discount,
+            title: o.title,
+            description: o.description,
+            category: o.category,
+            code: o.code,
+            link: o.link,
+            expiry: o.expiry,
+            isExclusive: o.is_exclusive,
+            isFeatured: o.is_featured,
+        }));
+        setOffers(mappedOffers);
     } else {
         console.error('Error fetching offers:', offersError);
     }
