@@ -25,6 +25,7 @@ import FinancialScore from './components/FinancialScore';
 import MobileDashboard from './components/MobileDashboard';
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
+import { showSuccess, showError, showLoading, dismissToast } from './utils/toastUtils';
 
 // --- MOCK DATA REMOVED ---
 
@@ -440,7 +441,7 @@ const App: React.FC = () => {
 
       if (error) {
           console.error('Error updating profile during onboarding:', error);
-          alert('Erro ao salvar dados. Tente novamente.');
+          showError('Erro ao salvar dados. Tente novamente.');
           return;
       }
 
@@ -470,6 +471,7 @@ const App: React.FC = () => {
   // --- USER MANAGEMENT HANDLERS (Admin) ---
   const handleAddUser = (newUser: User) => {
       setAllUsers([...allUsers, newUser]);
+      showSuccess('Usuário adicionado com sucesso!');
   };
 
   const handleUpdateUser = (updatedUser: User) => {
@@ -477,14 +479,17 @@ const App: React.FC = () => {
       if (user && user.id === updatedUser.id) {
           setUser(updatedUser);
       }
+      showSuccess('Perfil atualizado com sucesso!');
   };
 
   const handleChangePassword = async (newPassword: string): Promise<boolean> => {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) {
           console.error("Error changing password:", error);
+          showError('Erro ao alterar a senha. Verifique a senha atual.');
           return false;
       }
+      showSuccess('Senha alterada com sucesso!');
       return true;
   };
 
@@ -492,6 +497,7 @@ const App: React.FC = () => {
       // Requires Service Role or Edge Function
       console.warn("Admin: Delete user functionality requires Supabase Service Role or Edge Function.");
       setAllUsers(allUsers.filter(u => u.id !== id));
+      showSuccess('Usuário excluído (simulado).');
       if (user && user.id === id) {
           handleDeleteAccount();
       }
@@ -540,17 +546,21 @@ const App: React.FC = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    showSuccess('Dados exportados com sucesso!');
   };
 
   const handleDeleteAccount = async () => {
     if (!user) return;
     
+    const loadingToastId = showLoading('Excluindo conta e dados...');
+
     // 1. Get the current session token
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
 
     if (!token) {
-        alert('Erro: Não foi possível obter o token de sessão.');
+        dismissToast(loadingToastId);
+        showError('Erro: Não foi possível obter o token de sessão.');
         return;
     }
 
@@ -566,10 +576,12 @@ const App: React.FC = () => {
             },
         });
 
+        dismissToast(loadingToastId);
+
         if (response.ok) {
             // 3. Sign out locally after successful deletion by the server
             await supabase.auth.signOut();
-            alert('Conta excluída com sucesso. Você será deslogado.');
+            showSuccess('Conta excluída com sucesso. Você será deslogado.');
             
             // Reset local state immediately
             setUser(null);
@@ -582,11 +594,12 @@ const App: React.FC = () => {
         } else {
             const errorData = await response.json();
             console.error('Edge Function Error:', errorData);
-            alert(`Falha ao excluir a conta: ${errorData.error || 'Erro desconhecido.'}`);
+            showError(`Falha ao excluir a conta: ${errorData.error || 'Erro desconhecido.'}`);
         }
     } catch (error) {
+        dismissToast(loadingToastId);
         console.error('Network or Fetch Error:', error);
-        alert('Erro de conexão ao tentar excluir a conta.');
+        showError('Erro de conexão ao tentar excluir a conta.');
     }
   };
 
@@ -594,6 +607,7 @@ const App: React.FC = () => {
       const { error } = await supabase.auth.signOut();
       if (error) {
           console.error("Error signing out:", error);
+          showError('Erro ao sair.');
       }
       setUser(null);
   };
@@ -601,14 +615,17 @@ const App: React.FC = () => {
   // --- OFFERS HANDLERS ---
   const handleAddOffer = (newOffer: Offer) => {
     setOffers([newOffer, ...offers]);
+    showSuccess('Oferta adicionada!');
   };
 
   const handleUpdateOffer = (updatedOffer: Offer) => {
     setOffers(offers.map(o => o.id === updatedOffer.id ? updatedOffer : o));
+    showSuccess('Oferta atualizada!');
   };
 
   const handleDeleteOffer = (id: number) => {
     setOffers((prevOffers) => prevOffers.filter(o => o.id !== id));
+    showSuccess('Oferta excluída.');
   };
 
   // --- NEWS HANDLERS ---
@@ -619,27 +636,33 @@ const App: React.FC = () => {
 
   const handleAddNews = (newItem: NewsItem) => {
     setNews([newItem, ...news]);
+    showSuccess('Notícia publicada!');
   };
 
   const handleUpdateNews = (updatedItem: NewsItem) => {
     setNews(news.map(n => n.id === updatedItem.id ? updatedItem : n));
+    showSuccess('Notícia atualizada!');
   };
 
   const handleDeleteNewsClick = (id: number) => {
     setNews((prevNews) => prevNews.filter(n => n.id !== id));
+    showSuccess('Notícia excluída.');
   };
 
   // --- NOTIFICATION HANDLERS ---
   const handleAddNotification = (item: AppNotification) => {
       setNotifications([item, ...notifications]);
+      showSuccess('Notificação publicada!');
   }
 
   const handleUpdateNotification = (item: AppNotification) => {
       setNotifications(notifications.map(n => n.id === item.id ? item : n));
+      showSuccess('Notificação atualizada!');
   }
 
   const handleDeleteNotification = (id: number) => {
       setNotifications((prev) => prev.filter(n => n.id !== id));
+      showSuccess('Notificação excluída.');
   }
 
   const handleMarkAsRead = (id: number) => {
@@ -680,6 +703,7 @@ const App: React.FC = () => {
       }
       return n;
     }));
+    showSuccess('Voto registrado com sucesso!');
   };
 
   // --- CASHFLOW HANDLERS (Needs to be updated for Supabase) ---
@@ -709,10 +733,11 @@ const App: React.FC = () => {
 
     if (error) {
         console.error('Error adding transaction:', error);
-        alert('Erro ao adicionar transação.');
+        showError('Erro ao adicionar transação.');
         return;
     }
     
+    showSuccess('Transação(ões) adicionada(s) com sucesso!');
     // Reload data to update UI
     loadAllUserData(user.id, user.role || 'user');
   };
@@ -741,10 +766,11 @@ const App: React.FC = () => {
 
     if (error) {
         console.error('Error updating transaction:', error);
-        alert('Erro ao atualizar transação.');
+        showError('Erro ao atualizar transação.');
         return;
     }
     
+    showSuccess('Transação atualizada com sucesso!');
     // Reload data to update UI
     loadAllUserData(user.id, user.role || 'user');
   };
@@ -760,10 +786,11 @@ const App: React.FC = () => {
 
     if (error) {
         console.error('Error deleting transaction:', error);
-        alert('Erro ao excluir transação.');
+        showError('Erro ao excluir transação.');
         return;
     }
     
+    showSuccess('Transação excluída.');
     // Reload data to update UI
     loadAllUserData(user.id, user.role || 'user');
   };
@@ -787,9 +814,10 @@ const App: React.FC = () => {
 
     if (error) {
         console.error('Error adding appointment:', error);
-        alert('Erro ao adicionar compromisso.');
+        showError('Erro ao adicionar compromisso.');
         return;
     }
+    showSuccess('Compromisso adicionado!');
     loadAllUserData(user.id, user.role || 'user');
   };
 
@@ -812,9 +840,10 @@ const App: React.FC = () => {
 
     if (error) {
         console.error('Error updating appointment:', error);
-        alert('Erro ao atualizar compromisso.');
+        showError('Erro ao atualizar compromisso.');
         return;
     }
+    showSuccess('Compromisso atualizado!');
     loadAllUserData(user.id, user.role || 'user');
   };
 
@@ -829,9 +858,10 @@ const App: React.FC = () => {
 
     if (error) {
         console.error('Error deleting appointment:', error);
-        alert('Erro ao excluir compromisso.');
+        showError('Erro ao excluir compromisso.');
         return;
     }
+    showSuccess('Compromisso excluído.');
     loadAllUserData(user.id, user.role || 'user');
   };
 
@@ -842,6 +872,7 @@ const App: React.FC = () => {
     } else {
       setExpenseCats([...expenseCats, cat]);
     }
+    showSuccess(`Categoria '${cat.name}' adicionada.`);
   };
 
   const handleDeleteCategory = (type: 'receita' | 'despesa', name: string) => {
@@ -850,6 +881,7 @@ const App: React.FC = () => {
     } else {
       setExpenseCats(expenseCats.filter(c => c.name !== name));
     }
+    showSuccess(`Categoria '${name}' excluída.`);
   };
 
   // --- RENDER LOGIC ---

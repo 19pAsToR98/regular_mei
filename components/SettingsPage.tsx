@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Category, User } from '../types';
+import { showSuccess, showError, showWarning } from '../utils/toastUtils';
 
 const availableIcons = [
   'work', 'shopping_cart', 'shopping_bag', 'inventory_2', 'savings', 
@@ -113,7 +114,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   const handleAddCategory = () => {
-    if (!newCatInput.trim()) return;
+    if (!newCatInput.trim()) {
+        showWarning("O nome da categoria não pode ser vazio.");
+        return;
+    }
     
     const newCategory: Category = {
       name: newCatInput.trim(),
@@ -141,7 +145,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         setIsVerifyingEmail(true);
         setIsSaving(false);
         // Simulate sending email
-        alert(`[SIMULAÇÃO] Um código de verificação foi enviado para: ${profileForm.email}\n\nCódigo: 123456`);
+        showWarning(`Um código de verificação foi enviado para: ${profileForm.email}`);
         return;
     }
 
@@ -172,30 +176,28 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
           setPendingEmail('');
           showSuccessFeedback();
       } else {
-          alert("Código incorreto. Tente novamente.");
+          showError("Código incorreto. Tente novamente.");
       }
   };
 
   const handlePasswordSubmit = async () => {
       if (passForm.new !== passForm.confirm) {
-          alert("As novas senhas não coincidem.");
+          showError("As novas senhas não coincidem.");
           return;
       }
       if (passForm.new.length < 6) {
-          alert("A nova senha deve ter pelo menos 6 caracteres.");
+          showError("A nova senha deve ter pelo menos 6 caracteres.");
           return;
       }
       
       if (onChangePassword) {
           setIsSavingPass(true);
+          // Note: App.tsx handles success/error toasts for password change
           const success = await onChangePassword(passForm.new);
           setIsSavingPass(false);
           
           if (success) {
-              alert("Senha alterada com sucesso!");
               setPassForm({ current: '', new: '', confirm: '' });
-          } else {
-              alert("Erro ao alterar a senha. Verifique a senha atual.");
           }
       }
   };
@@ -208,8 +210,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const handleExportDataClick = async () => {
       if (onExportData) {
           setIsExporting(true);
-          await new Promise(r => setTimeout(r, 1500)); // Simulate generation
-          onExportData();
+          // App.tsx handles the actual export and success toast
+          await onExportData();
           setIsExporting(false);
       }
   };
@@ -219,10 +221,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       if (confirmDelete && onDeleteAccount) {
           setIsDeleting(true);
           try {
+              // App.tsx handles the deletion and redirects/toasts
               await onDeleteAccount();
           } catch (e) {
-              // Error handling is mostly done in App.tsx, but catch here just in case
-              console.error("Deletion failed in SettingsPage:", e);
+              // If App.tsx fails to catch and display error, we catch here
+              showError("Falha crítica ao iniciar a exclusão da conta.");
           } finally {
               setIsDeleting(false);
           }
