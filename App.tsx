@@ -545,19 +545,49 @@ const App: React.FC = () => {
   const handleDeleteAccount = async () => {
     if (!user) return;
     
-    // In a real app, this requires a Service Role Key or an Edge Function to delete the auth user
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-        console.error("Error signing out:", error);
+    // 1. Get the current session token
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+        alert('Erro: Não foi possível obter o token de sessão.');
+        return;
     }
 
-    setUser(null);
-    setActiveTab('dashboard');
-    setTransactions([]);
-    setAppointments([]);
-    setCnpj('');
-    setFiscalData(null);
-    setShowIntro(false);
+    // 2. Call the Edge Function to delete the user and associated data
+    const edgeFunctionUrl = `https://ogwjtlkemsqmpvcikrtd.supabase.co/functions/v1/delete-user-data`;
+
+    try {
+        const response = await fetch(edgeFunctionUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (response.ok) {
+            // 3. Sign out locally after successful deletion by the server
+            await supabase.auth.signOut();
+            alert('Conta excluída com sucesso. Você será deslogado.');
+            
+            // Reset local state immediately
+            setUser(null);
+            setActiveTab('dashboard');
+            setTransactions([]);
+            setAppointments([]);
+            setCnpj('');
+            setFiscalData(null);
+            setShowIntro(false);
+        } else {
+            const errorData = await response.json();
+            console.error('Edge Function Error:', errorData);
+            alert(`Falha ao excluir a conta: ${errorData.error || 'Erro desconhecido.'}`);
+        }
+    } catch (error) {
+        console.error('Network or Fetch Error:', error);
+        alert('Erro de conexão ao tentar excluir a conta.');
+    }
   };
 
   const handleLogout = async () => {

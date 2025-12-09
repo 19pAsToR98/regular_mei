@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Category, User } from '../types';
 
@@ -21,7 +20,7 @@ interface SettingsPageProps {
   onAddCategory: (type: 'receita' | 'despesa', cat: Category) => void;
   onDeleteCategory: (type: 'receita' | 'despesa', name: string) => void;
   onExportData?: () => void;
-  onDeleteAccount?: () => void;
+  onDeleteAccount?: () => Promise<void>; // Updated signature to reflect async operation
   onChangePassword?: (newPassword: string) => Promise<boolean>;
 }
 
@@ -72,6 +71,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   // Feedback State
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false); // New state for deletion
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   
   const iconPickerRef = useRef<HTMLDivElement>(null);
@@ -214,10 +214,18 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       }
   };
 
-  const handleDeleteAccountClick = () => {
+  const handleDeleteAccountClick = async () => {
       const confirmDelete = window.confirm("ATENÇÃO: Tem certeza que deseja excluir sua conta permanentemente? Todos os dados serão perdidos. Esta ação não pode ser desfeita.");
       if (confirmDelete && onDeleteAccount) {
-          onDeleteAccount();
+          setIsDeleting(true);
+          try {
+              await onDeleteAccount();
+          } catch (e) {
+              // Error handling is mostly done in App.tsx, but catch here just in case
+              console.error("Deletion failed in SettingsPage:", e);
+          } finally {
+              setIsDeleting(false);
+          }
       }
   }
 
@@ -469,9 +477,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                 </p>
                                 <button 
                                     onClick={handleDeleteAccountClick}
-                                    className="text-sm font-semibold text-white bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors w-full shadow-sm"
+                                    disabled={isDeleting}
+                                    className="text-sm font-semibold text-white bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors w-full shadow-sm flex items-center justify-center gap-2"
                                 >
-                                    Excluir Conta
+                                    {isDeleting ? (
+                                        <>
+                                            <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                            Excluindo...
+                                        </>
+                                    ) : 'Excluir Conta'}
                                 </button>
                             </div>
 
