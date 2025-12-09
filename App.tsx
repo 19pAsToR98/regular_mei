@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -24,12 +25,195 @@ import IntroWalkthrough from './components/IntroWalkthrough';
 import FinancialScore from './components/FinancialScore';
 import MobileDashboard from './components/MobileDashboard';
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
-import { supabase } from './src/integrations/supabase/client';
+
+const initialOffersData: Offer[] = [
+  {
+    id: 1,
+    partnerName: 'Banco Digital',
+    partnerColor: 'bg-purple-600',
+    partnerIcon: 'account_balance',
+    discount: 'TAXA ZERO',
+    title: 'Conta PJ Gratuita + Cartão',
+    description: 'Abra sua conta PJ e ganhe isenção total de taxas por 12 meses e maquininha com 50% de desconto.',
+    category: 'Finanças',
+    link: '#',
+    expiry: 'Válido até 30/06',
+    isExclusive: true,
+    isFeatured: true
+  },
+  {
+    id: 2,
+    partnerName: 'Gestão Fácil',
+    partnerColor: 'bg-blue-500',
+    partnerIcon: 'analytics',
+    discount: '30% OFF',
+    title: 'Sistema ERP para MEI',
+    description: 'Organize seu estoque e emita notas fiscais com desconto na anuidade do plano Pro.',
+    category: 'Software',
+    code: 'MEIPRO30',
+    expiry: 'Válido até 15/06',
+  },
+  {
+    id: 3,
+    partnerName: 'Educa Mais',
+    partnerColor: 'bg-orange-500',
+    partnerIcon: 'school',
+    discount: 'R$ 50,00',
+    title: 'Cursos de Marketing Digital',
+    description: 'Cupom válido para qualquer curso de vendas e redes sociais na plataforma.',
+    category: 'Educação',
+    code: 'MEIVENDE50',
+    expiry: 'Válido até 20/06',
+  },
+  {
+    id: 4,
+    partnerName: 'Segura Vida',
+    partnerColor: 'bg-emerald-500',
+    partnerIcon: 'health_and_safety',
+    discount: '15% OFF',
+    title: 'Plano de Saúde PME',
+    description: 'Desconto especial para MEI com CNPJ ativo há mais de 6 meses. Sem carência para consultas.',
+    category: 'Saúde',
+    link: '#',
+    expiry: 'Indeterminado',
+  },
+  {
+    id: 5,
+    partnerName: 'Loja Tech',
+    partnerColor: 'bg-slate-800',
+    partnerIcon: 'laptop_mac',
+    discount: '10% OFF',
+    title: 'Notebooks e Periféricos',
+    description: 'Equipe seu escritório com desconto em toda a linha empresarial.',
+    category: 'Equipamentos',
+    code: 'TECHMEI10',
+    expiry: 'Válido até 31/05',
+  },
+  {
+    id: 6,
+    partnerName: 'Certificado Já',
+    partnerColor: 'bg-cyan-600',
+    partnerIcon: 'verified_user',
+    discount: '25% OFF',
+    title: 'Certificado Digital A1',
+    description: 'Emissão de certificado digital com validade de 1 ano. Essencial para emitir notas em alguns estados.',
+    category: 'Serviços',
+    code: 'CERT25OFF',
+    expiry: 'Válido até 30/06',
+  },
+];
+
+const initialNewsData: NewsItem[] = [
+  {
+    id: 1,
+    category: 'Legislação',
+    title: 'Novas regras para emissão de NFS-e MEI em 2024: O que muda?',
+    excerpt: 'A partir de setembro, todos os microempreendedores deverão utilizar o padrão nacional. Entenda o passo a passo.',
+    content: 'A partir de setembro de 2024, a emissão de Nota Fiscal de Serviços Eletrônica (NFS-e) para Microempreendedores Individuais (MEI) passará a ser obrigatória exclusivamente pelo sistema nacional da Receita Federal.\n\nIsso significa que os portais municipais deixarão de ser utilizados para essa finalidade. O objetivo é padronizar o documento fiscal em todo o país e simplificar a vida do empreendedor.\n\nPara se adequar, o MEI deve realizar o cadastro no Portal Nacional de Emissão de Nota Fiscal de Serviços Eletrônica ou utilizar o aplicativo móvel oficial.',
+    date: '10 Mai 2024',
+    readTime: '5 min leitura',
+    imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=600',
+    status: 'published'
+  },
+  {
+    id: 2,
+    category: 'Finanças',
+    title: 'Aumento do limite de faturamento MEI: Projeto avança na câmara',
+    excerpt: 'Proposta visa ampliar o teto anual para R$ 130 mil, permitindo o crescimento de milhares de pequenos negócios.',
+    content: 'O Projeto de Lei Complementar que prevê o aumento do teto de faturamento do MEI de R$ 81 mil para R$ 130 mil anuais avançou mais uma etapa na Câmara dos Deputados.\n\nA medida visa corrigir a defasagem inflacionária dos últimos anos e permitir que mais empreendedores permaneçam no regime simplificado.\n\nAlém do aumento do teto, o projeto também prevê a possibilidade de contratação de até dois funcionários pelo MEI, ao invés de apenas um, como é permitido atualmente.',
+    date: '09 Mai 2024',
+    readTime: '3 min leitura',
+    imageUrl: 'https://images.unsplash.com/photo-1565514020176-dbf2277cc16d?auto=format&fit=crop&q=80&w=600',
+    status: 'published'
+  },
+  {
+    id: 3,
+    category: 'Gestão',
+    title: '5 estratégias para organizar o fluxo de caixa da sua microempresa',
+    excerpt: 'Manter as contas em dia é essencial. Confira dicas práticas para não misturar finanças pessoais com as da empresa.',
+    content: '1. Separe as contas: Tenha uma conta bancária PJ e nunca pague despesas pessoais com dinheiro da empresa.\n2. Registre tudo: Anote cada centavo que entra e sai.\n3. Defina um pró-labore: Estabeleça um salário fixo para você.\n4. Crie uma reserva de emergência: Guarde dinheiro para meses de baixa faturação.\n5. Use tecnologia: Utilize planilhas ou sistemas de gestão para automatizar o controle.',
+    date: '08 Mai 2024',
+    readTime: '7 min leitura',
+    imageUrl: 'https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&q=80&w=600',
+    status: 'published'
+  },
+  {
+    id: 4,
+    category: 'Benefícios',
+    title: 'Auxílio-doença e aposentadoria: Conheça os direitos do MEI',
+    excerpt: 'Pagando o DAS em dia, você garante cobertura previdenciária. Saiba quais são os requisitos para cada benefício.',
+    content: 'O MEI que paga o DAS em dia tem direito a diversos benefícios previdenciários, como auxílio-doença, aposentadoria por idade, salário-maternidade e pensão por morte para dependentes.\n\nPara ter acesso, é necessário cumprir o período de carência (número mínimo de meses de contribuição) exigido para cada benefício.',
+    date: '07 Mai 2024',
+    readTime: '4 min leitura',
+    imageUrl: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=600',
+    status: 'published'
+  },
+  {
+    id: 5,
+    category: 'Finanças',
+    title: 'Nota Fiscal: Entenda a diferença entre NF-e e NFS-e',
+    excerpt: 'Saber qual nota emitir é crucial. Veja o guia completo sobre notas de produto e serviço.',
+    content: 'Muitos MEIs confundem a Nota Fiscal Eletrônica (NF-e), usada para venda de produtos, com a Nota Fiscal de Serviços Eletrônica (NFS-e).\n\nPara quem vende mercadorias, a NF-e é emitida através da Secretaria da Fazenda do estado. Já quem presta serviços, deve emitir a NFS-e, que agora é centralizada no padrão nacional.',
+    date: '06 Mai 2024',
+    readTime: '4 min leitura',
+    imageUrl: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=600',
+    status: 'draft'
+  }
+];
+
+const initialNotifications: AppNotification[] = [
+    { id: 1, text: 'O sistema passará por manutenção às 00h.', type: 'warning', date: 'Hoje, 10:00', active: true, read: false },
+    { id: 2, text: 'Nova funcionalidade de Orçamentos liberada!', type: 'success', date: 'Ontem, 15:30', active: true, read: true },
+    { 
+      id: 3, 
+      text: 'Qual funcionalidade você quer ver primeiro?', 
+      type: 'poll', 
+      date: 'Hoje, 09:00', 
+      active: true, 
+      read: false,
+      pollOptions: [
+        { id: 1, text: 'Gestão de Estoque', votes: 12 },
+        { id: 2, text: 'Emissão de Notas', votes: 45 },
+        { id: 3, text: 'Integração com Bancos', votes: 23 }
+      ],
+      pollVotes: [] 
+    },
+];
+
+const today = new Date();
+const currentYear = today.getFullYear();
+const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
+
+const initialTransactions: Transaction[] = [
+  { id: 1, description: 'Desenvolvimento Website', category: 'Serviços', type: 'receita', amount: 2500.00, date: `${currentYear}-${currentMonth}-10`, time: '09:00', status: 'pago' },
+  { id: 2, description: 'Licença de Software', category: 'Software', type: 'despesa', amount: 159.90, date: `${currentYear}-${currentMonth}-08`, time: '14:30', status: 'pago' },
+  { id: 3, description: 'Consultoria Mensal', category: 'Serviços', type: 'receita', amount: 1200.00, date: `${currentYear}-${currentMonth}-05`, time: '10:00', status: 'pago' },
+  { id: 4, description: 'Internet Fibra', category: 'Infraestrutura', type: 'despesa', amount: 120.00, date: `${currentYear}-${currentMonth}-05`, time: '08:00', status: 'pendente' },
+  { id: 5, description: 'Manutenção Equipamento', category: 'Manutenção', type: 'despesa', amount: 450.00, date: `${currentYear}-${currentMonth}-02`, time: '16:00', status: 'pago' },
+  { id: 6, description: 'Venda de Template', category: 'Produtos', type: 'receita', amount: 150.00, date: `${currentYear}-${currentMonth}-01`, time: '11:30', status: 'pago' },
+  { id: 7, description: 'Guia DAS MEI', category: 'Impostos', type: 'despesa', amount: 72.60, date: `${currentYear}-${currentMonth}-20`, time: '00:00', status: 'pago' },
+  // Installment Example (Laptop 1/10)
+  { id: 8, description: 'Notebook Novo', category: 'Infraestrutura', type: 'despesa', amount: 350.00, date: `${currentYear}-${currentMonth}-15`, time: '12:00', status: 'pendente', installments: { current: 1, total: 10 } },
+  // Recurring Example
+  { id: 9, description: 'Hospedagem Site', category: 'Infraestrutura', type: 'despesa', amount: 29.90, date: `${currentYear}-${currentMonth}-28`, time: '09:00', status: 'pendente', isRecurring: true },
+];
+
+const initialAppointments: Appointment[] = [
+    { id: 101, title: 'Reunião com Cliente X', date: `${currentYear}-${currentMonth}-15`, time: '14:00', type: 'compromisso', notify: true },
+    { id: 102, title: 'Entrega de Projeto', date: `${currentYear}-${currentMonth}-25`, time: '18:00', type: 'compromisso', notify: true },
+];
+
+const mockUsers: User[] = [
+    { id: '1', name: 'Daniela Cristina', email: 'daniela@regularmei.com', role: 'admin', status: 'active', lastActive: new Date().toISOString(), joinedAt: '2024-01-15T10:00:00Z', isSetupComplete: true },
+    { id: '2', name: 'João Silva', email: 'joao@loja.com', role: 'user', status: 'active', lastActive: new Date(Date.now() - 3600000).toISOString(), joinedAt: '2024-02-20T14:30:00Z', isSetupComplete: true },
+    { id: '3', name: 'Maria Souza', email: 'maria@servicos.com', role: 'user', status: 'inactive', lastActive: new Date(Date.now() - 86400000 * 5).toISOString(), joinedAt: '2024-03-10T09:15:00Z', isSetupComplete: true },
+    { id: '4', name: 'Pedro Santos', email: 'pedro@tech.com', role: 'user', status: 'suspended', lastActive: new Date(Date.now() - 86400000 * 20).toISOString(), joinedAt: '2024-01-05T16:45:00Z', isSetupComplete: true },
+    { id: '5', name: 'Ana Oliveira', email: 'ana@cafe.com', role: 'user', status: 'active', lastActive: new Date(Date.now() - 1800000).toISOString(), joinedAt: '2024-04-12T11:20:00Z', isSetupComplete: false },
+];
 
 const App: React.FC = () => {
   // --- AUTH STATE ---
   const [user, setUser] = useState<User | null>(null);
-  const [loadingAuth, setLoadingAuth] = useState(true); // New state for initial auth check
   const [isPublicView, setIsPublicView] = useState(false);
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -37,17 +221,17 @@ const App: React.FC = () => {
   const [showIntro, setShowIntro] = useState(false);
   
   // --- APP STATE ---
-  const [cnpj, setCnpj] = useState(''); // CNPJ starts empty
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [news, setNews] = useState<NewsItem[]>([]);
+  const [cnpj, setCnpj] = useState('58.556.538/0001-67');
+  const [offers, setOffers] = useState<Offer[]>(initialOffersData);
+  const [news, setNews] = useState<NewsItem[]>(initialNewsData);
   const [readingNewsId, setReadingNewsId] = useState<number | null>(null);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
   
   // --- FISCAL DATA STATE (Lifted) ---
   const [fiscalData, setFiscalData] = useState<FiscalData | null>(null);
 
-  // --- USER MANAGEMENT STATE (Used for Admin view, but primary user data comes from Supabase) ---
-  const [allUsers, setAllUsers] = useState<User[]>([]); 
+  // --- USER MANAGEMENT STATE ---
+  const [allUsers, setAllUsers] = useState<User[]>(mockUsers);
 
   // --- CONNECTION STATE (ADMIN) ---
   const [connectionConfig, setConnectionConfig] = useState<ConnectionConfig>({
@@ -87,8 +271,8 @@ const App: React.FC = () => {
   });
 
   // --- CASH FLOW & APPOINTMENT STATE ---
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
+  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
 
   const [revenueCats, setRevenueCats] = useState<Category[]>([
     { name: 'Serviços', icon: 'work' },
@@ -120,78 +304,6 @@ const App: React.FC = () => {
     offers: false
   });
 
-  // --- DATA FETCHING FUNCTIONS ---
-
-  const loadUserProfile = async (supabaseUser: any) => {
-    setLoadingAuth(true);
-    
-    // 1. Fetch Profile Data
-    const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', supabaseUser.id)
-        .single();
-
-    if (profileError) {
-        console.error('Error fetching profile:', profileError);
-        // Fallback to basic user data if profile fetch fails
-        setUser({
-            id: supabaseUser.id,
-            name: supabaseUser.email || 'Usuário',
-            email: supabaseUser.email,
-            isSetupComplete: false,
-            role: 'user',
-            status: 'active'
-        });
-        setLoadingAuth(false);
-        return;
-    }
-
-    const appUser: User = {
-        id: profileData.id,
-        name: profileData.name || supabaseUser.email,
-        email: profileData.email || supabaseUser.email,
-        phone: profileData.phone,
-        cnpj: profileData.cnpj,
-        isSetupComplete: profileData.is_setup_complete,
-        role: profileData.role as 'admin' | 'user',
-        status: profileData.status as 'active' | 'inactive' | 'suspended',
-        joinedAt: profileData.joined_at,
-        lastActive: new Date().toISOString()
-    };
-
-    setUser(appUser);
-    setCnpj(appUser.cnpj || '');
-    setLoadingAuth(false);
-    
-    // If setup is complete, load other data (transactions, news, etc.)
-    if (appUser.isSetupComplete) {
-        // TODO: Implement data loading functions here (transactions, appointments, etc.)
-        // For now, we rely on mock data handlers below until full integration
-    }
-  };
-
-  // --- AUTH MONITORING ---
-  useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        loadUserProfile(session.user);
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setLoadingAuth(false);
-      } else if (event === 'INITIAL_SESSION' && session?.user) {
-        loadUserProfile(session.user);
-      } else if (event === 'INITIAL_SESSION' && !session) {
-        setLoadingAuth(false);
-      }
-    });
-
-    // Cleanup listener
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
-
   // --- CHECK PUBLIC URL ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -200,7 +312,7 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // --- CALCULATE DASHBOARD STATS (Remains the same, relies on `transactions` state) ---
+  // --- CALCULATE DASHBOARD STATS ---
   const dashboardStats = useMemo(() => {
     const today = new Date();
     const cMonth = today.getMonth();
@@ -269,48 +381,51 @@ const App: React.FC = () => {
     ];
   }, [transactions]);
 
-  // --- AUTH HANDLERS (Simplified/Removed mock logic) ---
+  // --- AUTH HANDLERS ---
   const handleLogin = (userData: User) => {
-      // This function is now mostly redundant as onAuthStateChange handles successful login
-      // It remains here to satisfy the AuthPage prop requirement, but the actual user state update happens in loadUserProfile
+      const existingUser = allUsers.find(u => u.email === userData.email);
+      if (existingUser) {
+          setUser(existingUser);
+      } else {
+          setUser(userData);
+      }
   }
 
   const handleForgotPassword = async (email: string): Promise<boolean> => {
-      // This function is now handled directly by AuthPage using supabase.auth.resetPasswordForEmail
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const existingUser = allUsers.find(u => u.email === email);
+      if (existingUser) {
+          const smtp = connectionConfig.smtp;
+          console.group('📧 [SMTP SIMULATION] Sending Password Recovery Email');
+          console.log(`Connecting to SMTP Host: ${smtp.host}:${smtp.port} (Secure: ${smtp.secure})`);
+          console.log(`FROM: ${smtp.fromEmail}`);
+          console.log(`TO: ${email}`);
+          console.log(`SUBJECT: Recuperação de Senha - Regular MEI`);
+          console.groupEnd();
+          return true;
+      }
       return true;
   }
 
-  const handleOnboardingComplete = async (newCnpj: string, theme: 'light' | 'dark', companyName: string) => {
+  const handleOnboardingComplete = (newCnpj: string, theme: 'light' | 'dark', companyName: string) => {
       if (!user) return;
-      
-      // 1. Update Supabase Profile
-      const { error } = await supabase
-          .from('profiles')
-          .update({ 
-              cnpj: newCnpj, 
-              name: companyName || user.name, 
-              is_setup_complete: true 
-          })
-          .eq('id', user.id);
-
-      if (error) {
-          console.error('Error updating profile during onboarding:', error);
-          alert('Erro ao salvar dados. Tente novamente.');
-          return;
-      }
-
-      // 2. Update Local State
       const updatedUser = { 
           ...user, 
           isSetupComplete: true, 
           cnpj: newCnpj,
           name: companyName || user.name,
+          role: 'user' as const,
+          status: 'active' as const,
+          joinedAt: new Date().toISOString(),
           lastActive: new Date().toISOString()
       };
       setCnpj(newCnpj);
       setUser(updatedUser);
-      
-      // 3. Apply Theme
+      if (!allUsers.find(u => u.id === user.id)) {
+          setAllUsers([...allUsers, updatedUser]);
+      } else {
+          setAllUsers(allUsers.map(u => u.id === user.id ? updatedUser : u));
+      }
       if (theme === 'dark') {
           document.documentElement.classList.add('dark');
       } else {
@@ -319,8 +434,7 @@ const App: React.FC = () => {
       setShowIntro(true);
   }
 
-  // --- USER MANAGEMENT HANDLERS (Admin) ---
-  // These handlers remain local for now, but should eventually interact with Supabase Admin API or RLS policies
+  // --- USER MANAGEMENT HANDLERS ---
   const handleAddUser = (newUser: User) => {
       setAllUsers([...allUsers, newUser]);
   };
@@ -333,17 +447,14 @@ const App: React.FC = () => {
   };
 
   const handleChangePassword = async (newPassword: string): Promise<boolean> => {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) {
-          console.error("Error changing password:", error);
-          return false;
-      }
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      // In a real application, you would call supabase.auth.updateUser({ password: newPassword })
+      console.log("Password changed successfully for user:", user?.email);
       return true;
   };
 
   const handleDeleteUser = (id: string) => {
-      // In a real app, this would require a Service Role Key or an Edge Function
-      console.warn("Admin: Delete user functionality requires Supabase Service Role or Edge Function.");
       setAllUsers(allUsers.filter(u => u.id !== id));
       if (user && user.id === id) {
           handleDeleteAccount();
@@ -395,34 +506,21 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleDeleteAccount = async () => {
-    if (!user) return;
-    
-    // In a real app, this requires a Service Role Key or an Edge Function to delete the auth user
-    // For now, we simulate logout and local state reset
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-        console.error("Error signing out:", error);
-    }
-
+  const handleDeleteAccount = () => {
     setUser(null);
     setActiveTab('dashboard');
-    setTransactions([]);
-    setAppointments([]);
-    setCnpj('');
+    setTransactions(initialTransactions);
+    setAppointments(initialAppointments);
+    setCnpj('58.556.538/0001-67');
     setFiscalData(null);
     setShowIntro(false);
   };
 
-  const handleLogout = async () => {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-          console.error("Error signing out:", error);
-      }
+  const handleLogout = () => {
       setUser(null);
   };
 
-  // --- OFFERS HANDLERS (Remaining handlers omitted for brevity, assuming they use local state for now) ---
+  // --- OFFERS HANDLERS ---
   const handleAddOffer = (newOffer: Offer) => {
     setOffers([newOffer, ...offers]);
   };
@@ -551,16 +649,6 @@ const App: React.FC = () => {
   };
 
   // --- RENDER LOGIC ---
-  
-  // Show loading screen while checking auth state
-  if (loadingAuth) {
-      return (
-          <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
-              <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          </div>
-      );
-  }
-
   if (isPublicView) {
       return (
           <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
@@ -612,7 +700,7 @@ const App: React.FC = () => {
   if (maintenance.global && activeTab !== 'admin' && activeTab !== 'settings') {
       return (
         <div className="flex h-screen bg-background-light dark:bg-background-dark overflow-hidden">
-            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} userRole={user?.role} />
+            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
              <div className="flex-1 flex flex-col overflow-hidden">
                  <Header activeTab={activeTab} onMenuClick={() => setIsSidebarOpen(true)} notifications={notifications} onMarkAsRead={handleMarkAsRead} onVote={handleVote} user={user} onLogout={handleLogout} onNavigateToProfile={() => setActiveTab('settings')} />
                  <main className="flex-1 flex items-center justify-center p-4">
@@ -624,18 +712,6 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
-      // Permission check for Admin page
-      if (activeTab === 'admin' && user.role !== 'admin') {
-          return (
-              <div className="flex flex-col items-center justify-center min-h-[600px] text-center p-8">
-                  <span className="material-icons text-6xl text-red-500 mb-4">lock</span>
-                  <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Acesso Negado</h2>
-                  <p className="text-slate-500 dark:text-slate-400">Você não tem permissão para acessar a área de administração.</p>
-                  <button onClick={() => setActiveTab('dashboard')} className="mt-4 text-primary font-medium hover:underline">Voltar ao Dashboard</button>
-              </div>
-          );
-      }
-
       if (isPageInMaintenance(activeTab)) {
           return <MaintenanceOverlay type="page" />;
       }
@@ -780,7 +856,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-background-light dark:bg-background-dark overflow-hidden relative">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} userRole={user?.role} />
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header activeTab={activeTab} onMenuClick={() => setIsSidebarOpen(true)} notifications={notifications} onMarkAsRead={handleMarkAsRead} onVote={handleVote} user={user} onLogout={handleLogout} onNavigateToProfile={() => setActiveTab('settings')} />
         <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth relative">

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { NavItem } from '../types';
 
@@ -18,15 +19,9 @@ interface SidebarProps {
   setActiveTab: (id: string) => void;
   isOpen: boolean;
   toggleSidebar: () => void;
-  userRole?: 'admin' | 'user';
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, toggleSidebar, userRole = 'user' }) => {
-  
-  const filteredNavItems = navItems.filter(item => 
-    item.id !== 'admin' || userRole === 'admin'
-  );
-
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, toggleSidebar }) => {
   return (
     <>
       {/* Mobile Overlay */}
@@ -67,7 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, togg
         <nav className="flex-grow px-4 py-6 overflow-y-auto custom-scrollbar space-y-1">
           <p className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Menu Principal</p>
           <ul>
-            {filteredNavItems.map((item) => {
+            {navItems.map((item) => {
               const isActive = activeTab === item.id;
               return (
                 <li key={item.id}>
