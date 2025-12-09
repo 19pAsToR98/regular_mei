@@ -24,12 +24,12 @@ import IntroWalkthrough from './components/IntroWalkthrough';
 import FinancialScore from './components/FinancialScore';
 import MobileDashboard from './components/MobileDashboard';
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
-
-// --- DADOS SIMULADOS REMOVIDOS ---
+import { supabase } from './integrations/supabase/client';
 
 const App: React.FC = () => {
   // --- AUTH STATE ---
   const [user, setUser] = useState<User | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true); // New state for initial auth check
   const [isPublicView, setIsPublicView] = useState(false);
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -46,8 +46,8 @@ const App: React.FC = () => {
   // --- FISCAL DATA STATE (Lifted) ---
   const [fiscalData, setFiscalData] = useState<FiscalData | null>(null);
 
-  // --- USER MANAGEMENT STATE ---
-  const [allUsers, setAllUsers] = useState<User[]>([]); // Starts empty
+  // --- USER MANAGEMENT STATE (Used for Admin view, but primary user data comes from Supabase) ---
+  const [allUsers, setAllUsers] = useState<User[]>([]); 
 
   // --- CONNECTION STATE (ADMIN) ---
   const [connectionConfig, setConnectionConfig] = useState<ConnectionConfig>({
@@ -120,6 +120,78 @@ const App: React.FC = () => {
     offers: false
   });
 
+  // --- DATA FETCHING FUNCTIONS ---
+
+  const loadUserProfile = async (supabaseUser: any) => {
+    setLoadingAuth(true);
+    
+    // 1. Fetch Profile Data
+    const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
+
+    if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        // Fallback to basic user data if profile fetch fails
+        setUser({
+            id: supabaseUser.id,
+            name: supabaseUser.email || 'Usuário',
+            email: supabaseUser.email,
+            isSetupComplete: false,
+            role: 'user',
+            status: 'active'
+        });
+        setLoadingAuth(false);
+        return;
+    }
+
+    const appUser: User = {
+        id: profileData.id,
+        name: profileData.name || supabaseUser.email,
+        email: profileData.email || supabaseUser.email,
+        phone: profileData.phone,
+        cnpj: profileData.cnpj,
+        isSetupComplete: profileData.is_setup_complete,
+        role: profileData.role as 'admin' | 'user',
+        status: profileData.status as 'active' | 'inactive' | 'suspended',
+        joinedAt: profileData.joined_at,
+        lastActive: new Date().toISOString()
+    };
+
+    setUser(appUser);
+    setCnpj(appUser.cnpj || '');
+    setLoadingAuth(false);
+    
+    // If setup is complete, load other data (transactions, news, etc.)
+    if (appUser.isSetupComplete) {
+        // TODO: Implement data loading functions here (transactions, appointments, etc.)
+        // For now, we rely on mock data handlers below until full integration
+    }
+  };
+
+  // --- AUTH MONITORING ---
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        loadUserProfile(session.user);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setLoadingAuth(false);
+      } else if (event === 'INITIAL_SESSION' && session?.user) {
+        loadUserProfile(session.user);
+      } else if (event === 'INITIAL_SESSION' && !session) {
+        setLoadingAuth(false);
+      }
+    });
+
+    // Cleanup listener
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
   // --- CHECK PUBLIC URL ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -128,7 +200,7 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // --- CALCULATE DASHBOARD STATS ---
+  // --- CALCULATE DASHBOARD STATS (Remains the same, relies on `transactions` state) ---
   const dashboardStats = useMemo(() => {
     const today = new Date();
     const cMonth = today.getMonth();
@@ -197,51 +269,48 @@ const App: React.FC = () => {
     ];
   }, [transactions]);
 
-  // --- AUTH HANDLERS ---
+  // --- AUTH HANDLERS (Simplified/Removed mock logic) ---
   const handleLogin = (userData: User) => {
-      const existingUser = allUsers.find(u => u.email === userData.email);
-      if (existingUser) {
-          setUser(existingUser);
-      } else {
-          setUser(userData);
-      }
+      // This function is now mostly redundant as onAuthStateChange handles successful login
+      // It remains here to satisfy the AuthPage prop requirement, but the actual user state update happens in loadUserProfile
   }
 
   const handleForgotPassword = async (email: string): Promise<boolean> => {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const existingUser = allUsers.find(u => u.email === email);
-      if (existingUser) {
-          const smtp = connectionConfig.smtp;
-          console.group('📧 [SMTP SIMULATION] Sending Password Recovery Email');
-          console.log(`Connecting to SMTP Host: ${smtp.host}:${smtp.port} (Secure: ${smtp.secure})`);
-          console.log(`FROM: ${smtp.fromEmail}`);
-          console.log(`TO: ${email}`);
-          console.log(`SUBJECT: Recuperação de Senha - Regular MEI`);
-          console.groupEnd();
-          return true;
-      }
+      // This function is now handled directly by AuthPage using supabase.auth.resetPasswordForEmail
       return true;
   }
 
-  const handleOnboardingComplete = (newCnpj: string, theme: 'light' | 'dark', companyName: string) => {
+  const handleOnboardingComplete = async (newCnpj: string, theme: 'light' | 'dark', companyName: string) => {
       if (!user) return;
+      
+      // 1. Update Supabase Profile
+      const { error } = await supabase
+          .from('profiles')
+          .update({ 
+              cnpj: newCnpj, 
+              name: companyName || user.name, 
+              is_setup_complete: true 
+          })
+          .eq('id', user.id);
+
+      if (error) {
+          console.error('Error updating profile during onboarding:', error);
+          alert('Erro ao salvar dados. Tente novamente.');
+          return;
+      }
+
+      // 2. Update Local State
       const updatedUser = { 
           ...user, 
           isSetupComplete: true, 
           cnpj: newCnpj,
           name: companyName || user.name,
-          role: 'user' as const,
-          status: 'active' as const,
-          joinedAt: new Date().toISOString(),
           lastActive: new Date().toISOString()
       };
       setCnpj(newCnpj);
       setUser(updatedUser);
-      if (!allUsers.find(u => u.id === user.id)) {
-          setAllUsers([...allUsers, updatedUser]);
-      } else {
-          setAllUsers(allUsers.map(u => u.id === user.id ? updatedUser : u));
-      }
+      
+      // 3. Apply Theme
       if (theme === 'dark') {
           document.documentElement.classList.add('dark');
       } else {
@@ -250,7 +319,8 @@ const App: React.FC = () => {
       setShowIntro(true);
   }
 
-  // --- USER MANAGEMENT HANDLERS ---
+  // --- USER MANAGEMENT HANDLERS (Admin) ---
+  // These handlers remain local for now, but should eventually interact with Supabase Admin API or RLS policies
   const handleAddUser = (newUser: User) => {
       setAllUsers([...allUsers, newUser]);
   };
@@ -263,14 +333,17 @@ const App: React.FC = () => {
   };
 
   const handleChangePassword = async (newPassword: string): Promise<boolean> => {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      // In a real application, you would call supabase.auth.updateUser({ password: newPassword })
-      console.log("Password changed successfully for user:", user?.email);
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+          console.error("Error changing password:", error);
+          return false;
+      }
       return true;
   };
 
   const handleDeleteUser = (id: string) => {
+      // In a real app, this would require a Service Role Key or an Edge Function
+      console.warn("Admin: Delete user functionality requires Supabase Service Role or Edge Function.");
       setAllUsers(allUsers.filter(u => u.id !== id));
       if (user && user.id === id) {
           handleDeleteAccount();
@@ -322,7 +395,16 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    
+    // In a real app, this requires a Service Role Key or an Edge Function to delete the auth user
+    // For now, we simulate logout and local state reset
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+        console.error("Error signing out:", error);
+    }
+
     setUser(null);
     setActiveTab('dashboard');
     setTransactions([]);
@@ -332,11 +414,15 @@ const App: React.FC = () => {
     setShowIntro(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+          console.error("Error signing out:", error);
+      }
       setUser(null);
   };
 
-  // --- OFFERS HANDLERS ---
+  // --- OFFERS HANDLERS (Remaining handlers omitted for brevity, assuming they use local state for now) ---
   const handleAddOffer = (newOffer: Offer) => {
     setOffers([newOffer, ...offers]);
   };
@@ -465,6 +551,16 @@ const App: React.FC = () => {
   };
 
   // --- RENDER LOGIC ---
+  
+  // Show loading screen while checking auth state
+  if (loadingAuth) {
+      return (
+          <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
+              <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          </div>
+      );
+  }
+
   if (isPublicView) {
       return (
           <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
@@ -528,6 +624,18 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
+      // Permission check for Admin page
+      if (activeTab === 'admin' && user.role !== 'admin') {
+          return (
+              <div className="flex flex-col items-center justify-center min-h-[600px] text-center p-8">
+                  <span className="material-icons text-6xl text-red-500 mb-4">lock</span>
+                  <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Acesso Negado</h2>
+                  <p className="text-slate-500 dark:text-slate-400">Você não tem permissão para acessar a área de administração.</p>
+                  <button onClick={() => setActiveTab('dashboard')} className="mt-4 text-primary font-medium hover:underline">Voltar ao Dashboard</button>
+              </div>
+          );
+      }
+
       if (isPageInMaintenance(activeTab)) {
           return <MaintenanceOverlay type="page" />;
       }
@@ -672,7 +780,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-background-light dark:bg-background-dark overflow-hidden relative">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} userRole={user?.role} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header activeTab={activeTab} onMenuClick={() => setIsSidebarOpen(true)} notifications={notifications} onMarkAsRead={handleMarkAsRead} onVote={handleVote} user={user} onLogout={handleLogout} onNavigateToProfile={() => setActiveTab('settings')} />
         <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth relative">

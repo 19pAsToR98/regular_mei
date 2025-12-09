@@ -1,6 +1,6 @@
-
 import React, { useState } from 'react';
 import { User } from '../types';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthPageProps {
   onLogin: (user: User) => void;
@@ -12,6 +12,7 @@ type AuthMode = 'login' | 'register' | 'forgot';
 const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false); // Global loading state for forms
+  const [authError, setAuthError] = useState<string | null>(null);
   
   // Login Form States
   const [email, setEmail] = useState('');
@@ -35,60 +36,75 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setAuthError(null);
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Simulate API Login
-    const mockUser: User = {
-      id: '1',
-      name: 'Daniela Cristina',
-      email: email,
-      isSetupComplete: true // For existing users simulation. New users would be false.
-    };
-    
-    // Simple logic for demo: if email contains "novo", force setup
-    if (email.includes('novo')) {
-        mockUser.isSetupComplete = false;
-        mockUser.name = ''; 
-    }
+    const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+    });
 
     setIsLoading(false);
-    onLogin(mockUser);
+
+    if (error) {
+        console.error('Login Error:', error);
+        setAuthError(error.message.includes('Invalid login credentials') ? 'Credenciais inválidas. Verifique seu email e senha.' : error.message);
+    }
+    // Note: Successful login is handled by the onAuthStateChange listener in App.tsx
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError(null);
     
     if (regPassword !== regConfirmPassword) {
-        alert("As senhas não coincidem. Por favor, verifique.");
+        setAuthError("As senhas não coincidem. Por favor, verifique.");
         return;
     }
 
     setIsLoading(true);
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Simulate API Register
-    const newUser: User = {
-      id: Date.now().toString(),
-      name: name,
-      email: regEmail,
-      phone: phone,
-      isSetupComplete: false
-    };
+    const { data, error } = await supabase.auth.signUp({
+        email: regEmail,
+        password: regPassword,
+        options: {
+            data: {
+                name: name,
+                phone: phone,
+            }
+        }
+    });
     
     setIsLoading(false);
-    onLogin(newUser);
+
+    if (error) {
+        console.error('Registration Error:', error);
+        setAuthError(error.message);
+    } else if (data.user) {
+        // Registration successful, but user needs to confirm email (if enabled in Supabase settings)
+        alert("Cadastro realizado! Verifique seu email para confirmar sua conta.");
+        setMode('login');
+        setEmail(regEmail);
+        setPassword('');
+    }
   };
 
   const handleForgotSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
+      setAuthError(null);
       setForgotLoading(true);
-      await onForgotPassword(forgotEmail);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+          redirectTo: window.location.origin, // Redirect back to the app after reset
+      });
+
       setForgotLoading(false);
-      setForgotSuccess(true);
+      
+      if (error) {
+          console.error('Forgot Password Error:', error);
+          setAuthError(error.message);
+      } else {
+          setForgotSuccess(true);
+      }
   };
 
   return (
@@ -139,6 +155,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                     ? 'Comece a organizar seu negócio hoje mesmo.'
                     : 'Enviaremos as instruções para seu e-mail.'}
             </p>
+            
+            {authError && (
+                <div className="p-3 mb-4 bg-red-100 text-red-700 rounded-lg text-sm border border-red-200 text-center animate-in fade-in">
+                    {authError}
+                </div>
+            )}
 
             {mode === 'login' && (
                 // LOGIN FORM
@@ -201,9 +223,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                     <p className="text-center text-slate-500 mt-6">
                         Não tem uma conta? <button type="button" onClick={() => setMode('register')} className="text-primary font-bold hover:underline">Cadastre-se</button>
                     </p>
-                    <div className="mt-4 p-3 bg-blue-50 text-blue-800 text-xs rounded border border-blue-100 text-center">
-                        Dica: Use um email contendo "novo" para simular um primeiro acesso (Onboarding).
-                    </div>
                 </form>
             )}
 
