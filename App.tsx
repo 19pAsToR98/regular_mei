@@ -859,22 +859,71 @@ const App: React.FC = () => {
   };
 
   // --- NOTIFICATION HANDLERS ---
-  const handleAddNotification = (item: AppNotification) => {
-      setNotifications([item, ...notifications]);
+  const handleAddNotification = async (item: AppNotification) => {
+      const payload = {
+          text: item.text,
+          type: item.type,
+          poll_options: item.pollOptions,
+          expires_at: item.expiresAt,
+          active: true,
+      };
+
+      const { error } = await supabase
+          .from('notifications')
+          .insert(payload);
+
+      if (error) {
+          console.error('Error adding notification:', error);
+          showError('Erro ao publicar notificação.');
+          return;
+      }
+      
       showSuccess('Notificação publicada!');
+      loadNotifications();
   }
 
-  const handleUpdateNotification = (item: AppNotification) => {
-      setNotifications(notifications.map(n => n.id === item.id ? item : n));
+  const handleUpdateNotification = async (item: AppNotification) => {
+      const payload = {
+          text: item.text,
+          type: item.type,
+          poll_options: item.pollOptions,
+          expires_at: item.expiresAt,
+          active: item.active,
+      };
+
+      const { error } = await supabase
+          .from('notifications')
+          .update(payload)
+          .eq('id', item.id);
+
+      if (error) {
+          console.error('Error updating notification:', error);
+          showError('Erro ao atualizar notificação.');
+          return;
+      }
+      
       showSuccess('Notificação atualizada!');
+      loadNotifications();
   }
 
-  const handleDeleteNotification = (id: number) => {
-      setNotifications((prev) => prev.filter(n => n.id !== id));
+  const handleDeleteNotification = async (id: number) => {
+      const { error } = await supabase
+          .from('notifications')
+          .delete()
+          .eq('id', id);
+
+      if (error) {
+          console.error('Error deleting notification:', error);
+          showError('Erro ao excluir notificação.');
+          return;
+      }
+      
       showSuccess('Notificação excluída.');
+      loadNotifications();
   }
 
   const handleMarkAsRead = (id: number) => {
+    // This requires persistence in user_notification_interactions
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
