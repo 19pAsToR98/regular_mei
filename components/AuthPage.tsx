@@ -1,6 +1,6 @@
-
 import React, { useState } from 'react';
 import { User } from '../types';
+import { supabase } from '../src/integrations/supabase/client';
 
 interface AuthPageProps {
   onLogin: (user: User) => void;
@@ -12,6 +12,7 @@ type AuthMode = 'login' | 'register' | 'forgot';
 const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false); // Global loading state for forms
+  const [authError, setAuthError] = useState<string | null>(null);
   
   // Login Form States
   const [email, setEmail] = useState('');
@@ -35,60 +36,75 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setAuthError(null);
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Simulate API Login
-    const mockUser: User = {
-      id: '1',
-      name: 'Daniela Cristina',
-      email: email,
-      isSetupComplete: true // For existing users simulation. New users would be false.
-    };
-    
-    // Simple logic for demo: if email contains "novo", force setup
-    if (email.includes('novo')) {
-        mockUser.isSetupComplete = false;
-        mockUser.name = ''; 
-    }
+    const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+    });
 
     setIsLoading(false);
-    onLogin(mockUser);
+
+    if (error) {
+        setAuthError(error.message.includes('Invalid login credentials') ? 'Credenciais inválidas. Verifique seu email e senha.' : error.message);
+    } else {
+        // onAuthStateChange in App.tsx handles successful login and user state update
+    }
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError(null);
     
     if (regPassword !== regConfirmPassword) {
-        alert("As senhas não coincidem. Por favor, verifique.");
+        setAuthError("As senhas não coincidem. Por favor, verifique.");
+        return;
+    }
+    if (regPassword.length < 6) {
+        setAuthError("A senha deve ter pelo menos 6 caracteres.");
         return;
     }
 
     setIsLoading(true);
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Simulate API Register
-    const newUser: User = {
-      id: Date.now().toString(),
-      name: name,
-      email: regEmail,
-      phone: phone,
-      isSetupComplete: false
-    };
+    const { error } = await supabase.auth.signUp({
+        email: regEmail,
+        password: regPassword,
+        options: {
+            data: {
+                name: name,
+                phone: phone,
+            }
+        }
+    });
     
     setIsLoading(false);
-    onLogin(newUser);
+
+    if (error) {
+        setAuthError(error.message);
+    } else {
+        // Supabase sends a confirmation email by default.
+        alert("Cadastro realizado! Verifique seu e-mail para confirmar sua conta antes de fazer login.");
+        setMode('login');
+    }
   };
 
   const handleForgotSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setForgotLoading(true);
-      await onForgotPassword(forgotEmail);
+      setAuthError(null);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+          redirectTo: window.location.origin, // Redirects back to the app after reset
+      });
+
       setForgotLoading(false);
-      setForgotSuccess(true);
+      
+      if (error) {
+          setAuthError(error.message);
+      } else {
+          setForgotSuccess(true);
+      }
   };
 
   return (
@@ -125,7 +141,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                 <img 
                     src="https://regularmei.com.br/wp-content/uploads/2024/07/REGULAR-500-x-200-px.png" 
                     alt="Regular MEI" 
-                    className="h-10 mx-auto"
+                    className="h-10 mx-auto dark:brightness-0 dark:invert"
                 />
             </div>
 
@@ -139,6 +155,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                     ? 'Comece a organizar seu negócio hoje mesmo.'
                     : 'Enviaremos as instruções para seu e-mail.'}
             </p>
+            
+            {authError && (
+                <div className="p-3 mb-4 bg-red-100 text-red-700 rounded-lg border border-red-200 text-sm text-center animate-in fade-in">
+                    {authError}
+                </div>
+            )}
 
             {mode === 'login' && (
                 // LOGIN FORM
@@ -148,7 +170,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                         <div className="relative">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">person</span>
                             <input 
-                                type="text" 
+                                type="email" 
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -182,7 +204,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                     </div>
                     
                     <div className="flex justify-end">
-                        <button type="button" onClick={() => setMode('forgot')} className="text-sm text-primary hover:underline">Esqueceu a senha?</button>
+                        <button type="button" onClick={() => { setMode('forgot'); setAuthError(null); }} className="text-sm text-primary hover:underline">Esqueceu a senha?</button>
                     </div>
 
                     <button 
@@ -199,11 +221,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                     </button>
                     
                     <p className="text-center text-slate-500 mt-6">
-                        Não tem uma conta? <button type="button" onClick={() => setMode('register')} className="text-primary font-bold hover:underline">Cadastre-se</button>
+                        Não tem uma conta? <button type="button" onClick={() => { setMode('register'); setAuthError(null); }} className="text-primary font-bold hover:underline">Cadastre-se</button>
                     </p>
-                    <div className="mt-4 p-3 bg-blue-50 text-blue-800 text-xs rounded border border-blue-100 text-center">
-                        Dica: Use um email contendo "novo" para simular um primeiro acesso (Onboarding).
-                    </div>
                 </form>
             )}
 
@@ -313,7 +332,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                     </button>
                     
                     <p className="text-center text-slate-500 mt-6">
-                        Já tem uma conta? <button type="button" onClick={() => setMode('login')} className="text-primary font-bold hover:underline">Faça login</button>
+                        Já tem uma conta? <button type="button" onClick={() => { setMode('login'); setAuthError(null); }} className="text-primary font-bold hover:underline">Faça login</button>
                     </p>
                 </form>
             )}
@@ -331,7 +350,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                                 Se o e-mail <strong>{forgotEmail}</strong> estiver cadastrado, você receberá um link para redefinir sua senha em instantes.
                             </p>
                             <button 
-                                onClick={() => { setMode('login'); setForgotSuccess(false); setForgotEmail(''); }} 
+                                onClick={() => { setMode('login'); setForgotSuccess(false); setForgotEmail(''); setAuthError(null); }} 
                                 className="w-full bg-primary hover:bg-blue-600 text-white py-3 rounded-lg font-bold shadow-sm transition-colors"
                             >
                                 Voltar para o Login
@@ -368,7 +387,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                             </button>
                             
                             <p className="text-center text-slate-500 mt-6">
-                                Lembrou a senha? <button type="button" onClick={() => setMode('login')} className="text-primary font-bold hover:underline">Voltar</button>
+                                Lembrou a senha? <button type="button" onClick={() => { setMode('login'); setAuthError(null); }} className="text-primary font-bold hover:underline">Voltar</button>
                             </p>
                         </form>
                     )}
