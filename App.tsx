@@ -24,7 +24,7 @@ import IntroWalkthrough from './components/IntroWalkthrough';
 import FinancialScore from './components/FinancialScore';
 import MobileDashboard from './components/MobileDashboard';
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from './src/integrations/supabase/client';
 
 const App: React.FC = () => {
   // --- AUTH STATE ---
@@ -505,7 +505,7 @@ const App: React.FC = () => {
 
   // --- CASHFLOW HANDLERS ---
   const handleAddTransaction = (t: Transaction | Transaction[]) => {
-    if (array.isArray(t)) {
+    if (Array.isArray(t)) {
         setTransactions([...t, ...transactions]);
     } else {
         setTransactions([t, ...transactions]);
