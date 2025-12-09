@@ -35,7 +35,19 @@ const App: React.FC = () => {
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [isPublicView, setIsPublicView] = useState(false);
 
-  const [activeTab, setActiveTab] = useState('dashboard');
+  // Initialize activeTab from localStorage or default to 'dashboard'
+  const [activeTab, setActiveTabState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('activeTab') || 'dashboard';
+    }
+    return 'dashboard';
+  });
+  
+  const setActiveTab = (tab: string) => {
+    setActiveTabState(tab);
+    localStorage.setItem('activeTab', tab);
+  };
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
   
@@ -330,6 +342,9 @@ const App: React.FC = () => {
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setLoadingAuth(false);
+        // Clear persisted tab on sign out
+        localStorage.removeItem('activeTab');
+        setActiveTabState('dashboard');
       } else if (event === 'INITIAL_SESSION' && session?.user) {
         loadUserProfile(session.user);
       } else if (event === 'INITIAL_SESSION' && !session) {
