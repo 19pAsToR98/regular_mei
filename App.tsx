@@ -24,7 +24,7 @@ import IntroWalkthrough from './components/IntroWalkthrough';
 import FinancialScore from './components/FinancialScore';
 import MobileDashboard from './components/MobileDashboard';
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
-import { supabase } from './integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 
 const App: React.FC = () => {
   // --- AUTH STATE ---
@@ -505,7 +505,7 @@ const App: React.FC = () => {
 
   // --- CASHFLOW HANDLERS ---
   const handleAddTransaction = (t: Transaction | Transaction[]) => {
-    if (Array.isArray(t)) {
+    if (array.isArray(t)) {
         setTransactions([...t, ...transactions]);
     } else {
         setTransactions([t, ...transactions]);
@@ -612,7 +612,7 @@ const App: React.FC = () => {
   if (maintenance.global && activeTab !== 'admin' && activeTab !== 'settings') {
       return (
         <div className="flex h-screen bg-background-light dark:bg-background-dark overflow-hidden">
-            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} userRole={user?.role} />
              <div className="flex-1 flex flex-col overflow-hidden">
                  <Header activeTab={activeTab} onMenuClick={() => setIsSidebarOpen(true)} notifications={notifications} onMarkAsRead={handleMarkAsRead} onVote={handleVote} user={user} onLogout={handleLogout} onNavigateToProfile={() => setActiveTab('settings')} />
                  <main className="flex-1 flex items-center justify-center p-4">
