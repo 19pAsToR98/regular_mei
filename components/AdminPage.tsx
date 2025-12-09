@@ -1,0 +1,1636 @@
+
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { Offer, NewsItem, MaintenanceConfig, AppNotification, PollOption, ConnectionConfig, ApiFieldMapping, User } from '../types';
+
+interface AdminPageProps {
+  offers: Offer[];
+  onAddOffer: (offer: Offer) => void;
+  onUpdateOffer: (offer: Offer) => void;
+  onDeleteOffer: (id: number) => void;
+  
+  news: NewsItem[];
+  onAddNews: (news: NewsItem) => void;
+  onUpdateNews: (news: NewsItem) => void;
+  onDeleteNews: (id: number) => void;
+
+  notifications: AppNotification[];
+  onAddNotification: (n: AppNotification) => void;
+  onUpdateNotification: (n: AppNotification) => void;
+  onDeleteNotification: (id: number) => void;
+
+  maintenance: MaintenanceConfig;
+  onUpdateMaintenance: (config: MaintenanceConfig) => void;
+
+  connectionConfig: ConnectionConfig;
+  onUpdateConnectionConfig: (config: ConnectionConfig) => void;
+
+  users: User[];
+  onAddUser: (user: User) => void;
+  onUpdateUser: (user: User) => void;
+  onDeleteUser: (id: string) => void;
+}
+
+// ... Icons and Colors definitions omitted for brevity ...
+const availableIcons = [
+  'work', 'shopping_cart', 'shopping_bag', 'inventory_2', 'savings', 
+  'account_balance', 'payments', 'attach_money', 'receipt_long', 'credit_card',
+  'local_shipping', 'wifi', 'computer', 'phone_iphone', 'build', 
+  'restaurant', 'flight', 'directions_car', 'home', 'apartment',
+  'school', 'health_and_safety', 'fitness_center', 'groups', 'campaign',
+  'content_cut', 'palette', 'camera_alt', 'music_note', 'pets', 'store', 
+  'laptop_mac', 'verified_user', 'analytics'
+];
+
+const tailwindColors = [
+  { name: 'Purple', class: 'bg-purple-600', text: 'text-purple-600' },
+  { name: 'Blue', class: 'bg-blue-500', text: 'text-blue-500' },
+  { name: 'Emerald', class: 'bg-emerald-500', text: 'text-emerald-500' },
+  { name: 'Orange', class: 'bg-orange-500', text: 'text-orange-500' },
+  { name: 'Red', class: 'bg-red-500', text: 'text-red-500' },
+  { name: 'Slate', class: 'bg-slate-800', text: 'text-slate-800' },
+  { name: 'Cyan', class: 'bg-cyan-600', text: 'text-cyan-600' },
+  { name: 'Pink', class: 'bg-pink-500', text: 'text-pink-500' },
+];
+
+const AdminPage: React.FC<AdminPageProps> = ({ 
+    offers, onAddOffer, onUpdateOffer, onDeleteOffer,
+    news, onAddNews, onUpdateNews, onDeleteNews,
+    notifications, onAddNotification, onUpdateNotification, onDeleteNotification,
+    maintenance, onUpdateMaintenance,
+    connectionConfig, onUpdateConnectionConfig,
+    users, onAddUser, onUpdateUser, onDeleteUser
+}) => {
+  const [activeTab, setActiveTab] = useState<'users' | 'news' | 'offers' | 'notifications' | 'maintenance' | 'connections'>('users');
+  const [isSubmitting, setIsSubmitting] = useState(false); // Global loading state for admin actions
+
+  // --- USERS STATE ---
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [userForm, setUserForm] = useState<Partial<User>>({
+      name: '', email: '', phone: '', role: 'user', status: 'active', cnpj: ''
+  });
+  
+  // User Filters & Pagination
+  const [userSearch, setUserSearch] = useState('');
+  const [userFilterType, setUserFilterType] = useState('all');
+  const [userPage, setUserPage] = useState(1);
+  const usersPerPage = 5;
+
+  // --- NEWS STATE ---
+  const initialNewsForm: Omit<NewsItem, 'id'> = {
+    title: '', category: 'Legislação', excerpt: '', content: '', imageUrl: '', readTime: '', date: '', status: 'draft'
+  };
+  const [newsForm, setNewsForm] = useState(initialNewsForm);
+  const [editingNewsId, setEditingNewsId] = useState<number | null>(null);
+  const [showNewsPreview, setShowNewsPreview] = useState(false);
+  
+  const contentInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // --- OFFERS STATE ---
+  const initialOfferForm: Omit<Offer, 'id'> = {
+    partnerName: '', partnerColor: 'bg-blue-500', partnerIcon: 'store', discount: '',
+    title: '', description: '', category: 'Finanças', code: '', link: '',
+    expiry: '', isExclusive: false, isFeatured: false
+  };
+  const [offerForm, setOfferForm] = useState(initialOfferForm);
+  const [editingOfferId, setEditingOfferId] = useState<number | null>(null);
+  const [showIconPicker, setShowIconPicker] = useState(false);
+
+  // --- NOTIFICATIONS STATE ---
+  const initialNotifForm: {
+    text: string;
+    type: 'info' | 'warning' | 'success' | 'poll';
+    pollOptions: string[];
+    expiresAt: string;
+  } = {
+    text: '', type: 'info', pollOptions: ['Sim', 'Não'], expiresAt: ''
+  };
+  const [notifForm, setNotifForm] = useState(initialNotifForm);
+  const [editingNotifId, setEditingNotifId] = useState<number | null>(null);
+  const [viewingResultsPoll, setViewingResultsPoll] = useState<AppNotification | null>(null);
+
+  // --- CONNECTIONS FORM STATE ---
+  const [localConnConfig, setLocalConnConfig] = useState<ConnectionConfig>(connectionConfig);
+  const [testModalOpen, setTestModalOpen] = useState(false);
+  const [testType, setTestType] = useState<'cnpj' | 'diagnostic'>('cnpj');
+  const [testCnpj, setTestCnpj] = useState('');
+  const [testLoading, setTestLoading] = useState(false);
+  const [testResponse, setTestResponse] = useState<string | null>(null);
+  const [testParsedData, setTestParsedData] = useState<any | null>(null);
+
+  // --- USERS LOGIC & HANDLERS ---
+  
+  // Reset pagination when filter changes
+  useEffect(() => {
+      setUserPage(1);
+  }, [userSearch, userFilterType]);
+
+  const userStats = useMemo(() => {
+      const now = new Date();
+      const oneDay = 24 * 60 * 60 * 1000;
+      const oneWeek = 7 * oneDay;
+      const oneMonth = 30 * oneDay;
+
+      const active24h = users.filter(u => u.lastActive && (now.getTime() - new Date(u.lastActive).getTime()) < oneDay).length;
+      const activeWeek = users.filter(u => u.lastActive && (now.getTime() - new Date(u.lastActive).getTime()) < oneWeek).length;
+      const activeMonth = users.filter(u => u.lastActive && (now.getTime() - new Date(u.lastActive).getTime()) < oneMonth).length;
+      const newThisMonth = users.filter(u => u.joinedAt && (now.getTime() - new Date(u.joinedAt).getTime()) < oneMonth).length;
+
+      return { total: users.length, active24h, activeWeek, activeMonth, newThisMonth };
+  }, [users]);
+
+  // Filtered Users List
+  const filteredUsers = useMemo(() => {
+      const now = new Date();
+      const dayMs = 1000 * 60 * 60 * 24;
+
+      return users.filter(user => {
+          // 1. Text Search
+          const searchLower = userSearch.toLowerCase();
+          const matchesSearch = 
+              user.name.toLowerCase().includes(searchLower) ||
+              user.email.toLowerCase().includes(searchLower) ||
+              (user.cnpj && user.cnpj.includes(searchLower));
+          
+          if (!matchesSearch) return false;
+
+          // 2. Dropdown Filter
+          if (userFilterType === 'all') return true;
+          if (userFilterType === 'active') return user.status === 'active';
+          if (userFilterType === 'inactive') return user.status === 'inactive';
+          if (userFilterType === 'suspended') return user.status === 'suspended';
+          if (userFilterType === 'admin') return user.role === 'admin';
+          
+          // Time-based filters
+          if (userFilterType === 'inactive_30d') {
+              if (!user.lastActive) return true; // Never active matches inactive
+              const daysInactive = (now.getTime() - new Date(user.lastActive).getTime()) / dayMs;
+              return daysInactive > 30;
+          }
+          if (userFilterType === 'inactive_90d') {
+              if (!user.lastActive) return true;
+              const daysInactive = (now.getTime() - new Date(user.lastActive).getTime()) / dayMs;
+              return daysInactive > 90;
+          }
+
+          return true;
+      });
+  }, [users, userSearch, userFilterType]);
+
+  // Paginated Users List
+  const paginatedUsers = useMemo(() => {
+      const startIndex = (userPage - 1) * usersPerPage;
+      return filteredUsers.slice(startIndex, startIndex + usersPerPage);
+  }, [filteredUsers, userPage]);
+
+  const totalUserPages = Math.ceil(filteredUsers.length / usersPerPage);
+
+  const handleEditUserClick = (user: User) => {
+      setEditingUserId(user.id);
+      setUserForm({
+          name: user.name,
+          email: user.email,
+          phone: user.phone || '',
+          cnpj: user.cnpj || '',
+          role: user.role || 'user',
+          status: user.status || 'active'
+      });
+      setUserModalOpen(true);
+  };
+
+  const handleDeleteUserClick = (id: string) => {
+      if (window.confirm("ATENÇÃO: Excluir este usuário removerá todo o acesso dele à plataforma. Continuar?")) {
+          onDeleteUser(id);
+      }
+  };
+
+  const handleSaveUser = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setIsSubmitting(true);
+      await new Promise(r => setTimeout(r, 1000));
+
+      const now = new Date().toISOString();
+      
+      const payload: User = {
+          id: editingUserId || Date.now().toString(),
+          name: userForm.name || '',
+          email: userForm.email || '',
+          phone: userForm.phone,
+          cnpj: userForm.cnpj,
+          role: userForm.role as 'admin' | 'user',
+          status: userForm.status as 'active' | 'inactive' | 'suspended',
+          isSetupComplete: true, // Assuming manual admin creation implies setup
+          lastActive: editingUserId ? (users.find(u => u.id === editingUserId)?.lastActive) : undefined,
+          joinedAt: editingUserId ? (users.find(u => u.id === editingUserId)?.joinedAt) : now
+      };
+
+      if (editingUserId) {
+          onUpdateUser(payload);
+      } else {
+          onAddUser(payload);
+      }
+      setIsSubmitting(false);
+      setUserModalOpen(false);
+      setEditingUserId(null);
+      setUserForm({ name: '', email: '', phone: '', role: 'user', status: 'active', cnpj: '' });
+  };
+
+  // --- NEWS HANDLERS ---
+  const handleEditNewsClick = (e: React.MouseEvent, item: NewsItem) => {
+      e.stopPropagation();
+      setEditingNewsId(item.id);
+      setNewsForm({
+          title: item.title, category: item.category, excerpt: item.excerpt, 
+          content: item.content, imageUrl: item.imageUrl, readTime: item.readTime, 
+          date: item.date, status: item.status
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelNewsEdit = () => {
+      setEditingNewsId(null);
+      setNewsForm(initialNewsForm);
+  };
+
+  const handleDeleteNewsClick = (e: React.MouseEvent, id: number) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if(window.confirm('Tem certeza que deseja excluir esta notícia?')) {
+          onDeleteNews(id);
+          if (editingNewsId === id) handleCancelNewsEdit();
+      }
+  };
+
+  const handleSaveNews = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    await new Promise(r => setTimeout(r, 1000));
+
+    const dateStr = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+    
+    if (editingNewsId) {
+        onUpdateNews({ id: editingNewsId, ...newsForm, date: newsForm.date || dateStr });
+    } else {
+        onAddNews({ id: Date.now(), ...newsForm, date: dateStr });
+    }
+    setIsSubmitting(false);
+    handleCancelNewsEdit();
+  };
+
+  const handleFormat = (tagStart: string, tagEnd: string) => {
+    if (contentInputRef.current) {
+        const start = contentInputRef.current.selectionStart;
+        const end = contentInputRef.current.selectionEnd;
+        const text = newsForm.content;
+        const newText = text.substring(0, start) + tagStart + text.substring(start, end) + tagEnd + text.substring(end);
+        setNewsForm({ ...newsForm, content: newText });
+        
+        setTimeout(() => {
+            contentInputRef.current?.focus();
+            contentInputRef.current?.setSelectionRange(start + tagStart.length, end + tagStart.length);
+        }, 10);
+    }
+  };
+
+  // --- OFFERS HANDLERS ---
+  const handleEditOfferClick = (e: React.MouseEvent, offer: Offer) => {
+    e.stopPropagation();
+    setEditingOfferId(offer.id);
+    setOfferForm({
+        partnerName: offer.partnerName, partnerColor: offer.partnerColor, partnerIcon: offer.partnerIcon,
+        discount: offer.discount, title: offer.title, description: offer.description, category: offer.category,
+        code: offer.code || '', link: offer.link || '', expiry: offer.expiry,
+        isExclusive: offer.isExclusive || false, isFeatured: offer.isFeatured || false
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelOfferEdit = () => {
+      setEditingOfferId(null);
+      setOfferForm(initialOfferForm);
+  };
+
+  const handleSaveOffer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    await new Promise(r => setTimeout(r, 1000));
+
+    if (editingOfferId) {
+        onUpdateOffer({ id: editingOfferId, ...offerForm });
+    } else {
+        onAddOffer({ id: Date.now(), ...offerForm });
+    }
+    setIsSubmitting(false);
+    handleCancelOfferEdit();
+  };
+
+  const handleDeleteOfferClick = (e: React.MouseEvent, id: number) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if(window.confirm('Tem certeza que deseja excluir esta oferta?')) {
+          onDeleteOffer(id);
+          if (editingOfferId === id) handleCancelOfferEdit();
+      }
+  }
+
+  // --- NOTIFICATION HANDLERS ---
+  const handleAddPollOption = () => {
+      setNotifForm({...notifForm, pollOptions: [...notifForm.pollOptions, `Opção ${notifForm.pollOptions.length + 1}`]});
+  }
+
+  const handleRemovePollOption = (index: number) => {
+      const newOptions = notifForm.pollOptions.filter((_, i) => i !== index);
+      setNotifForm({...notifForm, pollOptions: newOptions});
+  }
+
+  const handlePollOptionChange = (index: number, value: string) => {
+      const newOptions = [...notifForm.pollOptions];
+      newOptions[index] = value;
+      setNotifForm({...notifForm, pollOptions: newOptions});
+  }
+
+  const handleEditNotifClick = (item: AppNotification) => {
+      setEditingNotifId(item.id);
+      setNotifForm({
+          text: item.text,
+          type: item.type,
+          pollOptions: item.pollOptions ? item.pollOptions.map(o => o.text) : ['Sim', 'Não'],
+          expiresAt: item.expiresAt || ''
+      });
+  }
+
+  const handleCancelNotifEdit = () => {
+      setEditingNotifId(null);
+      setNotifForm(initialNotifForm);
+  }
+
+  const handleDeleteNotifClick = (id: number) => {
+      if(window.confirm("Excluir esta notificação?")) {
+          onDeleteNotification(id);
+          if (editingNotifId === id) handleCancelNotifEdit();
+      }
+  }
+
+  const handleSaveNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    await new Promise(r => setTimeout(r, 1000));
+
+    const dateStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + ' - ' + new Date().toLocaleDateString('pt-BR');
+    
+    let pollData: PollOption[] | undefined = undefined;
+    if (notifForm.type === 'poll') {
+        pollData = notifForm.pollOptions.map((opt, idx) => ({ id: idx, text: opt, votes: 0 }));
+    }
+
+    const payload: AppNotification = {
+        id: editingNotifId || Date.now(),
+        text: notifForm.text,
+        type: notifForm.type,
+        date: editingNotifId ? (notifications.find(n => n.id === editingNotifId)?.date || dateStr) : dateStr,
+        active: true,
+        pollOptions: pollData,
+        expiresAt: notifForm.expiresAt,
+        // Preserve existing votes if updating
+        pollVotes: editingNotifId ? (notifications.find(n => n.id === editingNotifId)?.pollVotes || []) : []
+    };
+
+    if (editingNotifId) {
+        onUpdateNotification(payload);
+    } else {
+        onAddNotification(payload);
+    }
+    setIsSubmitting(false);
+    handleCancelNotifEdit();
+  };
+
+  const handleExportPollVotes = () => {
+      if (!viewingResultsPoll || !viewingResultsPoll.pollVotes) return;
+
+      const headers = ["Data/Hora", "Usuário", "Email", "Voto (Opção)"];
+      const rows = viewingResultsPoll.pollVotes.map(v => [
+          new Date(v.votedAt).toLocaleString('pt-BR'),
+          v.userName,
+          v.userEmail,
+          v.optionText
+      ]);
+
+      const csvContent = "\uFEFF" + headers.join(";") + "\n" + rows.map(r => r.join(";")).join("\n");
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `enquete_${viewingResultsPoll.id}_resultados.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  };
+
+  // --- MAINTENANCE HANDLER ---
+  const toggleMaintenance = (key: keyof MaintenanceConfig) => {
+    onUpdateMaintenance({ ...maintenance, [key]: !maintenance[key] });
+  };
+
+  // --- CONNECTION HANDLERS ---
+  const handleSaveConnection = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setIsSubmitting(true);
+      await new Promise(r => setTimeout(r, 1000));
+      onUpdateConnectionConfig(localConnConfig);
+      setIsSubmitting(false);
+      alert('Configurações de conexão salvas com sucesso!');
+  };
+
+  // Helper to extract nested values
+  const getNestedValue = (obj: any, path: string) => {
+      return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+  };
+
+  const handleTestConnection = async () => {
+      if (!testCnpj) {
+          alert('Por favor, insira um CNPJ para teste.');
+          return;
+      }
+      
+      setTestLoading(true);
+      setTestResponse(null);
+      setTestParsedData(null);
+      
+      try {
+          const cleanCnpj = testCnpj.replace(/[^\d]/g, '');
+          let url = '';
+          let options: RequestInit = {};
+
+          if (testType === 'cnpj') {
+              url = `https://corsproxy.io/?${encodeURIComponent(localConnConfig.cnpjApi.baseUrl + cleanCnpj)}`;
+          } else {
+              // Diagnostic API logic
+              const webhookUrl = localConnConfig.diagnosticApi.webhookUrl;
+              const urlWithParams = `${webhookUrl}?cnpj=${cleanCnpj}`;
+              url = `https://corsproxy.io/?${encodeURIComponent(urlWithParams)}`;
+              options = {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json',
+                      [localConnConfig.diagnosticApi.headerKey || 'cnpj']: cleanCnpj
+                  },
+                  body: JSON.stringify({ cnpj: cleanCnpj })
+              };
+          }
+
+          const response = await fetch(url, options);
+          const rawText = await response.text();
+          let json;
+          try {
+              json = JSON.parse(rawText);
+          } catch {
+              json = { error: "Could not parse JSON", raw: rawText };
+          }
+
+          setTestResponse(JSON.stringify(json, null, 2));
+
+          // Parse based on mappings
+          const mappings = testType === 'cnpj' ? localConnConfig.cnpjApi.mappings : localConnConfig.diagnosticApi.mappings;
+          
+          let dataToMap = json;
+          if (Array.isArray(json) && json.length > 0) dataToMap = json[0];
+          if (dataToMap?.resultado) dataToMap = dataToMap.resultado;
+
+          const parsed: Record<string, any> = {};
+          mappings.forEach(m => {
+              if (m.visible) {
+                  let val = getNestedValue(dataToMap, m.jsonPath);
+                  if (typeof val === 'object') val = JSON.stringify(val);
+                  parsed[m.label] = val !== undefined ? val : 'N/A';
+              }
+          });
+          setTestParsedData(parsed);
+
+      } catch (error: any) {
+          setTestResponse(`Error: ${error.message}`);
+      } finally {
+          setTestLoading(false);
+      }
+  };
+
+  const handleUpdateMapping = (apiType: 'cnpj' | 'diagnostic', index: number, field: keyof ApiFieldMapping, value: any) => {
+      const newConfig = { ...localConnConfig };
+      const mappings = apiType === 'cnpj' ? newConfig.cnpjApi.mappings : newConfig.diagnosticApi.mappings;
+      mappings[index] = { ...mappings[index], [field]: value };
+      setLocalConnConfig(newConfig);
+  };
+
+  const MappingEditor = ({ mappings, apiType }: { mappings: ApiFieldMapping[], apiType: 'cnpj' | 'diagnostic' }) => (
+      <div className="mt-4 border rounded-lg overflow-hidden border-slate-200 dark:border-slate-700">
+          <div className="bg-slate-50 dark:bg-slate-800 p-3 text-xs font-bold text-slate-500 uppercase flex gap-4">
+              <div className="flex-1">Campo do Sistema</div>
+              <div className="flex-1">Caminho JSON (Path)</div>
+              <div className="flex-1">Rótulo de Exibição</div>
+              <div className="w-16 text-center">Visível</div>
+          </div>
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900 max-h-60 overflow-y-auto">
+              {mappings.map((m, idx) => (
+                  <div key={m.key} className="p-3 flex gap-4 items-center">
+                      <div className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-300">{m.key}</div>
+                      <div className="flex-1">
+                          <input 
+                              type="text" 
+                              value={m.jsonPath} 
+                              onChange={(e) => handleUpdateMapping(apiType, idx, 'jsonPath', e.target.value)}
+                              className="w-full px-2 py-1 border border-slate-200 dark:border-slate-700 rounded text-sm bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                          />
+                      </div>
+                      <div className="flex-1">
+                          <input 
+                              type="text" 
+                              value={m.label} 
+                              onChange={(e) => handleUpdateMapping(apiType, idx, 'label', e.target.value)}
+                              className="w-full px-2 py-1 border border-slate-200 dark:border-slate-700 rounded text-sm bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                          />
+                      </div>
+                      <div className="w-16 flex justify-center">
+                          <input 
+                              type="checkbox" 
+                              checked={m.visible} 
+                              onChange={(e) => handleUpdateMapping(apiType, idx, 'visible', e.target.checked)}
+                              className="rounded text-primary focus:ring-primary"
+                          />
+                      </div>
+                  </div>
+              ))}
+          </div>
+      </div>
+  );
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500 pb-8 max-w-6xl mx-auto">
+      
+      {/* Admin Tabs */}
+      <div className="flex flex-wrap gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full md:w-auto self-start inline-flex">
+        {/* ... Tab buttons ... */}
+        <button onClick={() => setActiveTab('users')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
+          Usuários
+        </button>
+        <button onClick={() => setActiveTab('news')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'news' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
+          Notícias
+        </button>
+        <button onClick={() => setActiveTab('offers')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'offers' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
+          Ofertas
+        </button>
+        <button onClick={() => setActiveTab('notifications')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'notifications' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
+          Notificações
+        </button>
+        <button onClick={() => setActiveTab('connections')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'connections' ? 'bg-white dark:bg-slate-700 text-blue-500 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
+          Conexões
+        </button>
+        <button onClick={() => setActiveTab('maintenance')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'maintenance' ? 'bg-white dark:bg-slate-700 text-red-500 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
+          Manutenção
+        </button>
+      </div>
+
+      {/* --- CONTENT: USERS --- */}
+      {activeTab === 'users' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+              {/* ... User Stats & Table code remains same ... */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <p className="text-xs font-bold text-slate-500 uppercase mb-1">Total de Usuários</p>
+                      <div className="flex items-end gap-2">
+                          <span className="text-3xl font-bold text-slate-800 dark:text-white">{userStats.total}</span>
+                          <span className="text-xs text-green-500 font-bold mb-1">+{userStats.newThisMonth} este mês</span>
+                      </div>
+                  </div>
+                  {/* ... other stats ... */}
+                  <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <p className="text-xs font-bold text-slate-500 uppercase mb-1">Ativos (24h)</p>
+                      <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">{userStats.active24h}</span>
+                  </div>
+                  <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <p className="text-xs font-bold text-slate-500 uppercase mb-1">Ativos (7 dias)</p>
+                      <span className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{userStats.activeWeek}</span>
+                  </div>
+                  <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <p className="text-xs font-bold text-slate-500 uppercase mb-1">Ativos (30 dias)</p>
+                      <span className="text-3xl font-bold text-purple-600 dark:text-purple-400">{userStats.activeMonth}</span>
+                  </div>
+              </div>
+
+              {/* Users Table */}
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                  {/* ... Toolbar ... */}
+                  <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-50 dark:bg-slate-800/50">
+                      <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 mr-auto">
+                          <span className="material-icons text-primary">groups</span>
+                          Gestão de Usuários
+                      </h3>
+                      <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                          {/* Search */}
+                          <div className="relative w-full md:w-64">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-sm">search</span>
+                              <input 
+                                type="text" 
+                                placeholder="Buscar nome, email ou CNPJ..." 
+                                value={userSearch}
+                                onChange={(e) => setUserSearch(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                              />
+                          </div>
+                          {/* Filter */}
+                          <select 
+                            value={userFilterType}
+                            onChange={(e) => setUserFilterType(e.target.value)}
+                            className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                          >
+                              <option value="all">Todos os Status</option>
+                              <option value="active">Ativos</option>
+                              <option value="inactive">Inativos</option>
+                              <option value="suspended">Suspensos</option>
+                              <option value="admin">Administradores</option>
+                              <option value="inactive_30d">Inativos {'>'} 30 dias</option>
+                              <option value="inactive_90d">Inativos {'>'} 90 dias</option>
+                          </select>
+                          {/* New User Button */}
+                          <button 
+                              onClick={() => {
+                                  setEditingUserId(null);
+                                  setUserForm({ name: '', email: '', phone: '', role: 'user', status: 'active', cnpj: '' });
+                                  setUserModalOpen(true);
+                              }}
+                              className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm transition-colors whitespace-nowrap"
+                          >
+                              <span className="material-icons text-sm">person_add</span>
+                              Novo
+                          </button>
+                      </div>
+                  </div>
+                  
+                  {/* Table Body */}
+                  <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                          <thead>
+                              <tr className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs uppercase font-semibold">
+                                  <th className="px-6 py-3">Usuário</th>
+                                  <th className="px-6 py-3">CNPJ</th>
+                                  <th className="px-6 py-3">Função</th>
+                                  <th className="px-6 py-3">Status</th>
+                                  <th className="px-6 py-3">Último Acesso</th>
+                                  <th className="px-6 py-3 text-right">Ações</th>
+                              </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                              {paginatedUsers.length === 0 ? (
+                                  <tr>
+                                      <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                                          Nenhum usuário encontrado com os filtros atuais.
+                                      </td>
+                                  </tr>
+                              ) : (
+                                  paginatedUsers.map(user => (
+                                      <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                          <td className="px-6 py-3">
+                                              <div className="flex items-center gap-3">
+                                                  <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500 text-xs font-bold">
+                                                      {user.name.charAt(0).toUpperCase()}
+                                                  </div>
+                                                  <div>
+                                                      <p className="text-sm font-bold text-slate-800 dark:text-white">{user.name}</p>
+                                                      <p className="text-xs text-slate-500">{user.email}</p>
+                                                  </div>
+                                              </div>
+                                          </td>
+                                          <td className="px-6 py-3 text-sm text-slate-600 dark:text-slate-300 font-mono">
+                                              {user.cnpj || '-'}
+                                          </td>
+                                          <td className="px-6 py-3">
+                                              <span className={`text-xs px-2 py-1 rounded font-bold uppercase ${
+                                                  user.role === 'admin' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                                              }`}>
+                                                  {user.role}
+                                              </span>
+                                          </td>
+                                          <td className="px-6 py-3">
+                                              <span className={`text-xs px-2 py-1 rounded font-bold uppercase ${
+                                                  user.status === 'active' ? 'bg-green-100 text-green-700' : 
+                                                  user.status === 'inactive' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                                              }`}>
+                                                  {user.status}
+                                              </span>
+                                          </td>
+                                          <td className="px-6 py-3 text-xs text-slate-500">
+                                              {user.lastActive ? new Date(user.lastActive).toLocaleString('pt-BR') : 'Nunca'}
+                                          </td>
+                                          <td className="px-6 py-3 text-right">
+                                              <div className="flex justify-end gap-1">
+                                                  <button 
+                                                      onClick={() => handleEditUserClick(user)}
+                                                      className="p-1.5 text-slate-400 hover:text-primary rounded hover:bg-blue-50 dark:hover:bg-slate-800"
+                                                      title="Editar"
+                                                  >
+                                                      <span className="material-icons text-sm">edit</span>
+                                                  </button>
+                                                  <button 
+                                                      onClick={() => handleDeleteUserClick(user.id)}
+                                                      className="p-1.5 text-slate-400 hover:text-red-500 rounded hover:bg-red-50 dark:hover:bg-slate-800"
+                                                      title="Excluir"
+                                                  >
+                                                      <span className="material-icons text-sm">delete</span>
+                                                  </button>
+                                              </div>
+                                          </td>
+                                      </tr>
+                                  ))
+                              )}
+                          </tbody>
+                      </table>
+                  </div>
+
+                  {/* Pagination Footer */}
+                  {totalUserPages > 1 && (
+                      <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                              Página <span className="font-bold text-slate-800 dark:text-white">{userPage}</span> de {totalUserPages}
+                          </span>
+                          <div className="flex gap-2">
+                              <button 
+                                  onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                                  disabled={userPage === 1}
+                                  className="px-3 py-1 text-xs font-medium rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                  Anterior
+                              </button>
+                              <button 
+                                  onClick={() => setUserPage(p => Math.min(totalUserPages, p + 1))}
+                                  disabled={userPage === totalUserPages}
+                                  className="px-3 py-1 text-xs font-medium rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                  Próxima
+                              </button>
+                          </div>
+                      </div>
+                  )}
+              </div>
+
+              {/* User Modal */}
+              {userModalOpen && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+                      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800">
+                          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
+                              <h3 className="font-bold text-lg text-slate-800 dark:text-white">
+                                  {editingUserId ? 'Editar Usuário' : 'Novo Usuário'}
+                              </h3>
+                              <button onClick={() => setUserModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                  <span className="material-icons">close</span>
+                              </button>
+                          </div>
+                          
+                          <form onSubmit={handleSaveUser} className="p-6 space-y-4">
+                              {/* ... User Form Fields ... */}
+                              <div>
+                                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome Completo</label>
+                                  <input 
+                                      type="text" 
+                                      required 
+                                      value={userForm.name} 
+                                      onChange={e => setUserForm({...userForm, name: e.target.value})}
+                                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50"
+                                  />
+                              </div>
+                              <div>
+                                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
+                                  <input 
+                                      type="email" 
+                                      required 
+                                      value={userForm.email} 
+                                      onChange={e => setUserForm({...userForm, email: e.target.value})}
+                                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50"
+                                  />
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Telefone</label>
+                                      <input 
+                                          type="text" 
+                                          value={userForm.phone} 
+                                          onChange={e => setUserForm({...userForm, phone: e.target.value})}
+                                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50"
+                                      />
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">CNPJ</label>
+                                      <input 
+                                          type="text" 
+                                          value={userForm.cnpj} 
+                                          onChange={e => setUserForm({...userForm, cnpj: e.target.value})}
+                                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50"
+                                      />
+                                  </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Função</label>
+                                      <select 
+                                          value={userForm.role}
+                                          onChange={e => setUserForm({...userForm, role: e.target.value as any})}
+                                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50"
+                                      >
+                                          <option value="user">Usuário</option>
+                                          <option value="admin">Administrador</option>
+                                      </select>
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
+                                      <select 
+                                          value={userForm.status}
+                                          onChange={e => setUserForm({...userForm, status: e.target.value as any})}
+                                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50"
+                                      >
+                                          <option value="active">Ativo</option>
+                                          <option value="inactive">Inativo</option>
+                                          <option value="suspended">Suspensos</option>
+                                      </select>
+                                  </div>
+                              </div>
+                              
+                              <div className="flex justify-end gap-3 pt-4">
+                                  <button 
+                                      type="button" 
+                                      onClick={() => setUserModalOpen(false)}
+                                      className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium transition-colors"
+                                  >
+                                      Cancelar
+                                  </button>
+                                  <button 
+                                      type="submit" 
+                                      disabled={isSubmitting}
+                                      className="px-6 py-2 bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
+                                  >
+                                      {isSubmitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'Salvar'}
+                                  </button>
+                              </div>
+                          </form>
+                      </div>
+                  </div>
+              )}
+          </div>
+      )}
+
+      {/* --- CONTENT: NEWS --- */}
+      {activeTab === 'news' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* News Form */}
+          <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+            {/* ... News Form content ... */}
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">
+                {editingNewsId ? 'Editar Notícia' : 'Publicar Nova Notícia'}
+            </h3>
+            
+            {editingNewsId && (
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 rounded-lg flex justify-between items-center">
+                    <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">Editando notícia...</span>
+                    <button type="button" onClick={handleCancelNewsEdit} className="text-xs font-bold text-blue-600 hover:underline">Cancelar</button>
+                </div>
+            )}
+
+            <form onSubmit={handleSaveNews} className="space-y-4">
+              {/* ... News Form Fields ... */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Título do Artigo</label>
+                  <input type="text" required value={newsForm.title} onChange={e => setNewsForm({...newsForm, title: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Categoria</label>
+                  <select value={newsForm.category} onChange={e => setNewsForm({...newsForm, category: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none">
+                    <option>Legislação</option><option>Finanças</option><option>Gestão</option><option>Marketing</option><option>Tecnologia</option><option>Benefícios</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tempo de Leitura</label>
+                  <input type="text" placeholder="Ex: 5 min leitura" value={newsForm.readTime} onChange={e => setNewsForm({...newsForm, readTime: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">URL da Imagem de Capa</label>
+                  <input type="text" placeholder="https://..." value={newsForm.imageUrl} onChange={e => setNewsForm({...newsForm, imageUrl: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" />
+                </div>
+                <div className="md:col-span-2">
+                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Resumo (Excerpt)</label>
+                   <textarea rows={2} required value={newsForm.excerpt} onChange={e => setNewsForm({...newsForm, excerpt: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" placeholder="Breve descrição que aparece no card..."></textarea>
+                </div>
+                
+                {/* Enhanced Content Editor */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Conteúdo do Artigo (HTML suportado)</label>
+                  <div className="border border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-800">
+                      {/* Editor Toolbar */}
+                      <div className="flex flex-wrap gap-1 p-2 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+                          <button type="button" onClick={() => handleFormat('<strong>', '</strong>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 font-bold" title="Negrito">B</button>
+                          <button type="button" onClick={() => handleFormat('<em>', '</em>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 italic" title="Itálico">I</button>
+                          <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center"></div>
+                          <button type="button" onClick={() => handleFormat('<h2>', '</h2>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 font-bold text-sm" title="Título H2">H2</button>
+                          <button type="button" onClick={() => handleFormat('<h3>', '</h3>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 font-bold text-xs" title="Título H3">H3</button>
+                          <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center"></div>
+                          <button type="button" onClick={() => handleFormat('<p>', '</p>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Parágrafo"><span className="material-icons text-sm">segment</span></button>
+                          <button type="button" onClick={() => handleFormat('<ul>\n<li>', '</li>\n</ul>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Lista com marcadores"><span className="material-icons text-sm">format_list_bulleted</span></button>
+                          <button type="button" onClick={() => handleFormat('<ol>\n<li>', '</li>\n</ol>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Lista numerada"><span className="material-icons text-sm">format_list_numbered</span></button>
+                          <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center"></div>
+                          <button type="button" onClick={() => handleFormat('<a href="#" target="_blank">', '</a>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Link"><span className="material-icons text-sm">link</span></button>
+                          <button type="button" onClick={() => handleFormat('<blockquote>', '</blockquote>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Citação"><span className="material-icons text-sm">format_quote</span></button>
+                      </div>
+                      <textarea 
+                        ref={contentInputRef}
+                        rows={10} 
+                        required 
+                        value={newsForm.content} 
+                        onChange={e => setNewsForm({...newsForm, content: e.target.value})} 
+                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none font-mono text-sm" 
+                        placeholder="Escreva seu artigo aqui. Use a barra acima para formatar..."
+                      ></textarea>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Dica: Selecione o texto e clique nos botões acima para formatar.</p>
+                </div>
+
+                <div>
+                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
+                   <select value={newsForm.status} onChange={e => setNewsForm({...newsForm, status: e.target.value as any})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none">
+                     <option value="draft">Rascunho</option>
+                     <option value="published">Publicado</option>
+                   </select>
+                </div>
+              </div>
+              <div className="flex justify-end pt-2 gap-2">
+                <button type="button" onClick={() => setShowNewsPreview(true)} className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
+                    Pré-visualizar
+                </button>
+                <button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2">
+                  {isSubmitting ? (
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  ) : (
+                      <span className="material-icons text-sm">{editingNewsId ? 'save_as' : 'publish'}</span> 
+                  )}
+                  {editingNewsId ? 'Salvar Alterações' : 'Publicar Notícia'}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* News List */}
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm h-fit">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Gerenciar Notícias</h3>
+            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
+              {news.map(item => (
+                <div key={item.id} onClick={(e) => handleEditNewsClick(e, item)} className={`p-3 rounded-lg border cursor-pointer transition-colors ${editingNewsId === item.id ? 'bg-blue-50 border-blue-200' : 'border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800'}`}>
+                  <h4 className="font-semibold text-slate-800 dark:text-white text-sm line-clamp-1">{item.title}</h4>
+                  <div className="flex justify-between items-center mt-2">
+                    <div className="flex gap-2">
+                        <span className="text-xs text-slate-500 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded">{item.category}</span>
+                        {item.status === 'draft' && <span className="text-xs text-slate-500 bg-yellow-100 px-2 py-0.5 rounded">Rascunho</span>}
+                    </div>
+                    <div className="flex gap-1">
+                      <button type="button" onClick={(e) => handleEditNewsClick(e, item)} className="p-1 text-slate-400 hover:text-primary"><span className="material-icons text-sm">edit</span></button>
+                      <button type="button" onClick={(e) => handleDeleteNewsClick(e, item.id)} className="p-1 text-slate-400 hover:text-red-500"><span className="material-icons text-sm">delete</span></button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- CONTENT: OFFERS --- */}
+      {activeTab === 'offers' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Offers Form */}
+          <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+            {/* ... Offer Form Content ... */}
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">
+                {editingOfferId ? 'Editar Oferta Existente' : 'Cadastrar Oferta ou Cupom'}
+            </h3>
+            
+            {editingOfferId && (
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 rounded-lg flex justify-between items-center">
+                    <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">Editando oferta...</span>
+                    <button type="button" onClick={handleCancelOfferEdit} className="text-xs font-bold text-blue-600 hover:underline">Cancelar</button>
+                </div>
+            )}
+
+            <form onSubmit={handleSaveOffer} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="md:col-span-2 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Identidade do Parceiro</label>
+                    <div className="flex gap-4 items-center">
+                        <button type="button" onClick={() => setShowIconPicker(!showIconPicker)} className={`w-12 h-12 rounded-lg ${offerForm.partnerColor} text-white flex items-center justify-center`}><span className="material-icons">{offerForm.partnerIcon}</span></button>
+                         {showIconPicker && (
+                         <div className="absolute mt-16 p-2 bg-white border rounded shadow-xl z-50 grid grid-cols-5 gap-1 h-32 overflow-y-auto">
+                           {availableIcons.map(icon => <button key={icon} type="button" onClick={() => { setOfferForm({...offerForm, partnerIcon: icon}); setShowIconPicker(false); }} className="p-1 hover:bg-slate-100"><span className="material-icons text-sm">{icon}</span></button>)}
+                         </div>
+                       )}
+                        <div className="flex flex-wrap gap-1">
+                            {tailwindColors.map(c => <button key={c.name} type="button" onClick={() => setOfferForm({...offerForm, partnerColor: c.class})} className={`w-6 h-6 rounded-full ${c.class} ring-1 ring-offset-1 ${offerForm.partnerColor === c.class ? 'ring-slate-400' : 'ring-transparent'}`}></button>)}
+                        </div>
+                    </div>
+                 </div>
+                 {/* ... Other inputs ... */}
+                 <div className="md:col-span-1"><label className="text-sm block mb-1">Parceiro</label><input type="text" required value={offerForm.partnerName} onChange={e => setOfferForm({...offerForm, partnerName: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
+                 <div className="md:col-span-1"><label className="text-sm block mb-1">Desconto</label><input type="text" required value={offerForm.discount} onChange={e => setOfferForm({...offerForm, discount: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
+                 <div className="md:col-span-2"><label className="text-sm block mb-1">Título</label><input type="text" required value={offerForm.title} onChange={e => setOfferForm({...offerForm, title: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
+                 <div className="md:col-span-2"><label className="text-sm block mb-1">Descrição</label><textarea required rows={2} value={offerForm.description} onChange={e => setOfferForm({...offerForm, description: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
+                 <div className="md:col-span-1"><label className="text-sm block mb-1">Cupom</label><input type="text" value={offerForm.code} onChange={e => setOfferForm({...offerForm, code: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
+                 <div className="md:col-span-1"><label className="text-sm block mb-1">Validade</label><input type="text" required value={offerForm.expiry} onChange={e => setOfferForm({...offerForm, expiry: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
+                 <div className="md:col-span-1"><label className="text-sm block mb-1">Link</label><input type="text" value={offerForm.link} onChange={e => setOfferForm({...offerForm, link: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
+                 <div className="md:col-span-1"><label className="text-sm block mb-1">Categoria</label><select value={offerForm.category} onChange={e => setOfferForm({...offerForm, category: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800"><option>Finanças</option><option>Software</option><option>Serviços</option><option>Educação</option></select></div>
+                 <div className="md:col-span-2 flex gap-4">
+                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={offerForm.isExclusive} onChange={e => setOfferForm({...offerForm, isExclusive: e.target.checked})} /> Exclusivo</label>
+                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={offerForm.isFeatured} onChange={e => setOfferForm({...offerForm, isFeatured: e.target.checked})} /> Destaque</label>
+                 </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2"
+                >
+                    {isSubmitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : null}
+                    {editingOfferId ? 'Atualizar' : 'Salvar'}
+                </button>
+              </div>
+            </form>
+          </div>
+          
+          {/* Offers List */}
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm h-fit">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Ofertas Ativas</h3>
+            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
+              {offers.map(offer => (
+                <div key={offer.id} onClick={(e) => handleEditOfferClick(e, offer)} className={`p-3 rounded-lg border cursor-pointer flex justify-between items-center group ${editingOfferId === offer.id ? 'bg-blue-50 border-blue-200' : 'border-slate-100 hover:bg-slate-50'}`}>
+                  <div className="flex items-center gap-3">
+                     <div className={`w-8 h-8 rounded ${offer.partnerColor} flex items-center justify-center text-white text-xs`}><span className="material-icons text-sm">{offer.partnerIcon}</span></div>
+                     <div><h4 className="font-semibold text-slate-800 dark:text-white text-sm line-clamp-1">{offer.title}</h4></div>
+                  </div>
+                  <div className="flex gap-1">
+                      <button type="button" onClick={(e) => handleEditOfferClick(e, offer)} className="p-1 text-slate-400 hover:text-primary"><span className="material-icons text-sm">edit</span></button>
+                      <button type="button" onClick={(e) => handleDeleteOfferClick(e, offer.id)} className="p-1 text-slate-400 hover:text-red-500"><span className="material-icons text-sm">delete</span></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- CONTENT: NOTIFICATIONS --- */}
+      {activeTab === 'notifications' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+                {/* ... Notification Form Content ... */}
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">
+                    {editingNotifId ? 'Editar Notificação' : 'Criar Notificação ou Enquete'}
+                </h3>
+                
+                {editingNotifId && (
+                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 rounded-lg flex justify-between items-center">
+                      <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">Editando notificação...</span>
+                      <button type="button" onClick={handleCancelNotifEdit} className="text-xs font-bold text-blue-600 hover:underline">Cancelar</button>
+                  </div>
+                )}
+
+                <form onSubmit={handleSaveNotification} className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4">
+                        <div>
+                           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de Mensagem</label>
+                           <div className="grid grid-cols-4 gap-2">
+                              {([
+                                  {val: 'info', icon: 'info', label: 'Info', color: 'bg-blue-100 text-blue-600'},
+                                  {val: 'warning', icon: 'warning', label: 'Aviso', color: 'bg-yellow-100 text-yellow-600'},
+                                  {val: 'success', icon: 'check_circle', label: 'Sucesso', color: 'bg-green-100 text-green-600'},
+                                  {val: 'poll', icon: 'poll', label: 'Enquete', color: 'bg-purple-100 text-purple-600'}
+                              ] as const).map(opt => (
+                                <button 
+                                  key={opt.val}
+                                  type="button" 
+                                  onClick={() => setNotifForm({...notifForm, type: opt.val})} 
+                                  className={`flex flex-col items-center p-3 rounded-lg border transition-all ${notifForm.type === opt.val ? `border-current ${opt.color} ring-1 ring-offset-1` : 'border-slate-200 bg-white hover:bg-slate-50'}`}
+                                >
+                                    <span className="material-icons mb-1">{opt.icon}</span>
+                                    <span className="text-xs font-bold">{opt.label}</span>
+                                </button>
+                              ))}
+                           </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                {notifForm.type === 'poll' ? 'Pergunta da Enquete' : 'Mensagem'}
+                            </label>
+                            <textarea 
+                                required 
+                                rows={notifForm.type === 'poll' ? 2 : 4} 
+                                value={notifForm.text} 
+                                onChange={e => setNotifForm({...notifForm, text: e.target.value})} 
+                                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50" 
+                                placeholder={notifForm.type === 'poll' ? "Ex: Qual funcionalidade você quer ver primeiro?" : "Escreva o conteúdo da notificação..."}
+                            />
+                        </div>
+
+                        {/* Poll Options Builder */}
+                        {notifForm.type === 'poll' && (
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-top-2">
+                                <div className="mb-4">
+                                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Validade / Prazo</label>
+                                  <input 
+                                    type="datetime-local" 
+                                    value={notifForm.expiresAt} 
+                                    onChange={e => setNotifForm({...notifForm, expiresAt: e.target.value})}
+                                    className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-sm"
+                                  />
+                                </div>
+
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Opções de Resposta</label>
+                                <div className="space-y-2">
+                                    {notifForm.pollOptions.map((opt, idx) => (
+                                        <div key={idx} className="flex gap-2">
+                                            <input 
+                                                type="text" 
+                                                value={opt} 
+                                                onChange={(e) => handlePollOptionChange(idx, e.target.value)}
+                                                className="flex-1 px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-sm"
+                                                placeholder={`Opção ${idx + 1}`}
+                                            />
+                                            {notifForm.pollOptions.length > 2 && (
+                                                <button type="button" onClick={() => handleRemovePollOption(idx)} className="p-2 text-slate-400 hover:text-red-500">
+                                                    <span className="material-icons">close</span>
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                                <button 
+                                    type="button" 
+                                    onClick={handleAddPollOption}
+                                    className="mt-3 text-sm text-primary font-medium hover:underline flex items-center gap-1"
+                                >
+                                    <span className="material-icons text-sm">add</span> Adicionar Opção
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex justify-end gap-3">
+                         <button 
+                            type="submit" 
+                            disabled={isSubmitting}
+                            className="bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-6 py-2 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2"
+                         >
+                            {isSubmitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : null}
+                            {editingNotifId ? 'Atualizar' : 'Publicar'}
+                         </button>
+                    </div>
+                </form>
+            </div>
+             
+             {/* ... Notifications List ... */}
+             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm h-fit">
+                <h3 className="font-bold text-slate-800 dark:text-white mb-4">Ativas</h3>
+                <div className="space-y-4">
+                    {notifications.length === 0 ? <p className="text-slate-400 text-sm text-center py-4">Nenhuma notificação.</p> : null}
+                    {notifications.map(n => (
+                        <div key={n.id} onClick={() => handleEditNotifClick(n)} className={`p-4 rounded-lg border border-l-4 cursor-pointer hover:bg-slate-50 transition-colors ${
+                            n.type === 'info' ? 'border-l-blue-500' :
+                            n.type === 'warning' ? 'border-l-yellow-500' :
+                            n.type === 'success' ? 'border-l-green-500' : 'border-l-purple-500 bg-purple-50/50'
+                        }`}>
+                            <div className="flex justify-between items-start mb-1">
+                                <div className="flex items-center gap-2">
+                                    <span className={`material-icons text-sm ${
+                                        n.type === 'info' ? 'text-blue-500' :
+                                        n.type === 'warning' ? 'text-yellow-500' :
+                                        n.type === 'success' ? 'text-green-500' : 'text-purple-500'
+                                    }`}>
+                                        {n.type === 'poll' ? 'poll' : n.type === 'warning' ? 'warning' : n.type === 'success' ? 'check_circle' : 'info'}
+                                    </span>
+                                    <span className="text-xs font-bold uppercase text-slate-400">{n.type === 'poll' ? 'Enquete' : 'Aviso'}</span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button onClick={(e) => { e.stopPropagation(); handleEditNotifClick(n); }} className="text-slate-300 hover:text-primary">
+                                    <span className="material-icons text-sm">edit</span>
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteNotifClick(n.id); }} className="text-slate-300 hover:text-red-500">
+                                      <span className="material-icons text-sm">close</span>
+                                  </button>
+                                </div>
+                            </div>
+                            <p className="text-sm text-slate-700 dark:text-slate-300 font-medium mb-2">{n.text}</p>
+                            
+                            {n.type === 'poll' && (
+                                <div className="flex justify-between items-end">
+                                  {n.expiresAt && <p className="text-[10px] text-red-500 mb-1">Expira em: {new Date(n.expiresAt).toLocaleString()}</p>}
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); setViewingResultsPoll(n); }}
+                                    className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded hover:bg-purple-200 font-bold flex items-center gap-1"
+                                  >
+                                    <span className="material-icons text-[10px]">bar_chart</span> Ver Resultados
+                                  </button>
+                                </div>
+                            )}
+
+                            <p className="text-[10px] text-slate-400 text-right mt-1">{n.date}</p>
+                        </div>
+                    ))}
+                </div>
+             </div>
+        </div>
+      )}
+
+      {/* --- CONTENT: MAINTENANCE --- */}
+      {activeTab === 'maintenance' && (
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+              <h3 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                  <span className="material-icons text-red-500">engineering</span>
+                  Controle de Manutenção
+              </h3>
+              
+              <div className="space-y-6">
+                  <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/50 rounded-xl flex justify-between items-center">
+                      <div>
+                          <h4 className="font-bold text-red-700 dark:text-red-400">Modo de Manutenção Global</h4>
+                          <p className="text-sm text-red-600/80 dark:text-red-400/70">Bloqueia o acesso a todas as páginas exceto Admin.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                              type="checkbox" 
+                              className="sr-only peer"
+                              checked={maintenance.global}
+                              onChange={() => toggleMaintenance('global')}
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 dark:peer-focus:ring-red-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-red-600"></div>
+                      </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {Object.keys(maintenance).filter(k => k !== 'global').map(key => (
+                          <div key={key} className="flex justify-between items-center p-3 border border-slate-100 dark:border-slate-800 rounded-lg">
+                              <span className="text-sm font-medium capitalize text-slate-700 dark:text-slate-300">
+                                  {key === 'cnpj' ? 'Meu CNPJ' : key}
+                              </span>
+                              <label className="relative inline-flex items-center cursor-pointer">
+                                  <input 
+                                      type="checkbox" 
+                                      className="sr-only peer"
+                                      checked={maintenance[key as keyof MaintenanceConfig]}
+                                      onChange={() => toggleMaintenance(key as keyof MaintenanceConfig)}
+                                  />
+                                  <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-orange-500"></div>
+                              </label>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* --- CONTENT: CONNECTIONS --- */}
+      {activeTab === 'connections' && (
+        <form onSubmit={handleSaveConnection} className="space-y-6">
+            
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                    <span className="material-icons text-indigo-500">psychology</span>
+                    Configurações de IA (Gemini)
+                </h3>
+                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div>
+                        <h4 className="font-semibold text-slate-800 dark:text-white">Análise Financeira Inteligente</h4>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                            Ativar o widget de análise automática no Dashboard.
+                        </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            className="sr-only peer"
+                            checked={localConnConfig.ai.enabled}
+                            onChange={(e) => setLocalConnConfig({...localConnConfig, ai: {...localConnConfig.ai, enabled: e.target.checked}})}
+                        />
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                    <span className="material-icons text-blue-500">store</span>
+                    API Dados do CNPJ
+                </h3>
+                {/* ... API Settings Fields ... */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">URL Base da API</label>
+                        <input 
+                            type="text" 
+                            required 
+                            value={localConnConfig.cnpjApi.baseUrl} 
+                            onChange={(e) => setLocalConnConfig({...localConnConfig, cnpjApi: {...localConnConfig.cnpjApi, baseUrl: e.target.value}})}
+                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/50" 
+                            placeholder="https://publica.cnpj.ws/cnpj/"
+                        />
+                    </div>
+                    {/* ... other fields ... */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Token de Acesso (Opcional)</label>
+                        <input 
+                            type="password" 
+                            value={localConnConfig.cnpjApi.token || ''} 
+                            onChange={(e) => setLocalConnConfig({...localConnConfig, cnpjApi: {...localConnConfig.cnpjApi, token: e.target.value}})}
+                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/50" 
+                            placeholder="••••••••"
+                        />
+                    </div>
+                    
+                    <div className="md:col-span-2 mt-2">
+                        <details>
+                            <summary className="cursor-pointer text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline mb-2 select-none">Configurar Mapeamento de Campos e Exibição</summary>
+                            <MappingEditor mappings={localConnConfig.cnpjApi.mappings} apiType="cnpj" />
+                        </details>
+                    </div>
+
+                    <div className="flex items-end">
+                        <button 
+                            type="button" 
+                            onClick={() => { setTestType('cnpj'); setTestModalOpen(true); }}
+                            className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors w-full flex items-center justify-center gap-2"
+                        >
+                            <span className="material-icons text-sm">science</span> Testar Conexão
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                    <span className="material-icons text-purple-500">analytics</span>
+                    API Diagnóstico Fiscal (Webhook)
+                </h3>
+                {/* ... Diagnostic API Fields ... */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">URL do Webhook</label>
+                        <input 
+                            type="text" 
+                            required 
+                            value={localConnConfig.diagnosticApi.webhookUrl} 
+                            onChange={(e) => setLocalConnConfig({...localConnConfig, diagnosticApi: {...localConnConfig.diagnosticApi, webhookUrl: e.target.value}})}
+                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50" 
+                            placeholder="https://webhook..."
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Chave do Header (CNPJ)</label>
+                        <input 
+                            type="text" 
+                            value={localConnConfig.diagnosticApi.headerKey || 'cnpj'} 
+                            onChange={(e) => setLocalConnConfig({...localConnConfig, diagnosticApi: {...localConnConfig.diagnosticApi, headerKey: e.target.value}})}
+                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50" 
+                            placeholder="ex: cnpj"
+                        />
+                    </div>
+
+                    <div className="md:col-span-2 mt-2">
+                        <details>
+                            <summary className="cursor-pointer text-sm font-medium text-purple-600 dark:text-purple-400 hover:underline mb-2 select-none">Configurar Mapeamento de Campos e Exibição</summary>
+                            <MappingEditor mappings={localConnConfig.diagnosticApi.mappings} apiType="diagnostic" />
+                        </details>
+                    </div>
+
+                    <div className="flex items-end">
+                        <button 
+                            type="button" 
+                            onClick={() => { setTestType('diagnostic'); setTestModalOpen(true); }}
+                            className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors w-full flex items-center justify-center gap-2"
+                        >
+                            <span className="material-icons text-sm">science</span> Testar Conexão
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                    <span className="material-icons text-orange-500">mail</span>
+                    Configurações de SMTP (E-mail)
+                </h3>
+                {/* ... SMTP Fields ... */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Host SMTP</label>
+                        <input 
+                            type="text" 
+                            required 
+                            value={localConnConfig.smtp.host} 
+                            onChange={(e) => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, host: e.target.value}})}
+                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-orange-500/50" 
+                            placeholder="smtp.example.com"
+                        />
+                    </div>
+                    {/* ... (rest of SMTP fields unchanged) ... */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Porta</label>
+                        <input 
+                            type="number" 
+                            required 
+                            value={localConnConfig.smtp.port} 
+                            onChange={(e) => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, port: parseInt(e.target.value)}})}
+                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-orange-500/50" 
+                            placeholder="587"
+                        />
+                    </div>
+                    <div className="flex items-center pt-6">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={localConnConfig.smtp.secure} 
+                                onChange={(e) => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, secure: e.target.checked}})}
+                                className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500"
+                            />
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Conexão Segura (SSL/TLS)</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Usuário / Email</label>
+                        <input 
+                            type="text" 
+                            value={localConnConfig.smtp.user} 
+                            onChange={(e) => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, user: e.target.value}})}
+                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-orange-500/50" 
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Senha</label>
+                        <input 
+                            type="password" 
+                            value={localConnConfig.smtp.pass} 
+                            onChange={(e) => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, pass: e.target.value}})}
+                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-orange-500/50" 
+                            placeholder="••••••••"
+                        />
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Remetente Padrão (From)</label>
+                        <input 
+                            type="email" 
+                            value={localConnConfig.smtp.fromEmail} 
+                            onChange={(e) => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, fromEmail: e.target.value}})}
+                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-orange-500/50" 
+                            placeholder="noreply@seudominio.com"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex justify-end pt-4">
+                <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-8 py-3 rounded-lg font-bold shadow-lg shadow-blue-500/20 transition-all transform hover:-translate-y-0.5 flex items-center gap-2"
+                >
+                    {isSubmitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : <span className="material-icons">save</span>}
+                    Salvar Configurações
+                </button>
+            </div>
+        </form>
+      )}
+
+      {/* POLL RESULTS MODAL */}
+      {viewingResultsPoll && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+              <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-800">
+                  <div className="bg-purple-100 dark:bg-purple-900/30 p-6 text-center relative border-b border-purple-200 dark:border-purple-800">
+                      <h3 className="text-xl font-bold text-purple-900 dark:text-purple-100">Resultados da Enquete</h3>
+                      <button onClick={() => setViewingResultsPoll(null)} className="absolute top-4 right-4 text-purple-700 dark:text-purple-300 hover:text-purple-900">
+                          <span className="material-icons">close</span>
+                      </button>
+                  </div>
+                  <div className="p-6">
+                      <h4 className="font-bold text-slate-800 dark:text-white mb-4 text-center">{viewingResultsPoll.text}</h4>
+                      
+                      <div className="space-y-4">
+                          {viewingResultsPoll.pollOptions?.map(opt => {
+                              const totalVotes = viewingResultsPoll.pollOptions!.reduce((acc, curr) => acc + curr.votes, 0);
+                              const percent = totalVotes === 0 ? 0 : Math.round((opt.votes / totalVotes) * 100);
+                              
+                              return (
+                                  <div key={opt.id}>
+                                      <div className="flex justify-between text-sm mb-1">
+                                          <span className="text-slate-700 dark:text-slate-300 font-medium">{opt.text}</span>
+                                          <span className="text-slate-500 font-bold">{opt.votes} votos ({percent}%)</span>
+                                      </div>
+                                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
+                                          <div className="bg-purple-600 h-2.5 rounded-full transition-all duration-1000" style={{ width: `${percent}%` }}></div>
+                                      </div>
+                                  </div>
+                              );
+                          })}
+                      </div>
+
+                      <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+                          <button 
+                              onClick={handleExportPollVotes}
+                              className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-lg font-bold transition-colors"
+                          >
+                              <span className="material-icons text-sm">download</span>
+                              Exportar Dados (CSV)
+                          </button>
+                          <p className="text-xs text-center text-slate-400 mt-2">Baixa planilha com lista de usuários e votos.</p>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* CONNECTION TEST MODAL - Update button status only */}
+      {testModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+              <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
+                  {/* Modal Header */}
+                  <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
+                      <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
+                          <span className="material-icons text-primary">science</span>
+                          Teste de Conexão
+                      </h3>
+                      <button onClick={() => setTestModalOpen(false)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                          <span className="material-icons">close</span>
+                      </button>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                      
+                      {/* Input Section */}
+                      <div className="flex gap-4 items-end">
+                          <div className="flex-1">
+                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">CNPJ para teste</label>
+                              <input 
+                                  type="text" 
+                                  value={testCnpj}
+                                  onChange={(e) => setTestCnpj(e.target.value)}
+                                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50"
+                                  placeholder="00.000.000/0000-00"
+                              />
+                          </div>
+                          <button 
+                              onClick={handleTestConnection}
+                              disabled={testLoading}
+                              className="px-6 py-2 bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2 h-10"
+                          >
+                              {testLoading ? <span className="material-icons animate-spin text-sm">refresh</span> : <span className="material-icons text-sm">play_arrow</span>}
+                              Executar
+                          </button>
+                      </div>
+
+                      {/* ... Results Section ... */}
+                      {testResponse && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-bottom-4">
+                              <div className="flex flex-col h-96">
+                                  <div className="flex justify-between items-center mb-2">
+                                      <span className="text-xs font-bold uppercase text-slate-500">Resposta Bruta (JSON)</span>
+                                      <span className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-500">Raw Output</span>
+                                  </div>
+                                  <div className="flex-1 bg-slate-900 rounded-lg p-4 overflow-auto border border-slate-700">
+                                      <pre className="text-green-400 font-mono text-xs whitespace-pre-wrap">{testResponse}</pre>
+                                  </div>
+                              </div>
+
+                              <div className="flex flex-col h-96">
+                                  <div className="flex justify-between items-center mb-2">
+                                      <span className="text-xs font-bold uppercase text-slate-500">Exibição para Usuário (Mapeado)</span>
+                                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold">Preview</span>
+                                  </div>
+                                  <div className="flex-1 bg-white dark:bg-slate-800 rounded-lg p-4 overflow-auto border border-slate-200 dark:border-slate-700">
+                                      {testParsedData ? (
+                                          <div className="space-y-3">
+                                              {Object.entries(testParsedData).map(([key, value]) => (
+                                                  <div key={key} className="border-b border-slate-100 dark:border-slate-700 pb-2 last:border-0">
+                                                      <span className="block text-xs font-bold text-slate-400 uppercase mb-1">{key}</span>
+                                                      <span className="block text-sm font-medium text-slate-800 dark:text-white break-words">
+                                                          {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                                      </span>
+                                                  </div>
+                                              ))}
+                                          </div>
+                                      ) : (
+                                          <div className="text-center text-slate-400 mt-10">
+                                              Nenhum dado mapeado encontrado. Verifique os caminhos JSON.
+                                          </div>
+                                      )}
+                                  </div>
+                              </div>
+                          </div>
+                      )}
+                  </div>
+              </div>
+          </div>
+      )}
+
+    </div>
+  );
+};
+
+export default AdminPage;

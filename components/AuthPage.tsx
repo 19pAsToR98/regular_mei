@@ -1,0 +1,383 @@
+
+import React, { useState } from 'react';
+import { User } from '../types';
+
+interface AuthPageProps {
+  onLogin: (user: User) => void;
+  onForgotPassword: (email: string) => Promise<boolean>;
+}
+
+type AuthMode = 'login' | 'register' | 'forgot';
+
+const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
+  const [mode, setMode] = useState<AuthMode>('login');
+  const [isLoading, setIsLoading] = useState(false); // Global loading state for forms
+  
+  // Login Form States
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showLoginPass, setShowLoginPass] = useState(false);
+
+  // Register Form States
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [showRegPass, setShowRegPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+
+  // Forgot Password States
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // Simulate API Login
+    const mockUser: User = {
+      id: '1',
+      name: 'Daniela Cristina',
+      email: email,
+      isSetupComplete: true // For existing users simulation. New users would be false.
+    };
+    
+    // Simple logic for demo: if email contains "novo", force setup
+    if (email.includes('novo')) {
+        mockUser.isSetupComplete = false;
+        mockUser.name = ''; 
+    }
+
+    setIsLoading(false);
+    onLogin(mockUser);
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (regPassword !== regConfirmPassword) {
+        alert("As senhas não coincidem. Por favor, verifique.");
+        return;
+    }
+
+    setIsLoading(true);
+
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Simulate API Register
+    const newUser: User = {
+      id: Date.now().toString(),
+      name: name,
+      email: regEmail,
+      phone: phone,
+      isSetupComplete: false
+    };
+    
+    setIsLoading(false);
+    onLogin(newUser);
+  };
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setForgotLoading(true);
+      await onForgotPassword(forgotEmail);
+      setForgotLoading(false);
+      setForgotSuccess(true);
+  };
+
+  return (
+    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-900">
+      {/* Left Side - Image/Brand */}
+      <div className="hidden lg:flex lg:w-1/2 bg-blue-600 relative items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-800 opacity-90 z-10"></div>
+        <img 
+            src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=1500" 
+            alt="Office" 
+            className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="relative z-20 text-white p-12 text-center">
+            <img 
+                src="https://regularmei.com.br/wp-content/uploads/2024/07/REGULAR-500-x-200-px.png" 
+                alt="Regular MEI" 
+                className="h-16 mx-auto mb-8 object-contain brightness-0 invert"
+            />
+            <h2 className="text-3xl font-bold mb-4">Simplifique sua vida de MEI</h2>
+            <p className="text-blue-100 text-lg max-w-md mx-auto">
+                Gestão financeira, fiscal e benefícios em um único lugar. Feito para você crescer.
+            </p>
+        </div>
+        {/* Decorative Circles */}
+        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-white opacity-10 rounded-full z-10"></div>
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-white opacity-10 rounded-full z-10"></div>
+      </div>
+
+      {/* Right Side - Forms */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 animate-in fade-in slide-in-from-right-8 duration-500">
+        <div className="max-w-md w-full">
+            
+            <div className="text-center mb-8 lg:hidden">
+                <img 
+                    src="https://regularmei.com.br/wp-content/uploads/2024/07/REGULAR-500-x-200-px.png" 
+                    alt="Regular MEI" 
+                    className="h-10 mx-auto"
+                />
+            </div>
+
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2 text-center">
+                {mode === 'login' ? 'Acesse sua conta' : mode === 'register' ? 'Crie sua conta grátis' : 'Recuperar Senha'}
+            </h2>
+            <p className="text-slate-500 text-center mb-8">
+                {mode === 'login' 
+                    ? 'Bem-vindo de volta! Insira seus dados abaixo.' 
+                    : mode === 'register' 
+                    ? 'Comece a organizar seu negócio hoje mesmo.'
+                    : 'Enviaremos as instruções para seu e-mail.'}
+            </p>
+
+            {mode === 'login' && (
+                // LOGIN FORM
+                <form onSubmit={handleLoginSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email ou Usuário</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">person</span>
+                            <input 
+                                type="text" 
+                                required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="seu@email.com"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Senha</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">lock</span>
+                            <input 
+                                type={showLoginPass ? "text" : "password"} 
+                                required
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full pl-10 pr-10 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="••••••••"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowLoginPass(!showLoginPass)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none"
+                            >
+                                <span className="material-icons text-lg">
+                                    {showLoginPass ? 'visibility_off' : 'visibility'}
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div className="flex justify-end">
+                        <button type="button" onClick={() => setMode('forgot')} className="text-sm text-primary hover:underline">Esqueceu a senha?</button>
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        disabled={isLoading}
+                        className="w-full bg-primary hover:bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed text-white py-3 rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2"
+                    >
+                        {isLoading ? (
+                            <>
+                                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                Entrando...
+                            </>
+                        ) : 'Entrar'}
+                    </button>
+                    
+                    <p className="text-center text-slate-500 mt-6">
+                        Não tem uma conta? <button type="button" onClick={() => setMode('register')} className="text-primary font-bold hover:underline">Cadastre-se</button>
+                    </p>
+                    <div className="mt-4 p-3 bg-blue-50 text-blue-800 text-xs rounded border border-blue-100 text-center">
+                        Dica: Use um email contendo "novo" para simular um primeiro acesso (Onboarding).
+                    </div>
+                </form>
+            )}
+
+            {mode === 'register' && (
+                // REGISTER FORM
+                <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                     <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome Completo</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">badge</span>
+                            <input 
+                                type="text" 
+                                required
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="Maria Silva"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">email</span>
+                            <input 
+                                type="email" 
+                                required
+                                value={regEmail}
+                                onChange={(e) => setRegEmail(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="maria@exemplo.com"
+                            />
+                        </div>
+                    </div>
+                     <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Telefone (WhatsApp)</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">smartphone</span>
+                            <input 
+                                type="tel" 
+                                required
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="(11) 99999-9999"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Senha</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">lock</span>
+                            <input 
+                                type={showRegPass ? "text" : "password"}
+                                required
+                                value={regPassword}
+                                onChange={(e) => setRegPassword(e.target.value)}
+                                className="w-full pl-10 pr-10 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="••••••••"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowRegPass(!showRegPass)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none"
+                            >
+                                <span className="material-icons text-lg">
+                                    {showRegPass ? 'visibility_off' : 'visibility'}
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Confirmar Senha</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">lock_reset</span>
+                            <input 
+                                type={showConfirmPass ? "text" : "password"}
+                                required
+                                value={regConfirmPassword}
+                                onChange={(e) => setRegConfirmPassword(e.target.value)}
+                                className="w-full pl-10 pr-10 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="••••••••"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmPass(!showConfirmPass)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none"
+                            >
+                                <span className="material-icons text-lg">
+                                    {showConfirmPass ? 'visibility_off' : 'visibility'}
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        disabled={isLoading}
+                        className="w-full bg-primary hover:bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed text-white py-3 rounded-lg font-bold shadow-sm transition-colors mt-2 flex items-center justify-center gap-2"
+                    >
+                        {isLoading ? (
+                            <>
+                                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                Criando conta...
+                            </>
+                        ) : 'Cadastrar'}
+                    </button>
+                    
+                    <p className="text-center text-slate-500 mt-6">
+                        Já tem uma conta? <button type="button" onClick={() => setMode('login')} className="text-primary font-bold hover:underline">Faça login</button>
+                    </p>
+                </form>
+            )}
+
+            {mode === 'forgot' && (
+                // FORGOT PASSWORD FORM
+                <div className="space-y-6">
+                    {forgotSuccess ? (
+                        <div className="text-center animate-in fade-in">
+                            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="material-icons text-3xl">mark_email_read</span>
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">E-mail Enviado!</h3>
+                            <p className="text-slate-600 dark:text-slate-400 text-sm mb-6">
+                                Se o e-mail <strong>{forgotEmail}</strong> estiver cadastrado, você receberá um link para redefinir sua senha em instantes.
+                            </p>
+                            <button 
+                                onClick={() => { setMode('login'); setForgotSuccess(false); setForgotEmail(''); }} 
+                                className="w-full bg-primary hover:bg-blue-600 text-white py-3 rounded-lg font-bold shadow-sm transition-colors"
+                            >
+                                Voltar para o Login
+                            </button>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleForgotSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email Cadastrado</label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">email</span>
+                                    <input 
+                                        type="email" 
+                                        required
+                                        value={forgotEmail}
+                                        onChange={(e) => setForgotEmail(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                        placeholder="seu@email.com"
+                                    />
+                                </div>
+                            </div>
+
+                            <button 
+                                type="submit" 
+                                disabled={forgotLoading}
+                                className="w-full bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white py-3 rounded-lg font-bold shadow-sm transition-colors flex justify-center items-center gap-2"
+                            >
+                                {forgotLoading ? (
+                                    <>
+                                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                        Enviando...
+                                    </>
+                                ) : 'Recuperar Senha'}
+                            </button>
+                            
+                            <p className="text-center text-slate-500 mt-6">
+                                Lembrou a senha? <button type="button" onClick={() => setMode('login')} className="text-primary font-bold hover:underline">Voltar</button>
+                            </p>
+                        </form>
+                    )}
+                </div>
+            )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AuthPage;
