@@ -13,6 +13,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false); // Global loading state for forms
   const [authError, setAuthError] = useState<string | null>(null);
+  const [authSuccess, setAuthSuccess] = useState<string | null>(null);
   
   // Login Form States
   const [email, setEmail] = useState('');
@@ -37,6 +38,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
     e.preventDefault();
     setIsLoading(true);
     setAuthError(null);
+    setAuthSuccess(null);
 
     const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -55,6 +57,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
+    setAuthSuccess(null);
     
     if (regPassword !== regConfirmPassword) {
         setAuthError("As senhas não coincidem. Por favor, verifique.");
@@ -84,7 +87,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
         setAuthError(error.message);
     } else {
         // Supabase sends a confirmation email by default.
-        alert("Cadastro realizado! Verifique seu e-mail para confirmar sua conta antes de fazer login.");
+        setAuthSuccess("Cadastro realizado! Verifique seu e-mail para confirmar sua conta antes de fazer login.");
         setMode('login');
     }
   };
@@ -93,6 +96,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
       e.preventDefault();
       setForgotLoading(true);
       setAuthError(null);
+      setAuthSuccess(null);
       
       const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
           redirectTo: window.location.origin, // Redirects back to the app after reset
@@ -161,6 +165,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                     {authError}
                 </div>
             )}
+            
+            {authSuccess && (
+                <div className="p-3 mb-4 bg-green-100 text-green-700 rounded-lg border border-green-200 text-sm text-center animate-in fade-in">
+                    {authSuccess}
+                </div>
+            )}
 
             {mode === 'login' && (
                 // LOGIN FORM
@@ -204,7 +214,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                     </div>
                     
                     <div className="flex justify-end">
-                        <button type="button" onClick={() => { setMode('forgot'); setAuthError(null); }} className="text-sm text-primary hover:underline">Esqueceu a senha?</button>
+                        <button type="button" onClick={() => { setMode('forgot'); setAuthError(null); setAuthSuccess(null); }} className="text-sm text-primary hover:underline">Esqueceu a senha?</button>
                     </div>
 
                     <button 
@@ -221,7 +231,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                     </button>
                     
                     <p className="text-center text-slate-500 mt-6">
-                        Não tem uma conta? <button type="button" onClick={() => { setMode('register'); setAuthError(null); }} className="text-primary font-bold hover:underline">Cadastre-se</button>
+                        Não tem uma conta? <button type="button" onClick={() => { setMode('register'); setAuthError(null); setAuthSuccess(null); }} className="text-primary font-bold hover:underline">Cadastre-se</button>
                     </p>
                 </form>
             )}
@@ -332,7 +342,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                     </button>
                     
                     <p className="text-center text-slate-500 mt-6">
-                        Já tem uma conta? <button type="button" onClick={() => { setMode('login'); setAuthError(null); }} className="text-primary font-bold hover:underline">Faça login</button>
+                        Já tem uma conta? <button type="button" onClick={() => { setMode('login'); setAuthError(null); setAuthSuccess(null); }} className="text-primary font-bold hover:underline">Faça login</button>
                     </p>
                 </form>
             )}
@@ -350,7 +360,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                                 Se o e-mail <strong>{forgotEmail}</strong> estiver cadastrado, você receberá um link para redefinir sua senha em instantes.
                             </p>
                             <button 
-                                onClick={() => { setMode('login'); setForgotSuccess(false); setForgotEmail(''); setAuthError(null); }} 
+                                onClick={() => { setMode('login'); setForgotSuccess(false); setForgotEmail(''); setAuthError(null); setAuthSuccess(null); }} 
                                 className="w-full bg-primary hover:bg-blue-600 text-white py-3 rounded-lg font-bold shadow-sm transition-colors"
                             >
                                 Voltar para o Login
@@ -387,7 +397,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                             </button>
                             
                             <p className="text-center text-slate-500 mt-6">
-                                Lembrou a senha? <button type="button" onClick={() => { setMode('login'); setAuthError(null); }} className="text-primary font-bold hover:underline">Voltar</button>
+                                Lembrou a senha? <button type="button" onClick={() => { setMode('login'); setAuthError(null); setAuthSuccess(null); }} className="text-primary font-bold hover:underline">Voltar</button>
                             </p>
                         </form>
                     )}
