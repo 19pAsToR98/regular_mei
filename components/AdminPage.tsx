@@ -1,5 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Offer, NewsItem, MaintenanceConfig, AppNotification, PollOption, ConnectionConfig, ApiFieldMapping, User } from '../types';
+import { supabase } from '../src/integrations/supabase/client';
+import { showSuccess, showError } from '../utils/toastUtils';
 
 interface AdminPageProps {
   offers: Offer[];
@@ -385,6 +387,64 @@ const AdminPage: React.FC<AdminPageProps> = ({
       }
   }
 
+  const fetchPollResults = async (notificationId: number, pollOptions: PollOption[] | undefined) => {
+      if (!pollOptions) return;
+
+      const { data: votes, error } = await supabase
+          .from('user_notification_interactions')
+          .select('voted_option_id, profiles(name, email)')
+          .eq('notification_id', notificationId)
+          .not('voted_option_id', 'is', null);
+
+      if (error) {
+          showError('Erro ao buscar resultados da enquete.');
+          console.error('Error fetching poll votes:', error);
+          return;
+      }
+
+      // 1. Calculate total votes per option
+      const voteCounts: Record<number, number> = {};
+      votes.forEach(v => {
+          const optionId = v.voted_option_id;
+          if (optionId !== null) {
+              voteCounts[optionId] = (voteCounts[optionId] || 0) + 1;
+          }
+      });
+
+      // 2. Map votes back to options
+      const updatedOptions = pollOptions.map(opt => ({
+          ...opt,
+          votes: voteCounts[opt.id] || 0
+      }));
+
+      // 3. Map detailed votes for CSV export
+      const detailedVotes: PollVote[] = votes.map(v => {
+          const option = pollOptions.find(o => o.id === v.voted_option_id);
+          return {
+              userId: v.profiles.id, // Assuming profiles is joined and has id
+              userName: v.profiles.name || v.profiles.email,
+              userEmail: v.profiles.email,
+              optionId: v.voted_option_id,
+              optionText: option?.text || 'N/A',
+              votedAt: new Date().toISOString() // Supabase doesn't return interaction timestamp easily here, simulating
+          } as PollVote;
+      });
+
+      const notification = notifications.find(n => n.id === notificationId);
+      if (notification) {
+          setViewingResultsPoll({
+              ...notification,
+              pollOptions: updatedOptions,
+              pollVotes: detailedVotes
+          });
+      }
+  };
+
+  const handleViewPollResults = (e: React.MouseEvent, notification: AppNotification) => {
+      e.stopPropagation();
+      fetchPollResults(notification.id, notification.pollOptions);
+  };
+
   const handleSaveNotification = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -394,6 +454,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
     
     let pollData: PollOption[] | undefined = undefined;
     if (notifForm.type === 'poll') {
+        // Assign IDs starting from 0 and initialize votes to 0
         pollData = notifForm.pollOptions.map((opt, idx) => ({ id: idx, text: opt, votes: 0 }));
     }
 
@@ -405,7 +466,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
         active: true,
         pollOptions: pollData,
         expiresAt: notifForm.expiresAt,
-        // Preserve existing votes if updating
+        // Preserve existing votes if updating (though DB handles persistence)
         pollVotes: editingNotifId ? (notifications.find(n => n.id === editingNotifId)?.pollVotes || []) : []
     };
 
@@ -1268,7 +1329,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                 <div className="flex justify-between items-end">
                                   {n.expiresAt && <p className="text-[10px] text-red-500 mb-1">Expira em: {new Date(n.expiresAt).toLocaleString()}</p>}
                                   <button 
-                                    onClick={(e) => { e.stopPropagation(); setViewingResultsPoll(n); }}
+                                    onClick={(e) => handleViewPollResults(e, n)}
                                     className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded hover:bg-purple-200 font-bold flex items-center gap-1"
                                   >
                                     <span className="material-icons text-[10px]">bar_chart</span> Ver Resultados
