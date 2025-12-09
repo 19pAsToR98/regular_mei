@@ -234,7 +234,12 @@ const App: React.FC = () => {
         .from('offers')
         .select('*')
         .order('is_featured', { ascending: false });
-    if (!offersError) setOffers(offersData as Offer[]);
+    
+    if (!offersError) {
+        setOffers(offersData as Offer[]);
+    } else {
+        console.error('Error fetching offers:', offersError);
+    }
   };
 
   const loadNotifications = async () => {
@@ -644,19 +649,81 @@ const App: React.FC = () => {
   };
 
   // --- OFFERS HANDLERS ---
-  const handleAddOffer = (newOffer: Offer) => {
-    setOffers([newOffer, ...offers]);
+  const handleAddOffer = async (newOffer: Offer) => {
+    const payload = {
+        partner_name: newOffer.partnerName,
+        partner_color: newOffer.partnerColor,
+        partner_icon: newOffer.partnerIcon,
+        discount: newOffer.discount,
+        title: newOffer.title,
+        description: newOffer.description,
+        category: newOffer.category,
+        code: newOffer.code,
+        link: newOffer.link,
+        expiry: newOffer.expiry,
+        is_exclusive: newOffer.isExclusive,
+        is_featured: newOffer.isFeatured,
+    };
+
+    const { error } = await supabase
+        .from('offers')
+        .insert(payload);
+
+    if (error) {
+        console.error('Error adding offer:', error);
+        showError('Erro ao adicionar oferta.');
+        return;
+    }
+    
     showSuccess('Oferta adicionada!');
+    loadNewsAndOffers();
   };
 
-  const handleUpdateOffer = (updatedOffer: Offer) => {
-    setOffers(offers.map(o => o.id === updatedOffer.id ? updatedOffer : o));
+  const handleUpdateOffer = async (updatedOffer: Offer) => {
+    const payload = {
+        partner_name: updatedOffer.partnerName,
+        partner_color: updatedOffer.partnerColor,
+        partner_icon: updatedOffer.partnerIcon,
+        discount: updatedOffer.discount,
+        title: updatedOffer.title,
+        description: updatedOffer.description,
+        category: updatedOffer.category,
+        code: updatedOffer.code,
+        link: updatedOffer.link,
+        expiry: updatedOffer.expiry,
+        is_exclusive: updatedOffer.isExclusive,
+        is_featured: updatedOffer.isFeatured,
+    };
+
+    const { error } = await supabase
+        .from('offers')
+        .update(payload)
+        .eq('id', updatedOffer.id);
+
+    if (error) {
+        console.error('Error updating offer:', error);
+        showError('Erro ao atualizar oferta.');
+        return;
+    }
+    
     showSuccess('Oferta atualizada!');
+    loadNewsAndOffers();
   };
 
-  const handleDeleteOffer = (id: number) => {
-    setOffers((prevOffers) => prevOffers.filter(o => o.id !== id));
+  const handleDeleteOffer = async (id: number) => {
+    const { error } = await supabase
+        .from('offers')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        console.error('Error deleting offer:', error);
+        showError('Erro ao excluir oferta.');
+        return;
+    }
+    
     showSuccess('Oferta excluída.');
+    loadNewsAndOffers();
   };
 
   // --- NEWS HANDLERS ---
