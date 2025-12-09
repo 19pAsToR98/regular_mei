@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -26,190 +25,7 @@ import FinancialScore from './components/FinancialScore';
 import MobileDashboard from './components/MobileDashboard';
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 
-const initialOffersData: Offer[] = [
-  {
-    id: 1,
-    partnerName: 'Banco Digital',
-    partnerColor: 'bg-purple-600',
-    partnerIcon: 'account_balance',
-    discount: 'TAXA ZERO',
-    title: 'Conta PJ Gratuita + Cartão',
-    description: 'Abra sua conta PJ e ganhe isenção total de taxas por 12 meses e maquininha com 50% de desconto.',
-    category: 'Finanças',
-    link: '#',
-    expiry: 'Válido até 30/06',
-    isExclusive: true,
-    isFeatured: true
-  },
-  {
-    id: 2,
-    partnerName: 'Gestão Fácil',
-    partnerColor: 'bg-blue-500',
-    partnerIcon: 'analytics',
-    discount: '30% OFF',
-    title: 'Sistema ERP para MEI',
-    description: 'Organize seu estoque e emita notas fiscais com desconto na anuidade do plano Pro.',
-    category: 'Software',
-    code: 'MEIPRO30',
-    expiry: 'Válido até 15/06',
-  },
-  {
-    id: 3,
-    partnerName: 'Educa Mais',
-    partnerColor: 'bg-orange-500',
-    partnerIcon: 'school',
-    discount: 'R$ 50,00',
-    title: 'Cursos de Marketing Digital',
-    description: 'Cupom válido para qualquer curso de vendas e redes sociais na plataforma.',
-    category: 'Educação',
-    code: 'MEIVENDE50',
-    expiry: 'Válido até 20/06',
-  },
-  {
-    id: 4,
-    partnerName: 'Segura Vida',
-    partnerColor: 'bg-emerald-500',
-    partnerIcon: 'health_and_safety',
-    discount: '15% OFF',
-    title: 'Plano de Saúde PME',
-    description: 'Desconto especial para MEI com CNPJ ativo há mais de 6 meses. Sem carência para consultas.',
-    category: 'Saúde',
-    link: '#',
-    expiry: 'Indeterminado',
-  },
-  {
-    id: 5,
-    partnerName: 'Loja Tech',
-    partnerColor: 'bg-slate-800',
-    partnerIcon: 'laptop_mac',
-    discount: '10% OFF',
-    title: 'Notebooks e Periféricos',
-    description: 'Equipe seu escritório com desconto em toda a linha empresarial.',
-    category: 'Equipamentos',
-    code: 'TECHMEI10',
-    expiry: 'Válido até 31/05',
-  },
-  {
-    id: 6,
-    partnerName: 'Certificado Já',
-    partnerColor: 'bg-cyan-600',
-    partnerIcon: 'verified_user',
-    discount: '25% OFF',
-    title: 'Certificado Digital A1',
-    description: 'Emissão de certificado digital com validade de 1 ano. Essencial para emitir notas em alguns estados.',
-    category: 'Serviços',
-    code: 'CERT25OFF',
-    expiry: 'Válido até 30/06',
-  },
-];
-
-const initialNewsData: NewsItem[] = [
-  {
-    id: 1,
-    category: 'Legislação',
-    title: 'Novas regras para emissão de NFS-e MEI em 2024: O que muda?',
-    excerpt: 'A partir de setembro, todos os microempreendedores deverão utilizar o padrão nacional. Entenda o passo a passo.',
-    content: 'A partir de setembro de 2024, a emissão de Nota Fiscal de Serviços Eletrônica (NFS-e) para Microempreendedores Individuais (MEI) passará a ser obrigatória exclusivamente pelo sistema nacional da Receita Federal.\n\nIsso significa que os portais municipais deixarão de ser utilizados para essa finalidade. O objetivo é padronizar o documento fiscal em todo o país e simplificar a vida do empreendedor.\n\nPara se adequar, o MEI deve realizar o cadastro no Portal Nacional de Emissão de Nota Fiscal de Serviços Eletrônica ou utilizar o aplicativo móvel oficial.',
-    date: '10 Mai 2024',
-    readTime: '5 min leitura',
-    imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=600',
-    status: 'published'
-  },
-  {
-    id: 2,
-    category: 'Finanças',
-    title: 'Aumento do limite de faturamento MEI: Projeto avança na câmara',
-    excerpt: 'Proposta visa ampliar o teto anual para R$ 130 mil, permitindo o crescimento de milhares de pequenos negócios.',
-    content: 'O Projeto de Lei Complementar que prevê o aumento do teto de faturamento do MEI de R$ 81 mil para R$ 130 mil anuais avançou mais uma etapa na Câmara dos Deputados.\n\nA medida visa corrigir a defasagem inflacionária dos últimos anos e permitir que mais empreendedores permaneçam no regime simplificado.\n\nAlém do aumento do teto, o projeto também prevê a possibilidade de contratação de até dois funcionários pelo MEI, ao invés de apenas um, como é permitido atualmente.',
-    date: '09 Mai 2024',
-    readTime: '3 min leitura',
-    imageUrl: 'https://images.unsplash.com/photo-1565514020176-dbf2277cc16d?auto=format&fit=crop&q=80&w=600',
-    status: 'published'
-  },
-  {
-    id: 3,
-    category: 'Gestão',
-    title: '5 estratégias para organizar o fluxo de caixa da sua microempresa',
-    excerpt: 'Manter as contas em dia é essencial. Confira dicas práticas para não misturar finanças pessoais com as da empresa.',
-    content: '1. Separe as contas: Tenha uma conta bancária PJ e nunca pague despesas pessoais com dinheiro da empresa.\n2. Registre tudo: Anote cada centavo que entra e sai.\n3. Defina um pró-labore: Estabeleça um salário fixo para você.\n4. Crie uma reserva de emergência: Guarde dinheiro para meses de baixa faturação.\n5. Use tecnologia: Utilize planilhas ou sistemas de gestão para automatizar o controle.',
-    date: '08 Mai 2024',
-    readTime: '7 min leitura',
-    imageUrl: 'https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&q=80&w=600',
-    status: 'published'
-  },
-  {
-    id: 4,
-    category: 'Benefícios',
-    title: 'Auxílio-doença e aposentadoria: Conheça os direitos do MEI',
-    excerpt: 'Pagando o DAS em dia, você garante cobertura previdenciária. Saiba quais são os requisitos para cada benefício.',
-    content: 'O MEI que paga o DAS em dia tem direito a diversos benefícios previdenciários, como auxílio-doença, aposentadoria por idade, salário-maternidade e pensão por morte para dependentes.\n\nPara ter acesso, é necessário cumprir o período de carência (número mínimo de meses de contribuição) exigido para cada benefício.',
-    date: '07 Mai 2024',
-    readTime: '4 min leitura',
-    imageUrl: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=600',
-    status: 'published'
-  },
-  {
-    id: 5,
-    category: 'Finanças',
-    title: 'Nota Fiscal: Entenda a diferença entre NF-e e NFS-e',
-    excerpt: 'Saber qual nota emitir é crucial. Veja o guia completo sobre notas de produto e serviço.',
-    content: 'Muitos MEIs confundem a Nota Fiscal Eletrônica (NF-e), usada para venda de produtos, com a Nota Fiscal de Serviços Eletrônica (NFS-e).\n\nPara quem vende mercadorias, a NF-e é emitida através da Secretaria da Fazenda do estado. Já quem presta serviços, deve emitir a NFS-e, que agora é centralizada no padrão nacional.',
-    date: '06 Mai 2024',
-    readTime: '4 min leitura',
-    imageUrl: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=600',
-    status: 'draft'
-  }
-];
-
-const initialNotifications: AppNotification[] = [
-    { id: 1, text: 'O sistema passará por manutenção às 00h.', type: 'warning', date: 'Hoje, 10:00', active: true, read: false },
-    { id: 2, text: 'Nova funcionalidade de Orçamentos liberada!', type: 'success', date: 'Ontem, 15:30', active: true, read: true },
-    { 
-      id: 3, 
-      text: 'Qual funcionalidade você quer ver primeiro?', 
-      type: 'poll', 
-      date: 'Hoje, 09:00', 
-      active: true, 
-      read: false,
-      pollOptions: [
-        { id: 1, text: 'Gestão de Estoque', votes: 12 },
-        { id: 2, text: 'Emissão de Notas', votes: 45 },
-        { id: 3, text: 'Integração com Bancos', votes: 23 }
-      ],
-      pollVotes: [] 
-    },
-];
-
-const today = new Date();
-const currentYear = today.getFullYear();
-const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
-
-const initialTransactions: Transaction[] = [
-  { id: 1, description: 'Desenvolvimento Website', category: 'Serviços', type: 'receita', amount: 2500.00, date: `${currentYear}-${currentMonth}-10`, time: '09:00', status: 'pago' },
-  { id: 2, description: 'Licença de Software', category: 'Software', type: 'despesa', amount: 159.90, date: `${currentYear}-${currentMonth}-08`, time: '14:30', status: 'pago' },
-  { id: 3, description: 'Consultoria Mensal', category: 'Serviços', type: 'receita', amount: 1200.00, date: `${currentYear}-${currentMonth}-05`, time: '10:00', status: 'pago' },
-  { id: 4, description: 'Internet Fibra', category: 'Infraestrutura', type: 'despesa', amount: 120.00, date: `${currentYear}-${currentMonth}-05`, time: '08:00', status: 'pendente' },
-  { id: 5, description: 'Manutenção Equipamento', category: 'Manutenção', type: 'despesa', amount: 450.00, date: `${currentYear}-${currentMonth}-02`, time: '16:00', status: 'pago' },
-  { id: 6, description: 'Venda de Template', category: 'Produtos', type: 'receita', amount: 150.00, date: `${currentYear}-${currentMonth}-01`, time: '11:30', status: 'pago' },
-  { id: 7, description: 'Guia DAS MEI', category: 'Impostos', type: 'despesa', amount: 72.60, date: `${currentYear}-${currentMonth}-20`, time: '00:00', status: 'pago' },
-  // Installment Example (Laptop 1/10)
-  { id: 8, description: 'Notebook Novo', category: 'Infraestrutura', type: 'despesa', amount: 350.00, date: `${currentYear}-${currentMonth}-15`, time: '12:00', status: 'pendente', installments: { current: 1, total: 10 } },
-  // Recurring Example
-  { id: 9, description: 'Hospedagem Site', category: 'Infraestrutura', type: 'despesa', amount: 29.90, date: `${currentYear}-${currentMonth}-28`, time: '09:00', status: 'pendente', isRecurring: true },
-];
-
-const initialAppointments: Appointment[] = [
-    { id: 101, title: 'Reunião com Cliente X', date: `${currentYear}-${currentMonth}-15`, time: '14:00', type: 'compromisso', notify: true },
-    { id: 102, title: 'Entrega de Projeto', date: `${currentYear}-${currentMonth}-25`, time: '18:00', type: 'compromisso', notify: true },
-];
-
-const mockUsers: User[] = [
-    { id: '1', name: 'Daniela Cristina', email: 'daniela@regularmei.com', role: 'admin', status: 'active', lastActive: new Date().toISOString(), joinedAt: '2024-01-15T10:00:00Z', isSetupComplete: true },
-    { id: '2', name: 'João Silva', email: 'joao@loja.com', role: 'user', status: 'active', lastActive: new Date(Date.now() - 3600000).toISOString(), joinedAt: '2024-02-20T14:30:00Z', isSetupComplete: true },
-    { id: '3', name: 'Maria Souza', email: 'maria@servicos.com', role: 'user', status: 'inactive', lastActive: new Date(Date.now() - 86400000 * 5).toISOString(), joinedAt: '2024-03-10T09:15:00Z', isSetupComplete: true },
-    { id: '4', name: 'Pedro Santos', email: 'pedro@tech.com', role: 'user', status: 'suspended', lastActive: new Date(Date.now() - 86400000 * 20).toISOString(), joinedAt: '2024-01-05T16:45:00Z', isSetupComplete: true },
-    { id: '5', name: 'Ana Oliveira', email: 'ana@cafe.com', role: 'user', status: 'active', lastActive: new Date(Date.now() - 1800000).toISOString(), joinedAt: '2024-04-12T11:20:00Z', isSetupComplete: false },
-];
+// --- DADOS SIMULADOS REMOVIDOS ---
 
 const App: React.FC = () => {
   // --- AUTH STATE ---
@@ -221,17 +37,17 @@ const App: React.FC = () => {
   const [showIntro, setShowIntro] = useState(false);
   
   // --- APP STATE ---
-  const [cnpj, setCnpj] = useState('58.556.538/0001-67');
-  const [offers, setOffers] = useState<Offer[]>(initialOffersData);
-  const [news, setNews] = useState<NewsItem[]>(initialNewsData);
+  const [cnpj, setCnpj] = useState(''); // CNPJ starts empty
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [news, setNews] = useState<NewsItem[]>([]);
   const [readingNewsId, setReadingNewsId] = useState<number | null>(null);
-  const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   
   // --- FISCAL DATA STATE (Lifted) ---
   const [fiscalData, setFiscalData] = useState<FiscalData | null>(null);
 
   // --- USER MANAGEMENT STATE ---
-  const [allUsers, setAllUsers] = useState<User[]>(mockUsers);
+  const [allUsers, setAllUsers] = useState<User[]>([]); // Starts empty
 
   // --- CONNECTION STATE (ADMIN) ---
   const [connectionConfig, setConnectionConfig] = useState<ConnectionConfig>({
@@ -271,8 +87,8 @@ const App: React.FC = () => {
   });
 
   // --- CASH FLOW & APPOINTMENT STATE ---
-  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
-  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   const [revenueCats, setRevenueCats] = useState<Category[]>([
     { name: 'Serviços', icon: 'work' },
@@ -509,9 +325,9 @@ const App: React.FC = () => {
   const handleDeleteAccount = () => {
     setUser(null);
     setActiveTab('dashboard');
-    setTransactions(initialTransactions);
-    setAppointments(initialAppointments);
-    setCnpj('58.556.538/0001-67');
+    setTransactions([]);
+    setAppointments([]);
+    setCnpj('');
     setFiscalData(null);
     setShowIntro(false);
   };
