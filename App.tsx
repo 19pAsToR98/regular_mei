@@ -124,6 +124,32 @@ const App: React.FC = () => {
 
   // --- DATA FETCHING FUNCTIONS ---
 
+  const loadAllUsers = async () => {
+      const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('joined_at', { ascending: false });
+
+      if (error) {
+          console.error('Error fetching all users:', error);
+          return;
+      }
+      
+      const mappedUsers: User[] = data.map(p => ({
+          id: p.id,
+          name: p.name || p.email,
+          email: p.email,
+          phone: p.phone,
+          cnpj: p.cnpj,
+          isSetupComplete: p.is_setup_complete,
+          role: p.role as 'admin' | 'user',
+          status: p.status as 'active' | 'inactive' | 'suspended',
+          joinedAt: p.joined_at,
+          lastActive: p.last_active
+      }));
+      setAllUsers(mappedUsers);
+  };
+
   const loadTransactions = async (userId: string) => {
     const { data, error } = await supabase
         .from('transactions')
@@ -227,18 +253,24 @@ const App: React.FC = () => {
     setNotifications(processedNotifications);
   };
 
-  const loadAllUserData = async (userId: string) => {
+  const loadAllUserData = async (userId: string, userRole: 'admin' | 'user') => {
       setLoadingAuth(true);
       
-      const [trans, appts] = await Promise.all([
+      const promises = [
           loadTransactions(userId),
           loadAppointments(userId),
           loadNewsAndOffers(),
           loadNotifications()
-      ]);
+      ];
 
-      setTransactions(trans);
-      setAppointments(appts);
+      if (userRole === 'admin') {
+          promises.push(loadAllUsers() as any);
+      }
+
+      const [trans, appts] = await Promise.all(promises);
+
+      setTransactions(trans as Transaction[]);
+      setAppointments(appts as Appointment[]);
       setLoadingAuth(false);
   };
 
@@ -276,14 +308,14 @@ const App: React.FC = () => {
         role: profileData.role as 'admin' | 'user',
         status: profileData.status as 'active' | 'inactive' | 'suspended',
         joinedAt: profileData.joined_at,
-        lastActive: new Date().toISOString()
+        lastActive: profileData.last_active
     };
 
     setUser(appUser);
     setCnpj(appUser.cnpj || '');
     
     if (appUser.isSetupComplete) {
-        loadAllUserData(appUser.id);
+        loadAllUserData(appUser.id, appUser.role || 'user');
     } else {
         setLoadingAuth(false);
     }
@@ -432,7 +464,7 @@ const App: React.FC = () => {
       setShowIntro(true);
       
       // 4. Load data for the first time
-      loadAllUserData(user.id);
+      loadAllUserData(user.id, updatedUser.role || 'user');
   }
 
   // --- USER MANAGEMENT HANDLERS (Admin) ---
@@ -652,7 +684,7 @@ const App: React.FC = () => {
     }
     
     // Reload data to update UI
-    loadAllUserData(user.id);
+    loadAllUserData(user.id, user.role || 'user');
   };
 
   const handleUpdateTransaction = async (t: Transaction) => {
@@ -684,7 +716,7 @@ const App: React.FC = () => {
     }
     
     // Reload data to update UI
-    loadAllUserData(user.id);
+    loadAllUserData(user.id, user.role || 'user');
   };
 
   const handleDeleteTransaction = async (id: number) => {
@@ -703,7 +735,7 @@ const App: React.FC = () => {
     }
     
     // Reload data to update UI
-    loadAllUserData(user.id);
+    loadAllUserData(user.id, user.role || 'user');
   };
 
   // --- APPOINTMENT HANDLERS (Needs to be updated for Supabase) ---
@@ -728,7 +760,7 @@ const App: React.FC = () => {
         alert('Erro ao adicionar compromisso.');
         return;
     }
-    loadAllUserData(user.id);
+    loadAllUserData(user.id, user.role || 'user');
   };
 
   const handleUpdateAppointment = async (a: Appointment) => {
@@ -753,7 +785,7 @@ const App: React.FC = () => {
         alert('Erro ao atualizar compromisso.');
         return;
     }
-    loadAllUserData(user.id);
+    loadAllUserData(user.id, user.role || 'user');
   };
 
   const handleDeleteAppointment = async (id: number) => {
@@ -770,7 +802,7 @@ const App: React.FC = () => {
         alert('Erro ao excluir compromisso.');
         return;
     }
-    loadAllUserData(user.id);
+    loadAllUserData(user.id, user.role || 'user');
   };
 
   // --- CATEGORY HANDLERS (Local state for now) ---
