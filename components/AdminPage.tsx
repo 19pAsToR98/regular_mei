@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Offer, NewsItem, MaintenanceConfig, AppNotification, PollOption, ConnectionConfig, ApiFieldMapping, User } from '../types';
 
@@ -60,7 +59,19 @@ const AdminPage: React.FC<AdminPageProps> = ({
     connectionConfig, onUpdateConnectionConfig,
     users, onAddUser, onUpdateUser, onDeleteUser
 }) => {
-  const [activeTab, setActiveTab] = useState<'users' | 'news' | 'offers' | 'notifications' | 'maintenance' | 'connections'>('users');
+  // Initialize activeTab from localStorage or default to 'users'
+  const [activeTab, setActiveTabState] = useState<'users' | 'news' | 'offers' | 'notifications' | 'maintenance' | 'connections'>(() => {
+      if (typeof window !== 'undefined') {
+          return (localStorage.getItem('adminActiveTab') as any) || 'users';
+      }
+      return 'users';
+  });
+  
+  const setActiveTab = (tab: typeof activeTab) => {
+      setActiveTabState(tab);
+      localStorage.setItem('adminActiveTab', tab);
+  };
+
   const [isSubmitting, setIsSubmitting] = useState(false); // Global loading state for admin actions
 
   // --- USERS STATE ---

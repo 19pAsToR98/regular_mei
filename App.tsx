@@ -55,7 +55,25 @@ const App: React.FC = () => {
   const [cnpj, setCnpj] = useState('');
   const [offers, setOffers] = useState<Offer[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
-  const [readingNewsId, setReadingNewsId] = useState<number | null>(null);
+  
+  // Persist readingNewsId
+  const [readingNewsId, setReadingNewsIdState] = useState<number | null>(() => {
+      if (typeof window !== 'undefined') {
+          const storedId = localStorage.getItem('readingNewsId');
+          return storedId ? parseInt(storedId) : null;
+      }
+      return null;
+  });
+
+  const setReadingNewsId = (id: number | null) => {
+      setReadingNewsIdState(id);
+      if (id !== null) {
+          localStorage.setItem('readingNewsId', id.toString());
+      } else {
+          localStorage.removeItem('readingNewsId');
+      }
+  };
+
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   
   // --- FISCAL DATA STATE (Lifted) ---
@@ -344,6 +362,8 @@ const App: React.FC = () => {
         setLoadingAuth(false);
         // Clear persisted tab on sign out
         localStorage.removeItem('activeTab');
+        localStorage.removeItem('readingNewsId'); // Clear news state
+        localStorage.removeItem('adminActiveTab'); // Clear admin state
         setActiveTabState('dashboard');
       } else if (event === 'INITIAL_SESSION' && session?.user) {
         loadUserProfile(session.user);
@@ -1083,7 +1103,7 @@ const App: React.FC = () => {
             />;
           case 'cnpj': return <CNPJPage cnpj={cnpj} fiscalData={fiscalData} onUpdateFiscalData={setFiscalData} />;
           case 'tools': return <ToolsPage user={user} />;
-          case 'news': return <NewsPage news={news} readingId={readingNewsId} onSelectNews={(id) => setReadingNewsId(id)} />;
+          case 'news': return <NewsPage news={news} readingId={readingNewsId} onSelectNews={setReadingNewsId} />;
           case 'offers': return <OffersPage offers={offers} />;
           case 'admin':
             return <AdminPage 
