@@ -331,6 +331,7 @@ const App: React.FC = () => {
 
     // 3. Fetch ALL interactions if Admin (for poll results)
     if (isAdmin) {
+        // NOTE: The RLS policy "Admins can read all interactions" must be active for this to work.
         const { data: allInteractionsData, error: allInteractionsError } = await supabase
             .from('user_notification_interactions')
             .select('notification_id, voted_option_id, voted_at, user_id, profiles(name, email)');
@@ -371,8 +372,8 @@ const App: React.FC = () => {
             if (isAdmin) {
                 pollVotes = votesForThisPoll.map(v => ({
                     userId: v.user_id,
-                    userName: v.profiles?.name || 'N/A',
-                    userEmail: v.profiles?.email || 'N/A',
+                    userName: (v.profiles as any)?.name || 'N/A',
+                    userEmail: (v.profiles as any)?.email || 'N/A',
                     optionId: v.voted_option_id,
                     optionText: pollOptions!.find(o => o.id === v.voted_option_id)?.text || 'N/A',
                     votedAt: v.voted_at
