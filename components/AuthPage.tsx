@@ -1,44 +1,94 @@
-import React, { useState, useEffect } from 'react';
-import { Auth } from '@supabase/auth-ui-react';
-import { ThemeSupa } from '@supabase/auth-ui-shared';
-import { supabase } from '../lib/supabase';
+
+import React, { useState } from 'react';
 import { User } from '../types';
 
 interface AuthPageProps {
   onLogin: (user: User) => void;
-  onForgotPassword: (email: string) => Promise<boolean>; // Keeping signature for compatibility, but logic moves to Auth UI
+  onForgotPassword: (email: string) => Promise<boolean>;
 }
 
-const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
-  // The Auth UI handles all login/register/forgot password logic internally.
-  // We only need to listen for the session change in App.tsx or a wrapper.
+type AuthMode = 'login' | 'register' | 'forgot';
 
-  // Custom styling to match the application's aesthetic
-  const customTheme = {
-    default: {
-      colors: {
-        brand: 'hsl(217 78% 51%)', // Primary Blue
-        brandAccent: 'hsl(217 78% 41%)',
-        defaultButtonBackground: 'hsl(210 40% 96%)', // Slate-100
-        defaultButtonBackgroundHover: 'hsl(210 40% 90%)',
-        defaultButtonBorder: 'hsl(210 40% 90%)',
-        inputBackground: 'hsl(0 0% 100%)',
-        inputBorder: 'hsl(214.3 31.8% 91.4%)',
-        inputBorderHover: 'hsl(214.3 31.8% 81.4%)',
-        inputBorderFocus: 'hsl(217 78% 51%)',
-        inputLabelText: 'hsl(215.4 16.3% 46.9%)',
-        inputText: 'hsl(222.2 47.4% 11.2%)',
-      },
-      space: {
-        spaceSmall: '10px',
-        spaceMedium: '15px',
-        spaceLarge: '20px',
-      },
-      radii: {
-        borderRadiusButton: '8px',
-        inputBorderRadius: '8px',
-      },
-    },
+const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
+  const [mode, setMode] = useState<AuthMode>('login');
+  const [isLoading, setIsLoading] = useState(false); // Global loading state for forms
+  
+  // Login Form States
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showLoginPass, setShowLoginPass] = useState(false);
+
+  // Register Form States
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [showRegPass, setShowRegPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+
+  // Forgot Password States
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // Simulate API Login
+    const mockUser: User = {
+      id: '1',
+      name: 'Daniela Cristina',
+      email: email,
+      isSetupComplete: true // For existing users simulation. New users would be false.
+    };
+    
+    // Simple logic for demo: if email contains "novo", force setup
+    if (email.includes('novo')) {
+        mockUser.isSetupComplete = false;
+        mockUser.name = ''; 
+    }
+
+    setIsLoading(false);
+    onLogin(mockUser);
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (regPassword !== regConfirmPassword) {
+        alert("As senhas não coincidem. Por favor, verifique.");
+        return;
+    }
+
+    setIsLoading(true);
+
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Simulate API Register
+    const newUser: User = {
+      id: Date.now().toString(),
+      name: name,
+      email: regEmail,
+      phone: phone,
+      isSetupComplete: false
+    };
+    
+    setIsLoading(false);
+    onLogin(newUser);
+  };
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setForgotLoading(true);
+      await onForgotPassword(forgotEmail);
+      setForgotLoading(false);
+      setForgotSuccess(true);
   };
 
   return (
@@ -79,55 +129,251 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                 />
             </div>
 
-            <Auth
-                supabaseClient={supabase}
-                appearance={{ theme: ThemeSupa, variables: customTheme }}
-                theme="light"
-                providers={[]}
-                redirectTo={window.location.origin}
-                localization={{
-                    variables: {
-                        sign_in: {
-                            email_label: 'Email',
-                            password_label: 'Senha',
-                            email_input_placeholder: 'seu@email.com',
-                            password_input_placeholder: '••••••••',
-                            button_label: 'Entrar',
-                            loading_button_label: 'Entrando...',
-                            link_text: 'Já tem uma conta? Faça login',
-                            social_provider_text: 'Entrar com {{provider}}',
-                            forgotten_password: 'Esqueceu a senha?',
-                            sign_in_action_label: 'Acesse sua conta',
-                            sign_in_action_button_label: 'Entrar',
-                        },
-                        sign_up: {
-                            email_label: 'Email',
-                            password_label: 'Crie uma senha',
-                            email_input_placeholder: 'seu@email.com',
-                            password_input_placeholder: '••••••••',
-                            button_label: 'Cadastrar',
-                            loading_button_label: 'Cadastrando...',
-                            link_text: 'Não tem uma conta? Cadastre-se',
-                            sign_up_action_label: 'Crie sua conta grátis',
-                            sign_up_action_button_label: 'Cadastrar',
-                        },
-                        forgotten_password: {
-                            email_label: 'Email Cadastrado',
-                            email_input_placeholder: 'seu@email.com',
-                            button_label: 'Recuperar Senha',
-                            loading_button_label: 'Enviando...',
-                            link_text: 'Esqueceu a senha?',
-                            forgotten_password_action_label: 'Recuperar Senha',
-                        },
-                        update_password: {
-                            password_label: 'Nova Senha',
-                            password_input_placeholder: '••••••••',
-                            button_label: 'Atualizar Senha',
-                            loading_button_label: 'Atualizando...',
-                        }
-                    }
-                }}
-            />
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2 text-center">
+                {mode === 'login' ? 'Acesse sua conta' : mode === 'register' ? 'Crie sua conta grátis' : 'Recuperar Senha'}
+            </h2>
+            <p className="text-slate-500 text-center mb-8">
+                {mode === 'login' 
+                    ? 'Bem-vindo de volta! Insira seus dados abaixo.' 
+                    : mode === 'register' 
+                    ? 'Comece a organizar seu negócio hoje mesmo.'
+                    : 'Enviaremos as instruções para seu e-mail.'}
+            </p>
+
+            {mode === 'login' && (
+                // LOGIN FORM
+                <form onSubmit={handleLoginSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email ou Usuário</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">person</span>
+                            <input 
+                                type="text" 
+                                required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="seu@email.com"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Senha</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">lock</span>
+                            <input 
+                                type={showLoginPass ? "text" : "password"} 
+                                required
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full pl-10 pr-10 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="••••••••"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowLoginPass(!showLoginPass)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none"
+                            >
+                                <span className="material-icons text-lg">
+                                    {showLoginPass ? 'visibility_off' : 'visibility'}
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div className="flex justify-end">
+                        <button type="button" onClick={() => setMode('forgot')} className="text-sm text-primary hover:underline">Esqueceu a senha?</button>
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        disabled={isLoading}
+                        className="w-full bg-primary hover:bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed text-white py-3 rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2"
+                    >
+                        {isLoading ? (
+                            <>
+                                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                Entrando...
+                            </>
+                        ) : 'Entrar'}
+                    </button>
+                    
+                    <p className="text-center text-slate-500 mt-6">
+                        Não tem uma conta? <button type="button" onClick={() => setMode('register')} className="text-primary font-bold hover:underline">Cadastre-se</button>
+                    </p>
+                    <div className="mt-4 p-3 bg-blue-50 text-blue-800 text-xs rounded border border-blue-100 text-center">
+                        Dica: Use um email contendo "novo" para simular um primeiro acesso (Onboarding).
+                    </div>
+                </form>
+            )}
+
+            {mode === 'register' && (
+                // REGISTER FORM
+                <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                     <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome Completo</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">badge</span>
+                            <input 
+                                type="text" 
+                                required
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="Maria Silva"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">email</span>
+                            <input 
+                                type="email" 
+                                required
+                                value={regEmail}
+                                onChange={(e) => setRegEmail(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="maria@exemplo.com"
+                            />
+                        </div>
+                    </div>
+                     <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Telefone (WhatsApp)</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">smartphone</span>
+                            <input 
+                                type="tel" 
+                                required
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="(11) 99999-9999"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Senha</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">lock</span>
+                            <input 
+                                type={showRegPass ? "text" : "password"}
+                                required
+                                value={regPassword}
+                                onChange={(e) => setRegPassword(e.target.value)}
+                                className="w-full pl-10 pr-10 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="••••••••"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowRegPass(!showRegPass)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none"
+                            >
+                                <span className="material-icons text-lg">
+                                    {showRegPass ? 'visibility_off' : 'visibility'}
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Confirmar Senha</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">lock_reset</span>
+                            <input 
+                                type={showConfirmPass ? "text" : "password"}
+                                required
+                                value={regConfirmPassword}
+                                onChange={(e) => setRegConfirmPassword(e.target.value)}
+                                className="w-full pl-10 pr-10 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="••••••••"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmPass(!showConfirmPass)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none"
+                            >
+                                <span className="material-icons text-lg">
+                                    {showConfirmPass ? 'visibility_off' : 'visibility'}
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        disabled={isLoading}
+                        className="w-full bg-primary hover:bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed text-white py-3 rounded-lg font-bold shadow-sm transition-colors mt-2 flex items-center justify-center gap-2"
+                    >
+                        {isLoading ? (
+                            <>
+                                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                Criando conta...
+                            </>
+                        ) : 'Cadastrar'}
+                    </button>
+                    
+                    <p className="text-center text-slate-500 mt-6">
+                        Já tem uma conta? <button type="button" onClick={() => setMode('login')} className="text-primary font-bold hover:underline">Faça login</button>
+                    </p>
+                </form>
+            )}
+
+            {mode === 'forgot' && (
+                // FORGOT PASSWORD FORM
+                <div className="space-y-6">
+                    {forgotSuccess ? (
+                        <div className="text-center animate-in fade-in">
+                            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="material-icons text-3xl">mark_email_read</span>
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">E-mail Enviado!</h3>
+                            <p className="text-slate-600 dark:text-slate-400 text-sm mb-6">
+                                Se o e-mail <strong>{forgotEmail}</strong> estiver cadastrado, você receberá um link para redefinir sua senha em instantes.
+                            </p>
+                            <button 
+                                onClick={() => { setMode('login'); setForgotSuccess(false); setForgotEmail(''); }} 
+                                className="w-full bg-primary hover:bg-blue-600 text-white py-3 rounded-lg font-bold shadow-sm transition-colors"
+                            >
+                                Voltar para o Login
+                            </button>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleForgotSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email Cadastrado</label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">email</span>
+                                    <input 
+                                        type="email" 
+                                        required
+                                        value={forgotEmail}
+                                        onChange={(e) => setForgotEmail(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                        placeholder="seu@email.com"
+                                    />
+                                </div>
+                            </div>
+
+                            <button 
+                                type="submit" 
+                                disabled={forgotLoading}
+                                className="w-full bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white py-3 rounded-lg font-bold shadow-sm transition-colors flex justify-center items-center gap-2"
+                            >
+                                {forgotLoading ? (
+                                    <>
+                                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                        Enviando...
+                                    </>
+                                ) : 'Recuperar Senha'}
+                            </button>
+                            
+                            <p className="text-center text-slate-500 mt-6">
+                                Lembrou a senha? <button type="button" onClick={() => setMode('login')} className="text-primary font-bold hover:underline">Voltar</button>
+                            </p>
+                        </form>
+                    )}
+                </div>
+            )}
         </div>
       </div>
     </div>
