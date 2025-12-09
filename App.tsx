@@ -211,7 +211,23 @@ const App: React.FC = () => {
         .from('news')
         .select('*')
         .order('date', { ascending: false });
-    if (!newsError) setNews(newsData as NewsItem[]);
+    
+    if (!newsError) {
+        const mappedNews: NewsItem[] = newsData.map(n => ({
+            id: n.id,
+            category: n.category,
+            title: n.title,
+            excerpt: n.excerpt,
+            content: n.content,
+            date: n.date,
+            imageUrl: n.image_url,
+            readTime: n.read_time,
+            status: n.status as 'published' | 'draft',
+        }));
+        setNews(mappedNews);
+    } else {
+        console.error('Error fetching news:', newsError);
+    }
 
     // Offers (Publicly readable via RLS)
     const { data: offersData, error: offersError } = await supabase
@@ -649,19 +665,73 @@ const App: React.FC = () => {
     setActiveTab('news');
   };
 
-  const handleAddNews = (newItem: NewsItem) => {
-    setNews([newItem, ...news]);
+  const handleAddNews = async (newItem: NewsItem) => {
+    const payload = {
+        category: newItem.category,
+        title: newItem.title,
+        excerpt: newItem.excerpt,
+        content: newItem.content,
+        date: newItem.date,
+        image_url: newItem.imageUrl,
+        read_time: newItem.readTime,
+        status: newItem.status,
+    };
+
+    const { error } = await supabase
+        .from('news')
+        .insert(payload);
+
+    if (error) {
+        console.error('Error adding news:', error);
+        showError('Erro ao publicar notícia.');
+        return;
+    }
+    
     showSuccess('Notícia publicada!');
+    loadNewsAndOffers(); // Reload news list
   };
 
-  const handleUpdateNews = (updatedItem: NewsItem) => {
-    setNews(news.map(n => n.id === updatedItem.id ? updatedItem : n));
+  const handleUpdateNews = async (updatedItem: NewsItem) => {
+    const payload = {
+        category: updatedItem.category,
+        title: updatedItem.title,
+        excerpt: updatedItem.excerpt,
+        content: updatedItem.content,
+        date: updatedItem.date,
+        image_url: updatedItem.imageUrl,
+        read_time: updatedItem.readTime,
+        status: updatedItem.status,
+    };
+
+    const { error } = await supabase
+        .from('news')
+        .update(payload)
+        .eq('id', updatedItem.id);
+
+    if (error) {
+        console.error('Error updating news:', error);
+        showError('Erro ao atualizar notícia.');
+        return;
+    }
+    
     showSuccess('Notícia atualizada!');
+    loadNewsAndOffers(); // Reload news list
   };
 
-  const handleDeleteNewsClick = (id: number) => {
-    setNews((prevNews) => prevNews.filter(n => n.id !== id));
+  const handleDeleteNewsClick = async (id: number) => {
+    const { error } = await supabase
+        .from('news')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        console.error('Error deleting news:', error);
+        showError('Erro ao excluir notícia.');
+        return;
+    }
+    
     showSuccess('Notícia excluída.');
+    loadNewsAndOffers(); // Reload news list
   };
 
   // --- NOTIFICATION HANDLERS ---
