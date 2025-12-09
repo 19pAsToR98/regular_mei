@@ -137,6 +137,45 @@ const App: React.FC = () => {
 
   // --- DATA FETCHING FUNCTIONS ---
 
+  const loadMaintenanceConfig = async () => {
+      const { data, error } = await supabase
+          .from('app_config')
+          .select('maintenance_config')
+          .eq('id', 1)
+          .single();
+
+      if (error) {
+          console.error('Error fetching maintenance config:', error);
+          // Fallback to default state if fetch fails
+          return;
+      }
+      
+      if (data && data.maintenance_config) {
+          setMaintenance(data.maintenance_config as MaintenanceConfig);
+      }
+  };
+
+  const handleUpdateMaintenance = async (config: MaintenanceConfig) => {
+      if (user?.role !== 'admin') {
+          showError('Apenas administradores podem alterar a manutenção.');
+          return;
+      }
+      
+      const { error } = await supabase
+          .from('app_config')
+          .update({ maintenance_config: config })
+          .eq('id', 1);
+
+      if (error) {
+          console.error('Error updating maintenance config:', error);
+          showError('Erro ao salvar configuração de manutenção.');
+          return;
+      }
+      
+      setMaintenance(config);
+      showSuccess('Configuração de manutenção atualizada!');
+  };
+
   const loadAllUsers = async () => {
       const { data, error } = await supabase
           .from('profiles')
@@ -372,6 +411,9 @@ const App: React.FC = () => {
 
   // --- AUTH MONITORING ---
   useEffect(() => {
+    // Load maintenance config first, as it affects rendering
+    loadMaintenanceConfig();
+
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         loadUserProfile(session.user);
@@ -1252,7 +1294,7 @@ const App: React.FC = () => {
                 onUpdateNotification={handleUpdateNotification}
                 onDeleteNotification={handleDeleteNotification}
                 maintenance={maintenance}
-                onUpdateMaintenance={setMaintenance}
+                onUpdateMaintenance={handleUpdateMaintenance}
                 connectionConfig={connectionConfig}
                 onUpdateConnectionConfig={setConnectionConfig}
                 users={allUsers}
