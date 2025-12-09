@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Offer, NewsItem, MaintenanceConfig, AppNotification, PollOption, ConnectionConfig, ApiFieldMapping, User } from '../types';
+import { showSuccess, showError, showLoading, dismissToast } from '../utils/toastUtils';
 
 interface AdminPageProps {
   offers: Offer[];
@@ -8,9 +9,9 @@ interface AdminPageProps {
   onDeleteOffer: (id: number) => void;
   
   news: NewsItem[];
-  onAddNews: (news: NewsItem) => void;
-  onUpdateNews: (news: NewsItem) => void;
-  onDeleteNews: (id: number) => void;
+  onAddNews: (news: NewsItem) => Promise<void>; // Updated to async
+  onUpdateNews: (news: NewsItem) => Promise<void>; // Updated to async
+  onDeleteNews: (id: number) => Promise<void>; // Updated to async
 
   notifications: AppNotification[];
   onAddNotification: (n: AppNotification) => void;
@@ -263,11 +264,11 @@ const AdminPage: React.FC<AdminPageProps> = ({
       setNewsForm(initialNewsForm);
   };
 
-  const handleDeleteNewsClick = (e: React.MouseEvent, id: number) => {
+  const handleDeleteNewsClick = async (e: React.MouseEvent, id: number) => {
       e.stopPropagation();
       e.preventDefault();
       if(window.confirm('Tem certeza que deseja excluir esta notícia?')) {
-          onDeleteNews(id);
+          await onDeleteNews(id);
           if (editingNewsId === id) handleCancelNewsEdit();
       }
   };
@@ -275,15 +276,21 @@ const AdminPage: React.FC<AdminPageProps> = ({
   const handleSaveNews = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 1000));
 
     const dateStr = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
     
+    const newsPayload: NewsItem = { 
+        id: editingNewsId || Date.now(), 
+        ...newsForm, 
+        date: newsForm.date || dateStr 
+    };
+
     if (editingNewsId) {
-        onUpdateNews({ id: editingNewsId, ...newsForm, date: newsForm.date || dateStr });
+        await onUpdateNews(newsPayload);
     } else {
-        onAddNews({ id: Date.now(), ...newsForm, date: dateStr });
+        await onAddNews(newsPayload);
     }
+    
     setIsSubmitting(false);
     handleCancelNewsEdit();
   };
@@ -449,7 +456,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
       await new Promise(r => setTimeout(r, 1000));
       onUpdateConnectionConfig(localConnConfig);
       setIsSubmitting(false);
-      alert('Configurações de conexão salvas com sucesso!');
+      showSuccess('Configurações de conexão salvas com sucesso!');
   };
 
   // Helper to extract nested values
@@ -459,7 +466,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
   const handleTestConnection = async () => {
       if (!testCnpj) {
-          alert('Por favor, insira um CNPJ para teste.');
+          showWarning('Por favor, insira um CNPJ para teste.');
           return;
       }
       
@@ -531,1117 +538,250 @@ const AdminPage: React.FC<AdminPageProps> = ({
       setLocalConnConfig(newConfig);
   };
 
-  const MappingEditor = ({ mappings, apiType }: { mappings: ApiFieldMapping[], apiType: 'cnpj' | 'diagnostic' }) => (
-      <div className="mt-4 border rounded-lg overflow-hidden border-slate-200 dark:border-slate-700">
-          <div className="bg-slate-50 dark:bg-slate-800 p-3 text-xs font-bold text-slate-500 uppercase flex gap-4">
-              <div className="flex-1">Campo do Sistema</div>
-              <div className="flex-1">Caminho JSON (Path)</div>
-              <div className="flex-1">Rótulo de Exibição</div>
-              <div className="w-16 text-center">Visível</div>
+  // --- RENDER LOGIC ---
+  
+  if (loadingAuth) {
+      return (
+          <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
+              <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
           </div>
-          <div className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900 max-h-60 overflow-y-auto">
-              {mappings.map((m, idx) => (
-                  <div key={m.key} className="p-3 flex gap-4 items-center">
-                      <div className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-300">{m.key}</div>
-                      <div className="flex-1">
-                          <input 
-                              type="text" 
-                              value={m.jsonPath} 
-                              onChange={(e) => handleUpdateMapping(apiType, idx, 'jsonPath', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-200 dark:border-slate-700 rounded text-sm bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-                          />
-                      </div>
-                      <div className="flex-1">
-                          <input 
-                              type="text" 
-                              value={m.label} 
-                              onChange={(e) => handleUpdateMapping(apiType, idx, 'label', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-200 dark:border-slate-700 rounded text-sm bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-                          />
-                      </div>
-                      <div className="w-16 flex justify-center">
-                          <input 
-                              type="checkbox" 
-                              checked={m.visible} 
-                              onChange={(e) => handleUpdateMapping(apiType, idx, 'visible', e.target.checked)}
-                              className="rounded text-primary focus:ring-primary"
-                          />
-                      </div>
+      );
+  }
+
+  if (isPublicView) {
+      return (
+          <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
+              <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 h-[72px] flex items-center justify-between px-6">
+                  <div className="flex items-center gap-2">
+                      <img 
+                        src="https://regularmei.com.br/wp-content/uploads/2024/07/REGULAR-500-x-200-px.png" 
+                        alt="Regular MEI" 
+                        className="h-8 w-auto object-contain dark:brightness-0 dark:invert"
+                      />
+                      <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase ml-2">Blog</span>
                   </div>
-              ))}
+                  <button 
+                    onClick={() => {
+                        setIsPublicView(false);
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete('page');
+                        window.history.pushState({}, '', url);
+                    }}
+                    className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
+                  >
+                      Acessar Plataforma <span className="material-icons text-sm">login</span>
+                  </button>
+              </header>
+              <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8">
+                  <NewsPage news={news} readingId={readingNewsId} onSelectNews={setReadingNewsId} />
+              </main>
+              <footer className="mt-8 text-center text-sm text-slate-400 pb-8">
+                <p>&copy; {new Date().getFullYear()} Regular MEI. Todos os direitos reservados.</p>
+              </footer>
           </div>
-      </div>
-  );
+      );
+  }
 
-  return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-8 max-w-6xl mx-auto">
-      
-      {/* Admin Tabs */}
-      <div className="flex flex-wrap gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full md:w-auto self-start inline-flex">
-        {/* ... Tab buttons ... */}
-        <button onClick={() => setActiveTab('users')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
-          Usuários
-        </button>
-        <button onClick={() => setActiveTab('news')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'news' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
-          Notícias
-        </button>
-        <button onClick={() => setActiveTab('offers')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'offers' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
-          Ofertas
-        </button>
-        <button onClick={() => setActiveTab('notifications')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'notifications' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
-          Notificações
-        </button>
-        <button onClick={() => setActiveTab('connections')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'connections' ? 'bg-white dark:bg-slate-700 text-blue-500 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
-          Conexões
-        </button>
-        <button onClick={() => setActiveTab('maintenance')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'maintenance' ? 'bg-white dark:bg-slate-700 text-red-500 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
-          Manutenção
-        </button>
-      </div>
+  if (!user) {
+      return <AuthPage onLogin={handleLogin} onForgotPassword={handleForgotPassword} />;
+  }
 
-      {/* --- CONTENT: USERS --- */}
-      {activeTab === 'users' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-              {/* ... User Stats & Table code remains same ... */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                      <p className="text-xs font-bold text-slate-500 uppercase mb-1">Total de Usuários</p>
-                      <div className="flex items-end gap-2">
-                          <span className="text-3xl font-bold text-slate-800 dark:text-white">{userStats.total}</span>
-                          <span className="text-xs text-green-500 font-bold mb-1">+{userStats.newThisMonth} este mês</span>
-                      </div>
-                  </div>
-                  {/* ... other stats ... */}
-                  <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                      <p className="text-xs font-bold text-slate-500 uppercase mb-1">Ativos (24h)</p>
-                      <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">{userStats.active24h}</span>
-                  </div>
-                  <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                      <p className="text-xs font-bold text-slate-500 uppercase mb-1">Ativos (7 dias)</p>
-                      <span className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{userStats.activeWeek}</span>
-                  </div>
-                  <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                      <p className="text-xs font-bold text-slate-500 uppercase mb-1">Ativos (30 dias)</p>
-                      <span className="text-3xl font-bold text-purple-600 dark:text-purple-400">{userStats.activeMonth}</span>
-                  </div>
-              </div>
+  if (!user.isSetupComplete) {
+      return <OnboardingPage user={user} onComplete={handleOnboardingComplete} />;
+  }
 
-              {/* Users Table */}
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-                  {/* ... Toolbar ... */}
-                  <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-50 dark:bg-slate-800/50">
-                      <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 mr-auto">
-                          <span className="material-icons text-primary">groups</span>
-                          Gestão de Usuários
-                      </h3>
-                      <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-                          {/* Search */}
-                          <div className="relative w-full md:w-64">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-sm">search</span>
-                              <input 
-                                type="text" 
-                                placeholder="Buscar nome, email ou CNPJ..." 
-                                value={userSearch}
-                                onChange={(e) => setUserSearch(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
-                              />
-                          </div>
-                          {/* Filter */}
-                          <select 
-                            value={userFilterType}
-                            onChange={(e) => setUserFilterType(e.target.value)}
-                            className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
-                          >
-                              <option value="all">Todos os Status</option>
-                              <option value="active">Ativos</option>
-                              <option value="inactive">Inativos</option>
-                              <option value="suspended">Suspensos</option>
-                              <option value="admin">Administradores</option>
-                              <option value="inactive_30d">Inativos {'>'} 30 dias</option>
-                              <option value="inactive_90d">Inativos {'>'} 90 dias</option>
-                          </select>
-                          {/* New User Button */}
-                          <button 
-                              onClick={() => {
-                                  setEditingUserId(null);
-                                  setUserForm({ name: '', email: '', phone: '', role: 'user', status: 'active', cnpj: '' });
-                                  setUserModalOpen(true);
-                              }}
-                              className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm transition-colors whitespace-nowrap"
-                          >
-                              <span className="material-icons text-sm">person_add</span>
-                              Novo
-                          </button>
-                      </div>
-                  </div>
-                  
-                  {/* Table Body */}
-                  <div className="overflow-x-auto">
-                      <table className="w-full text-left">
-                          <thead>
-                              <tr className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs uppercase font-semibold">
-                                  <th className="px-6 py-3">Usuário</th>
-                                  <th className="px-6 py-3">CNPJ</th>
-                                  <th className="px-6 py-3">Função</th>
-                                  <th className="px-6 py-3">Status</th>
-                                  <th className="px-6 py-3">Último Acesso</th>
-                                  <th className="px-6 py-3 text-right">Ações</th>
-                              </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                              {paginatedUsers.length === 0 ? (
-                                  <tr>
-                                      <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
-                                          Nenhum usuário encontrado com os filtros atuais.
-                                      </td>
-                                  </tr>
-                              ) : (
-                                  paginatedUsers.map(user => (
-                                      <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                          <td className="px-6 py-3">
-                                              <div className="flex items-center gap-3">
-                                                  <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500 text-xs font-bold">
-                                                      {user.name.charAt(0).toUpperCase()}
-                                                  </div>
-                                                  <div>
-                                                      <p className="text-sm font-bold text-slate-800 dark:text-white">{user.name}</p>
-                                                      <p className="text-xs text-slate-500">{user.email}</p>
-                                                  </div>
-                                              </div>
-                                          </td>
-                                          <td className="px-6 py-3 text-sm text-slate-600 dark:text-slate-300 font-mono">
-                                              {user.cnpj || '-'}
-                                          </td>
-                                          <td className="px-6 py-3">
-                                              <span className={`text-xs px-2 py-1 rounded font-bold uppercase ${
-                                                  user.role === 'admin' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                                              }`}>
-                                                  {user.role}
-                                              </span>
-                                          </td>
-                                          <td className="px-6 py-3">
-                                              <span className={`text-xs px-2 py-1 rounded font-bold uppercase ${
-                                                  user.status === 'active' ? 'bg-green-100 text-green-700' : 
-                                                  user.status === 'inactive' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
-                                              }`}>
-                                                  {user.status}
-                                              </span>
-                                          </td>
-                                          <td className="px-6 py-3 text-xs text-slate-500">
-                                              {user.lastActive ? new Date(user.lastActive).toLocaleString('pt-BR') : 'Nunca'}
-                                          </td>
-                                          <td className="px-6 py-3 text-right">
-                                              <div className="flex justify-end gap-1">
-                                                  <button 
-                                                      onClick={() => handleEditUserClick(user)}
-                                                      className="p-1.5 text-slate-400 hover:text-primary rounded hover:bg-blue-50 dark:hover:bg-slate-800"
-                                                      title="Editar"
-                                                  >
-                                                      <span className="material-icons text-sm">edit</span>
-                                                  </button>
-                                                  <button 
-                                                      onClick={() => handleDeleteUserClick(user.id)}
-                                                      className="p-1.5 text-slate-400 hover:text-red-500 rounded hover:bg-red-50 dark:hover:bg-slate-800"
-                                                      title="Excluir"
-                                                  >
-                                                      <span className="material-icons text-sm">delete</span>
-                                                  </button>
-                                              </div>
-                                          </td>
-                                      </tr>
-                                  ))
-                              )}
-                          </tbody>
-                      </table>
-                  </div>
+  const isPageInMaintenance = (page: string) => {
+      if (maintenance.global && page !== 'admin' && page !== 'settings') return true;
+      if (maintenance[page as keyof MaintenanceConfig]) return true;
+      return false;
+  }
 
-                  {/* Pagination Footer */}
-                  {totalUserPages > 1 && (
-                      <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-                          <span className="text-xs text-slate-500 dark:text-slate-400">
-                              Página <span className="font-bold text-slate-800 dark:text-white">{userPage}</span> de {totalUserPages}
-                          </span>
-                          <div className="flex gap-2">
-                              <button 
-                                  onClick={() => setUserPage(p => Math.max(1, p - 1))}
-                                  disabled={userPage === 1}
-                                  className="px-3 py-1 text-xs font-medium rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                  Anterior
-                              </button>
-                              <button 
-                                  onClick={() => setUserPage(p => Math.min(totalUserPages, p + 1))}
-                                  disabled={userPage === totalUserPages}
-                                  className="px-3 py-1 text-xs font-medium rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                  Próxima
-                              </button>
-                          </div>
-                      </div>
-                  )}
-              </div>
-
-              {/* User Modal */}
-              {userModalOpen && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-                      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800">
-                          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
-                              <h3 className="font-bold text-lg text-slate-800 dark:text-white">
-                                  {editingUserId ? 'Editar Usuário' : 'Novo Usuário'}
-                              </h3>
-                              <button onClick={() => setUserModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                                  <span className="material-icons">close</span>
-                              </button>
-                          </div>
-                          
-                          <form onSubmit={handleSaveUser} className="p-6 space-y-4">
-                              {/* ... User Form Fields ... */}
-                              <div>
-                                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome Completo</label>
-                                  <input 
-                                      type="text" 
-                                      required 
-                                      value={userForm.name} 
-                                      onChange={e => setUserForm({...userForm, name: e.target.value})}
-                                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50"
-                                  />
-                              </div>
-                              <div>
-                                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
-                                  <input 
-                                      type="email" 
-                                      required 
-                                      value={userForm.email} 
-                                      onChange={e => setUserForm({...userForm, email: e.target.value})}
-                                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50"
-                                  />
-                              </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Telefone</label>
-                                      <input 
-                                          type="text" 
-                                          value={userForm.phone} 
-                                          onChange={e => setUserForm({...userForm, phone: e.target.value})}
-                                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50"
-                                      />
-                                  </div>
-                                  <div>
-                                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">CNPJ</label>
-                                      <input 
-                                          type="text" 
-                                          value={userForm.cnpj} 
-                                          onChange={e => setUserForm({...userForm, cnpj: e.target.value})}
-                                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50"
-                                      />
-                                  </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Função</label>
-                                      <select 
-                                          value={userForm.role}
-                                          onChange={e => setUserForm({...userForm, role: e.target.value as any})}
-                                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50"
-                                      >
-                                          <option value="user">Usuário</option>
-                                          <option value="admin">Administrador</option>
-                                      </select>
-                                  </div>
-                                  <div>
-                                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
-                                      <select 
-                                          value={userForm.status}
-                                          onChange={e => setUserForm({...userForm, status: e.target.value as any})}
-                                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50"
-                                      >
-                                          <option value="active">Ativo</option>
-                                          <option value="inactive">Inativo</option>
-                                          <option value="suspended">Suspensos</option>
-                                      </select>
-                                  </div>
-                              </div>
-                              
-                              <div className="flex justify-end gap-3 pt-4">
-                                  <button 
-                                      type="button" 
-                                      onClick={() => setUserModalOpen(false)}
-                                      className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium transition-colors"
-                                  >
-                                      Cancelar
-                                  </button>
-                                  <button 
-                                      type="submit" 
-                                      disabled={isSubmitting}
-                                      className="px-6 py-2 bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
-                                  >
-                                      {isSubmitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'Salvar'}
-                                  </button>
-                              </div>
-                          </form>
-                      </div>
-                  </div>
-              )}
-          </div>
-      )}
-
-      {/* --- CONTENT: NEWS --- */}
-      {activeTab === 'news' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* News Form */}
-          <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
-            {/* ... News Form content ... */}
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">
-                {editingNewsId ? 'Editar Notícia' : 'Publicar Nova Notícia'}
-            </h3>
-            
-            {editingNewsId && (
-                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 rounded-lg flex justify-between items-center">
-                    <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">Editando notícia...</span>
-                    <button type="button" onClick={handleCancelNewsEdit} className="text-xs font-bold text-blue-600 hover:underline">Cancelar</button>
-                </div>
-            )}
-
-            <form onSubmit={handleSaveNews} className="space-y-4">
-              {/* ... News Form Fields ... */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Título do Artigo</label>
-                  <input type="text" required value={newsForm.title} onChange={e => setNewsForm({...newsForm, title: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Categoria</label>
-                  <select value={newsForm.category} onChange={e => setNewsForm({...newsForm, category: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none">
-                    <option>Legislação</option><option>Finanças</option><option>Gestão</option><option>Marketing</option><option>Tecnologia</option><option>Benefícios</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tempo de Leitura</label>
-                  <input type="text" placeholder="Ex: 5 min leitura" value={newsForm.readTime} onChange={e => setNewsForm({...newsForm, readTime: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">URL da Imagem de Capa</label>
-                  <input type="text" placeholder="https://..." value={newsForm.imageUrl} onChange={e => setNewsForm({...newsForm, imageUrl: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" />
-                </div>
-                <div className="md:col-span-2">
-                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Resumo (Excerpt)</label>
-                   <textarea rows={2} required value={newsForm.excerpt} onChange={e => setNewsForm({...newsForm, excerpt: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" placeholder="Breve descrição que aparece no card..."></textarea>
-                </div>
-                
-                {/* Enhanced Content Editor */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Conteúdo do Artigo (HTML suportado)</label>
-                  <div className="border border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-800">
-                      {/* Editor Toolbar */}
-                      <div className="flex flex-wrap gap-1 p-2 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-                          <button type="button" onClick={() => handleFormat('<strong>', '</strong>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 font-bold" title="Negrito">B</button>
-                          <button type="button" onClick={() => handleFormat('<em>', '</em>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 italic" title="Itálico">I</button>
-                          <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center"></div>
-                          <button type="button" onClick={() => handleFormat('<h2>', '</h2>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 font-bold text-sm" title="Título H2">H2</button>
-                          <button type="button" onClick={() => handleFormat('<h3>', '</h3>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 font-bold text-xs" title="Título H3">H3</button>
-                          <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center"></div>
-                          <button type="button" onClick={() => handleFormat('<p>', '</p>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Parágrafo"><span className="material-icons text-sm">segment</span></button>
-                          <button type="button" onClick={() => handleFormat('<ul>\n<li>', '</li>\n</ul>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Lista com marcadores"><span className="material-icons text-sm">format_list_bulleted</span></button>
-                          <button type="button" onClick={() => handleFormat('<ol>\n<li>', '</li>\n</ol>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Lista numerada"><span className="material-icons text-sm">format_list_numbered</span></button>
-                          <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center"></div>
-                          <button type="button" onClick={() => handleFormat('<a href="#" target="_blank">', '</a>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Link"><span className="material-icons text-sm">link</span></button>
-                          <button type="button" onClick={() => handleFormat('<blockquote>', '</blockquote>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Citação"><span className="material-icons text-sm">format_quote</span></button>
-                      </div>
-                      <textarea 
-                        ref={contentInputRef}
-                        rows={10} 
-                        required 
-                        value={newsForm.content} 
-                        onChange={e => setNewsForm({...newsForm, content: e.target.value})} 
-                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none font-mono text-sm" 
-                        placeholder="Escreva seu artigo aqui. Use a barra acima para formatar..."
-                      ></textarea>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">Dica: Selecione o texto e clique nos botões acima para formatar.</p>
-                </div>
-
-                <div>
-                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
-                   <select value={newsForm.status} onChange={e => setNewsForm({...newsForm, status: e.target.value as any})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none">
-                     <option value="draft">Rascunho</option>
-                     <option value="published">Publicado</option>
-                   </select>
-                </div>
-              </div>
-              <div className="flex justify-end pt-2 gap-2">
-                <button type="button" onClick={() => setShowNewsPreview(true)} className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
-                    Pré-visualizar
-                </button>
-                <button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2">
-                  {isSubmitting ? (
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  ) : (
-                      <span className="material-icons text-sm">{editingNewsId ? 'save_as' : 'publish'}</span> 
-                  )}
-                  {editingNewsId ? 'Salvar Alterações' : 'Publicar Notícia'}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* News List */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm h-fit">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Gerenciar Notícias</h3>
-            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
-              {news.map(item => (
-                <div key={item.id} onClick={(e) => handleEditNewsClick(e, item)} className={`p-3 rounded-lg border cursor-pointer transition-colors ${editingNewsId === item.id ? 'bg-blue-50 border-blue-200' : 'border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800'}`}>
-                  <h4 className="font-semibold text-slate-800 dark:text-white text-sm line-clamp-1">{item.title}</h4>
-                  <div className="flex justify-between items-center mt-2">
-                    <div className="flex gap-2">
-                        <span className="text-xs text-slate-500 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded">{item.category}</span>
-                        {item.status === 'draft' && <span className="text-xs text-slate-500 bg-yellow-100 px-2 py-0.5 rounded">Rascunho</span>}
-                    </div>
-                    <div className="flex gap-1">
-                      <button type="button" onClick={(e) => handleEditNewsClick(e, item)} className="p-1 text-slate-400 hover:text-primary"><span className="material-icons text-sm">edit</span></button>
-                      <button type="button" onClick={(e) => handleDeleteNewsClick(e, item.id)} className="p-1 text-slate-400 hover:text-red-500"><span className="material-icons text-sm">delete</span></button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- CONTENT: OFFERS --- */}
-      {activeTab === 'offers' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Offers Form */}
-          <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
-            {/* ... Offer Form Content ... */}
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">
-                {editingOfferId ? 'Editar Oferta Existente' : 'Cadastrar Oferta ou Cupom'}
-            </h3>
-            
-            {editingOfferId && (
-                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 rounded-lg flex justify-between items-center">
-                    <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">Editando oferta...</span>
-                    <button type="button" onClick={handleCancelOfferEdit} className="text-xs font-bold text-blue-600 hover:underline">Cancelar</button>
-                </div>
-            )}
-
-            <form onSubmit={handleSaveOffer} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="md:col-span-2 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Identidade do Parceiro</label>
-                    <div className="flex gap-4 items-center">
-                        <button type="button" onClick={() => setShowIconPicker(!showIconPicker)} className={`w-12 h-12 rounded-lg ${offerForm.partnerColor} text-white flex items-center justify-center`}><span className="material-icons">{offerForm.partnerIcon}</span></button>
-                         {showIconPicker && (
-                         <div className="absolute mt-16 p-2 bg-white border rounded shadow-xl z-50 grid grid-cols-5 gap-1 h-32 overflow-y-auto">
-                           {availableIcons.map(icon => <button key={icon} type="button" onClick={() => { setOfferForm({...offerForm, partnerIcon: icon}); setShowIconPicker(false); }} className="p-1 hover:bg-slate-100"><span className="material-icons text-sm">{icon}</span></button>)}
-                         </div>
-                       )}
-                        <div className="flex flex-wrap gap-1">
-                            {tailwindColors.map(c => <button key={c.name} type="button" onClick={() => setOfferForm({...offerForm, partnerColor: c.class})} className={`w-6 h-6 rounded-full ${c.class} ring-1 ring-offset-1 ${offerForm.partnerColor === c.class ? 'ring-slate-400' : 'ring-transparent'}`}></button>)}
-                        </div>
-                    </div>
-                 </div>
-                 {/* ... Other inputs ... */}
-                 <div className="md:col-span-1"><label className="text-sm block mb-1">Parceiro</label><input type="text" required value={offerForm.partnerName} onChange={e => setOfferForm({...offerForm, partnerName: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
-                 <div className="md:col-span-1"><label className="text-sm block mb-1">Desconto</label><input type="text" required value={offerForm.discount} onChange={e => setOfferForm({...offerForm, discount: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
-                 <div className="md:col-span-2"><label className="text-sm block mb-1">Título</label><input type="text" required value={offerForm.title} onChange={e => setOfferForm({...offerForm, title: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
-                 <div className="md:col-span-2"><label className="text-sm block mb-1">Descrição</label><textarea required rows={2} value={offerForm.description} onChange={e => setOfferForm({...offerForm, description: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
-                 <div className="md:col-span-1"><label className="text-sm block mb-1">Cupom</label><input type="text" value={offerForm.code} onChange={e => setOfferForm({...offerForm, code: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
-                 <div className="md:col-span-1"><label className="text-sm block mb-1">Validade</label><input type="text" required value={offerForm.expiry} onChange={e => setOfferForm({...offerForm, expiry: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
-                 <div className="md:col-span-1"><label className="text-sm block mb-1">Link</label><input type="text" value={offerForm.link} onChange={e => setOfferForm({...offerForm, link: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
-                 <div className="md:col-span-1"><label className="text-sm block mb-1">Categoria</label><select value={offerForm.category} onChange={e => setOfferForm({...offerForm, category: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800"><option>Finanças</option><option>Software</option><option>Serviços</option><option>Educação</option></select></div>
-                 <div className="md:col-span-2 flex gap-4">
-                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={offerForm.isExclusive} onChange={e => setOfferForm({...offerForm, isExclusive: e.target.checked})} /> Exclusivo</label>
-                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={offerForm.isFeatured} onChange={e => setOfferForm({...offerForm, isFeatured: e.target.checked})} /> Destaque</label>
-                 </div>
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button 
-                    type="submit" 
-                    disabled={isSubmitting}
-                    className="bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2"
-                >
-                    {isSubmitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : null}
-                    {editingOfferId ? 'Atualizar' : 'Salvar'}
-                </button>
-              </div>
-            </form>
-          </div>
-          
-          {/* Offers List */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm h-fit">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Ofertas Ativas</h3>
-            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
-              {offers.map(offer => (
-                <div key={offer.id} onClick={(e) => handleEditOfferClick(e, offer)} className={`p-3 rounded-lg border cursor-pointer flex justify-between items-center group ${editingOfferId === offer.id ? 'bg-blue-50 border-blue-200' : 'border-slate-100 hover:bg-slate-50'}`}>
-                  <div className="flex items-center gap-3">
-                     <div className={`w-8 h-8 rounded ${offer.partnerColor} flex items-center justify-center text-white text-xs`}><span className="material-icons text-sm">{offer.partnerIcon}</span></div>
-                     <div><h4 className="font-semibold text-slate-800 dark:text-white text-sm line-clamp-1">{offer.title}</h4></div>
-                  </div>
-                  <div className="flex gap-1">
-                      <button type="button" onClick={(e) => handleEditOfferClick(e, offer)} className="p-1 text-slate-400 hover:text-primary"><span className="material-icons text-sm">edit</span></button>
-                      <button type="button" onClick={(e) => handleDeleteOfferClick(e, offer.id)} className="p-1 text-slate-400 hover:text-red-500"><span className="material-icons text-sm">delete</span></button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- CONTENT: NOTIFICATIONS --- */}
-      {activeTab === 'notifications' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
-                {/* ... Notification Form Content ... */}
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">
-                    {editingNotifId ? 'Editar Notificação' : 'Criar Notificação ou Enquete'}
-                </h3>
-                
-                {editingNotifId && (
-                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 rounded-lg flex justify-between items-center">
-                      <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">Editando notificação...</span>
-                      <button type="button" onClick={handleCancelNotifEdit} className="text-xs font-bold text-blue-600 hover:underline">Cancelar</button>
-                  </div>
-                )}
-
-                <form onSubmit={handleSaveNotification} className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4">
-                        <div>
-                           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de Mensagem</label>
-                           <div className="grid grid-cols-4 gap-2">
-                              {([
-                                  {val: 'info', icon: 'info', label: 'Info', color: 'bg-blue-100 text-blue-600'},
-                                  {val: 'warning', icon: 'warning', label: 'Aviso', color: 'bg-yellow-100 text-yellow-600'},
-                                  {val: 'success', icon: 'check_circle', label: 'Sucesso', color: 'bg-green-100 text-green-600'},
-                                  {val: 'poll', icon: 'poll', label: 'Enquete', color: 'bg-purple-100 text-purple-600'}
-                              ] as const).map(opt => (
-                                <button 
-                                  key={opt.val}
-                                  type="button" 
-                                  onClick={() => setNotifForm({...notifForm, type: opt.val})} 
-                                  className={`flex flex-col items-center p-3 rounded-lg border transition-all ${notifForm.type === opt.val ? `border-current ${opt.color} ring-1 ring-offset-1` : 'border-slate-200 bg-white hover:bg-slate-50'}`}
-                                >
-                                    <span className="material-icons mb-1">{opt.icon}</span>
-                                    <span className="text-xs font-bold">{opt.label}</span>
-                                </button>
-                              ))}
-                           </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                {notifForm.type === 'poll' ? 'Pergunta da Enquete' : 'Mensagem'}
-                            </label>
-                            <textarea 
-                                required 
-                                rows={notifForm.type === 'poll' ? 2 : 4} 
-                                value={notifForm.text} 
-                                onChange={e => setNotifForm({...notifForm, text: e.target.value})} 
-                                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50" 
-                                placeholder={notifForm.type === 'poll' ? "Ex: Qual funcionalidade você quer ver primeiro?" : "Escreva o conteúdo da notificação..."}
-                            />
-                        </div>
-
-                        {/* Poll Options Builder */}
-                        {notifForm.type === 'poll' && (
-                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-top-2">
-                                <div className="mb-4">
-                                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Validade / Prazo</label>
-                                  <input 
-                                    type="datetime-local" 
-                                    value={notifForm.expiresAt} 
-                                    onChange={e => setNotifForm({...notifForm, expiresAt: e.target.value})}
-                                    className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-sm"
-                                  />
-                                </div>
-
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Opções de Resposta</label>
-                                <div className="space-y-2">
-                                    {notifForm.pollOptions.map((opt, idx) => (
-                                        <div key={idx} className="flex gap-2">
-                                            <input 
-                                                type="text" 
-                                                value={opt} 
-                                                onChange={(e) => handlePollOptionChange(idx, e.target.value)}
-                                                className="flex-1 px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-sm"
-                                                placeholder={`Opção ${idx + 1}`}
-                                            />
-                                            {notifForm.pollOptions.length > 2 && (
-                                                <button type="button" onClick={() => handleRemovePollOption(idx)} className="p-2 text-slate-400 hover:text-red-500">
-                                                    <span className="material-icons">close</span>
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                                <button 
-                                    type="button" 
-                                    onClick={handleAddPollOption}
-                                    className="mt-3 text-sm text-primary font-medium hover:underline flex items-center gap-1"
-                                >
-                                    <span className="material-icons text-sm">add</span> Adicionar Opção
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex justify-end gap-3">
-                         <button 
-                            type="submit" 
-                            disabled={isSubmitting}
-                            className="bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-6 py-2 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2"
-                         >
-                            {isSubmitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : null}
-                            {editingNotifId ? 'Atualizar' : 'Publicar'}
-                         </button>
-                    </div>
-                </form>
-            </div>
-             
-             {/* ... Notifications List ... */}
-             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm h-fit">
-                <h3 className="font-bold text-slate-800 dark:text-white mb-4">Ativas</h3>
-                <div className="space-y-4">
-                    {notifications.length === 0 ? <p className="text-slate-400 text-sm text-center py-4">Nenhuma notificação.</p> : null}
-                    {notifications.map(n => (
-                        <div key={n.id} onClick={() => handleEditNotifClick(n)} className={`p-4 rounded-lg border border-l-4 cursor-pointer hover:bg-slate-50 transition-colors ${
-                            n.type === 'info' ? 'border-l-blue-500' :
-                            n.type === 'warning' ? 'border-l-yellow-500' :
-                            n.type === 'success' ? 'border-l-green-500' : 'border-l-purple-500 bg-purple-50/50'
-                        }`}>
-                            <div className="flex justify-between items-start mb-1">
-                                <div className="flex items-center gap-2">
-                                    <span className={`material-icons text-sm ${
-                                        n.type === 'info' ? 'text-blue-500' :
-                                        n.type === 'warning' ? 'text-yellow-500' :
-                                        n.type === 'success' ? 'text-green-500' : 'text-purple-500'
-                                    }`}>
-                                        {n.type === 'poll' ? 'poll' : n.type === 'warning' ? 'warning' : n.type === 'success' ? 'check_circle' : 'info'}
-                                    </span>
-                                    <span className="text-xs font-bold uppercase text-slate-400">{n.type === 'poll' ? 'Enquete' : 'Aviso'}</span>
-                                </div>
-                                <div className="flex gap-2">
-                                  <button onClick={(e) => { e.stopPropagation(); handleEditNotifClick(n); }} className="text-slate-300 hover:text-primary">
-                                    <span className="material-icons text-sm">edit</span>
-                                  </button>
-                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteNotifClick(n.id); }} className="text-slate-300 hover:text-red-500">
-                                      <span className="material-icons text-sm">close</span>
-                                  </button>
-                                </div>
-                            </div>
-                            <p className="text-sm text-slate-700 dark:text-slate-300 font-medium mb-2">{n.text}</p>
-                            
-                            {n.type === 'poll' && (
-                                <div className="flex justify-between items-end">
-                                  {n.expiresAt && <p className="text-[10px] text-red-500 mb-1">Expira em: {new Date(n.expiresAt).toLocaleString()}</p>}
-                                  <button 
-                                    onClick={(e) => { e.stopPropagation(); setViewingResultsPoll(n); }}
-                                    className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded hover:bg-purple-200 font-bold flex items-center gap-1"
-                                  >
-                                    <span className="material-icons text-[10px]">bar_chart</span> Ver Resultados
-                                  </button>
-                                </div>
-                            )}
-
-                            <p className="text-[10px] text-slate-400 text-right mt-1">{n.date}</p>
-                        </div>
-                    ))}
-                </div>
+  if (maintenance.global && activeTab !== 'admin' && activeTab !== 'settings') {
+      return (
+        <div className="flex h-screen bg-background-light dark:bg-background-dark overflow-hidden">
+            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} userRole={user?.role} />
+             <div className="flex-1 flex flex-col overflow-hidden">
+                 <Header activeTab={activeTab} onMenuClick={() => setIsSidebarOpen(true)} notifications={notifications} onMarkAsRead={handleMarkAsRead} onVote={handleVote} user={user} onLogout={handleLogout} onNavigateToProfile={() => setActiveTab('settings')} />
+                 <main className="flex-1 flex items-center justify-center p-4">
+                     <MaintenanceOverlay type="global" />
+                 </main>
              </div>
         </div>
-      )}
+      );
+  }
 
-      {/* --- CONTENT: MAINTENANCE --- */}
-      {activeTab === 'maintenance' && (
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
-              <h3 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                  <span className="material-icons text-red-500">engineering</span>
-                  Controle de Manutenção
-              </h3>
-              
-              <div className="space-y-6">
-                  <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/50 rounded-xl flex justify-between items-center">
-                      <div>
-                          <h4 className="font-bold text-red-700 dark:text-red-400">Modo de Manutenção Global</h4>
-                          <p className="text-sm text-red-600/80 dark:text-red-400/70">Bloqueia o acesso a todas as páginas exceto Admin.</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                          <input 
-                              type="checkbox" 
-                              className="sr-only peer"
-                              checked={maintenance.global}
-                              onChange={() => toggleMaintenance('global')}
-                          />
-                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 dark:peer-focus:ring-red-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-red-600"></div>
-                      </label>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {Object.keys(maintenance).filter(k => k !== 'global').map(key => (
-                          <div key={key} className="flex justify-between items-center p-3 border border-slate-100 dark:border-slate-800 rounded-lg">
-                              <span className="text-sm font-medium capitalize text-slate-700 dark:text-slate-300">
-                                  {key === 'cnpj' ? 'Meu CNPJ' : key}
-                              </span>
-                              <label className="relative inline-flex items-center cursor-pointer">
-                                  <input 
-                                      type="checkbox" 
-                                      className="sr-only peer"
-                                      checked={maintenance[key as keyof MaintenanceConfig]}
-                                      onChange={() => toggleMaintenance(key as keyof MaintenanceConfig)}
-                                  />
-                                  <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-orange-500"></div>
-                              </label>
-                          </div>
-                      ))}
-                  </div>
+  const renderContent = () => {
+      // Permission check for Admin page
+      if (activeTab === 'admin' && user.role !== 'admin') {
+          return (
+              <div className="flex flex-col items-center justify-center min-h-[600px] text-center p-8">
+                  <span className="material-icons text-6xl text-red-500 mb-4">lock</span>
+                  <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Acesso Negado</h2>
+                  <p className="text-slate-500 dark:text-slate-400">Você não tem permissão para acessar a área de administração.</p>
+                  <button onClick={() => setActiveTab('dashboard')} className="mt-4 text-primary font-medium hover:underline">Voltar ao Dashboard</button>
               </div>
-          </div>
-      )}
+          );
+      }
 
-      {/* --- CONTENT: CONNECTIONS --- */}
-      {activeTab === 'connections' && (
-        <form onSubmit={handleSaveConnection} className="space-y-6">
-            
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                    <span className="material-icons text-indigo-500">psychology</span>
-                    Configurações de IA (Gemini)
-                </h3>
-                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <div>
-                        <h4 className="font-semibold text-slate-800 dark:text-white">Análise Financeira Inteligente</h4>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Ativar o widget de análise automática no Dashboard.
-                        </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input 
-                            type="checkbox" 
-                            className="sr-only peer"
-                            checked={localConnConfig.ai.enabled}
-                            onChange={(e) => setLocalConnConfig({...localConnConfig, ai: {...localConnConfig.ai, enabled: e.target.checked}})}
-                        />
-                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-blue-600"></div>
-                    </label>
-                </div>
-            </div>
+      if (isPageInMaintenance(activeTab)) {
+          return <MaintenanceOverlay type="page" />;
+      }
 
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                    <span className="material-icons text-blue-500">store</span>
-                    API Dados do CNPJ
-                </h3>
-                {/* ... API Settings Fields ... */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">URL Base da API</label>
-                        <input 
-                            type="text" 
-                            required 
-                            value={localConnConfig.cnpjApi.baseUrl} 
-                            onChange={(e) => setLocalConnConfig({...localConnConfig, cnpjApi: {...localConnConfig.cnpjApi, baseUrl: e.target.value}})}
-                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/50" 
-                            placeholder="https://publica.cnpj.ws/cnpj/"
-                        />
-                    </div>
-                    {/* ... other fields ... */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Token de Acesso (Opcional)</label>
-                        <input 
-                            type="password" 
-                            value={localConnConfig.cnpjApi.token || ''} 
-                            onChange={(e) => setLocalConnConfig({...localConnConfig, cnpjApi: {...localConnConfig.cnpjApi, token: e.target.value}})}
-                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/50" 
-                            placeholder="••••••••"
-                        />
-                    </div>
-                    
-                    <div className="md:col-span-2 mt-2">
-                        <details>
-                            <summary className="cursor-pointer text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline mb-2 select-none">Configurar Mapeamento de Campos e Exibição</summary>
-                            <MappingEditor mappings={localConnConfig.cnpjApi.mappings} apiType="cnpj" />
-                        </details>
-                    </div>
-
-                    <div className="flex items-end">
-                        <button 
-                            type="button" 
-                            onClick={() => { setTestType('cnpj'); setTestModalOpen(true); }}
-                            className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors w-full flex items-center justify-center gap-2"
-                        >
-                            <span className="material-icons text-sm">science</span> Testar Conexão
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                    <span className="material-icons text-purple-500">analytics</span>
-                    API Diagnóstico Fiscal (Webhook)
-                </h3>
-                {/* ... Diagnostic API Fields ... */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">URL do Webhook</label>
-                        <input 
-                            type="text" 
-                            required 
-                            value={localConnConfig.diagnosticApi.webhookUrl} 
-                            onChange={(e) => setLocalConnConfig({...localConnConfig, diagnosticApi: {...localConnConfig.diagnosticApi, webhookUrl: e.target.value}})}
-                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50" 
-                            placeholder="https://webhook..."
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Chave do Header (CNPJ)</label>
-                        <input 
-                            type="text" 
-                            value={localConnConfig.diagnosticApi.headerKey || 'cnpj'} 
-                            onChange={(e) => setLocalConnConfig({...localConnConfig, diagnosticApi: {...localConnConfig.diagnosticApi, headerKey: e.target.value}})}
-                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50" 
-                            placeholder="ex: cnpj"
-                        />
-                    </div>
-
-                    <div className="md:col-span-2 mt-2">
-                        <details>
-                            <summary className="cursor-pointer text-sm font-medium text-purple-600 dark:text-purple-400 hover:underline mb-2 select-none">Configurar Mapeamento de Campos e Exibição</summary>
-                            <MappingEditor mappings={localConnConfig.diagnosticApi.mappings} apiType="diagnostic" />
-                        </details>
-                    </div>
-
-                    <div className="flex items-end">
-                        <button 
-                            type="button" 
-                            onClick={() => { setTestType('diagnostic'); setTestModalOpen(true); }}
-                            className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors w-full flex items-center justify-center gap-2"
-                        >
-                            <span className="material-icons text-sm">science</span> Testar Conexão
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                    <span className="material-icons text-orange-500">mail</span>
-                    Configurações de SMTP (E-mail)
-                </h3>
-                {/* ... SMTP Fields ... */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Host SMTP</label>
-                        <input 
-                            type="text" 
-                            required 
-                            value={localConnConfig.smtp.host} 
-                            onChange={(e) => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, host: e.target.value}})}
-                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-orange-500/50" 
-                            placeholder="smtp.example.com"
-                        />
-                    </div>
-                    {/* ... (rest of SMTP fields unchanged) ... */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Porta</label>
-                        <input 
-                            type="number" 
-                            required 
-                            value={localConnConfig.smtp.port} 
-                            onChange={(e) => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, port: parseInt(e.target.value)}})}
-                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-orange-500/50" 
-                            placeholder="587"
-                        />
-                    </div>
-                    <div className="flex items-center pt-6">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input 
-                                type="checkbox" 
-                                checked={localConnConfig.smtp.secure} 
-                                onChange={(e) => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, secure: e.target.checked}})}
-                                className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500"
-                            />
-                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Conexão Segura (SSL/TLS)</span>
-                        </label>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Usuário / Email</label>
-                        <input 
-                            type="text" 
-                            value={localConnConfig.smtp.user} 
-                            onChange={(e) => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, user: e.target.value}})}
-                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-orange-500/50" 
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Senha</label>
-                        <input 
-                            type="password" 
-                            value={localConnConfig.smtp.pass} 
-                            onChange={(e) => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, pass: e.target.value}})}
-                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-orange-500/50" 
-                            placeholder="••••••••"
-                        />
-                    </div>
-                    <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Remetente Padrão (From)</label>
-                        <input 
-                            type="email" 
-                            value={localConnConfig.smtp.fromEmail} 
-                            onChange={(e) => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, fromEmail: e.target.value}})}
-                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-orange-500/50" 
-                            placeholder="noreply@seudominio.com"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex justify-end pt-4">
-                <button 
-                    type="submit" 
-                    disabled={isSubmitting}
-                    className="bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-8 py-3 rounded-lg font-bold shadow-lg shadow-blue-500/20 transition-all transform hover:-translate-y-0.5 flex items-center gap-2"
-                >
-                    {isSubmitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : <span className="material-icons">save</span>}
-                    Salvar Configurações
-                </button>
-            </div>
-        </form>
-      )}
-
-      {/* POLL RESULTS MODAL */}
-      {viewingResultsPoll && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-              <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-800">
-                  <div className="bg-purple-100 dark:bg-purple-900/30 p-6 text-center relative border-b border-purple-200 dark:border-purple-800">
-                      <h3 className="text-xl font-bold text-purple-900 dark:text-purple-100">Resultados da Enquete</h3>
-                      <button onClick={() => setViewingResultsPoll(null)} className="absolute top-4 right-4 text-purple-700 dark:text-purple-300 hover:text-purple-900">
-                          <span className="material-icons">close</span>
-                      </button>
-                  </div>
-                  <div className="p-6">
-                      <h4 className="font-bold text-slate-800 dark:text-white mb-4 text-center">{viewingResultsPoll.text}</h4>
-                      
-                      <div className="space-y-4">
-                          {viewingResultsPoll.pollOptions?.map(opt => {
-                              const totalVotes = viewingResultsPoll.pollOptions!.reduce((acc, curr) => acc + curr.votes, 0);
-                              const percent = totalVotes === 0 ? 0 : Math.round((opt.votes / totalVotes) * 100);
-                              
-                              return (
-                                  <div key={opt.id}>
-                                      <div className="flex justify-between text-sm mb-1">
-                                          <span className="text-slate-700 dark:text-slate-300 font-medium">{opt.text}</span>
-                                          <span className="text-slate-500 font-bold">{opt.votes} votos ({percent}%)</span>
-                                      </div>
-                                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
-                                          <div className="bg-purple-600 h-2.5 rounded-full transition-all duration-1000" style={{ width: `${percent}%` }}></div>
-                                      </div>
-                                  </div>
-                              );
-                          })}
+      switch (activeTab) {
+          case 'dashboard':
+              return (
+                <>
+                {/* --- MOBILE LAYOUT --- */}
+                <div className="md:hidden">
+                   <div className="grid grid-cols-12 mb-6">
+                      <AIAnalysis enabled={connectionConfig.ai.enabled} />
+                   </div>
+                   <MobileDashboard 
+                        transactions={transactions} 
+                        user={user} 
+                        appointments={appointments}
+                        fiscalData={fiscalData}
+                        onNavigate={setActiveTab}
+                   />
+                   
+                   <div className="mt-6">
+                      <h3 className="text-sm font-bold text-slate-500 uppercase mb-4 px-2">Últimas Movimentações</h3>
+                      <div className="h-[400px]">
+                         <RecentTransactions transactions={transactions} onNavigate={setActiveTab} />
                       </div>
+                   </div>
 
-                      <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
-                          <button 
-                              onClick={handleExportPollVotes}
-                              className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-lg font-bold transition-colors"
-                          >
-                              <span className="material-icons text-sm">download</span>
-                              Exportar Dados (CSV)
-                          </button>
-                          <p className="text-xs text-center text-slate-400 mt-2">Baixa planilha com lista de usuários e votos.</p>
-                      </div>
+                   <div className="mt-8 mb-4">
+                      <NewsSlider news={news} onViewNews={handleViewNews} />
+                   </div>
+                </div>
+
+                {/* --- DESKTOP LAYOUT --- */}
+                <div className="hidden md:block space-y-6">
+                  <div className="grid grid-cols-12">
+                    <AIAnalysis enabled={connectionConfig.ai.enabled} />
                   </div>
-              </div>
-          </div>
-      )}
-
-      {/* CONNECTION TEST MODAL - Update button status only */}
-      {testModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-              <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
-                  {/* Modal Header */}
-                  <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
-                      <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-                          <span className="material-icons text-primary">science</span>
-                          Teste de Conexão
-                      </h3>
-                      <button onClick={() => setTestModalOpen(false)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                          <span className="material-icons">close</span>
-                      </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    {dashboardStats.map((stat, index) => (
+                      <StatCard key={index} data={stat} />
+                    ))}
                   </div>
                   
-                  <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                      
-                      {/* Input Section */}
-                      <div className="flex gap-4 items-end">
-                          <div className="flex-1">
-                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">CNPJ para teste</label>
-                              <input 
-                                  type="text" 
-                                  value={testCnpj}
-                                  onChange={(e) => setTestCnpj(e.target.value)}
-                                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50"
-                                  placeholder="00.000.000/0000-00"
-                              />
-                          </div>
-                          <button 
-                              onClick={handleTestConnection}
-                              disabled={testLoading}
-                              className="px-6 py-2 bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2 h-10"
-                          >
-                              {testLoading ? <span className="material-icons animate-spin text-sm">refresh</span> : <span className="material-icons text-sm">play_arrow</span>}
-                              Executar
-                          </button>
-                      </div>
-
-                      {/* ... Results Section ... */}
-                      {testResponse && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-bottom-4">
-                              <div className="flex flex-col h-96">
-                                  <div className="flex justify-between items-center mb-2">
-                                      <span className="text-xs font-bold uppercase text-slate-500">Resposta Bruta (JSON)</span>
-                                      <span className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-500">Raw Output</span>
-                                  </div>
-                                  <div className="flex-1 bg-slate-900 rounded-lg p-4 overflow-auto border border-slate-700">
-                                      <pre className="text-green-400 font-mono text-xs whitespace-pre-wrap">{testResponse}</pre>
-                                  </div>
-                              </div>
-
-                              <div className="flex flex-col h-96">
-                                  <div className="flex justify-between items-center mb-2">
-                                      <span className="text-xs font-bold uppercase text-slate-500">Exibição para Usuário (Mapeado)</span>
-                                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold">Preview</span>
-                                  </div>
-                                  <div className="flex-1 bg-white dark:bg-slate-800 rounded-lg p-4 overflow-auto border border-slate-200 dark:border-slate-700">
-                                      {testParsedData ? (
-                                          <div className="space-y-3">
-                                              {Object.entries(testParsedData).map(([key, value]) => (
-                                                  <div key={key} className="border-b border-slate-100 dark:border-slate-700 pb-2 last:border-0">
-                                                      <span className="block text-xs font-bold text-slate-400 uppercase mb-1">{key}</span>
-                                                      <span className="block text-sm font-medium text-slate-800 dark:text-white break-words">
-                                                          {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                                                      </span>
-                                                  </div>
-                                              ))}
-                                          </div>
-                                      ) : (
-                                          <div className="text-center text-slate-400 mt-10">
-                                              Nenhum dado mapeado encontrado. Verifique os caminhos JSON.
-                                          </div>
-                                      )}
-                                  </div>
-                              </div>
-                          </div>
-                      )}
+                  <div className="grid grid-cols-12 gap-6">
+                    <div className="col-span-12 xl:col-span-8 h-full">
+                      <RevenueChart transactions={transactions} />
+                    </div>
+                    <div className="col-span-12 xl:col-span-4 h-full">
+                        <Reminders transactions={transactions} appointments={appointments} fiscalData={fiscalData} onNavigate={setActiveTab} />
+                    </div>
                   </div>
-              </div>
-          </div>
-      )}
 
+                  <div className="grid grid-cols-12 gap-6">
+                    <div className="col-span-12 xl:col-span-6 h-full">
+                        <FinancialScore transactions={transactions} />
+                    </div>
+                    <div className="col-span-12 xl:col-span-6 h-full">
+                        <Thermometer transactions={transactions} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-6">
+                    <div className="col-span-12 h-full">
+                        <RecentTransactions transactions={transactions} onNavigate={setActiveTab} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12">
+                    <NewsSlider news={news} onViewNews={handleViewNews} />
+                  </div>
+                </div>
+              </>
+              );
+          case 'cashflow': 
+            return <CashFlowPage 
+                transactions={transactions}
+                revenueCats={revenueCats}
+                expenseCats={expenseCats}
+                onAddTransaction={handleAddTransaction}
+                onUpdateTransaction={handleUpdateTransaction}
+                onDeleteTransaction={handleDeleteTransaction}
+            />;
+          case 'invoices': return <InvoicesPage />;
+          case 'calendar': 
+            return <CalendarPage 
+                transactions={transactions}
+                appointments={appointments}
+                revenueCats={revenueCats}
+                expenseCats={expenseCats}
+                onAddTransaction={handleAddTransaction}
+                onUpdateTransaction={handleUpdateTransaction}
+                onDeleteTransaction={handleDeleteTransaction}
+                onAddAppointment={handleAddAppointment}
+                onUpdateAppointment={handleUpdateAppointment}
+                onDeleteAppointment={handleDeleteAppointment}
+            />;
+          case 'cnpj': return <CNPJPage cnpj={cnpj} fiscalData={fiscalData} onUpdateFiscalData={setFiscalData} />;
+          case 'tools': return <ToolsPage user={user} />;
+          case 'news': return <NewsPage news={news} readingId={readingNewsId} onSelectNews={setReadingNewsId} />;
+          case 'offers': return <OffersPage offers={offers} />;
+          case 'admin':
+            return <AdminPage 
+                offers={offers}
+                onAddOffer={handleAddOffer}
+                onUpdateOffer={handleUpdateOffer}
+                onDeleteOffer={handleDeleteOffer}
+                news={news}
+                onAddNews={handleAddNews}
+                onUpdateNews={handleUpdateNews}
+                onDeleteNews={handleDeleteNewsClick}
+                notifications={notifications}
+                onAddNotification={handleAddNotification}
+                onUpdateNotification={handleUpdateNotification}
+                onDeleteNotification={handleDeleteNotification}
+                maintenance={maintenance}
+                onUpdateMaintenance={setMaintenance}
+                connectionConfig={connectionConfig}
+                onUpdateConnectionConfig={setConnectionConfig}
+                users={allUsers}
+                onAddUser={handleAddUser}
+                onUpdateUser={handleUpdateUser}
+                onDeleteUser={handleDeleteUser}
+            />;
+          case 'settings': 
+            return <SettingsPage 
+              user={user}
+              onUpdateUser={handleUpdateUser}
+              cnpj={cnpj} 
+              onCnpjChange={setCnpj}
+              revenueCats={revenueCats}
+              expenseCats={expenseCats}
+              onAddCategory={handleAddCategory}
+              onDeleteCategory={handleDeleteCategory}
+              onExportData={handleExportData}
+              onDeleteAccount={handleDeleteAccount}
+              onChangePassword={handleChangePassword}
+            />;
+          default: return null;
+      }
+  };
+
+  return (
+    <div className="flex h-screen bg-background-light dark:bg-background-dark overflow-hidden relative">
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} userRole={user?.role} />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header activeTab={activeTab} onMenuClick={() => setIsSidebarOpen(true)} notifications={notifications} onMarkAsRead={handleMarkAsRead} onVote={handleVote} user={user} onLogout={handleLogout} onNavigateToProfile={() => setActiveTab('settings')} />
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth relative">
+          <div className="max-w-7xl mx-auto space-y-6">
+            {renderContent()}
+          </div>
+          <footer className="mt-8 text-center text-sm text-slate-400 pb-4">
+            <p>&copy; {new Date().getFullYear()} Regular MEI. Todos os direitos reservados.</p>
+          </footer>
+          {showIntro && <IntroWalkthrough onFinish={() => setShowIntro(false)} />}
+        </main>
+      </div>
     </div>
   );
 };
 
-export default AdminPage;
+export default App;
