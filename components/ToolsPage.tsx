@@ -156,6 +156,10 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
         const element = plateRef.current;
         const filename = `plaquinha_pix_${formData.name.replace(/\s/g, '_')}.pdf`;
 
+        // Tamanho fixo da placa para visualização (320x480)
+        const PLATE_WIDTH = 320;
+        const PLATE_HEIGHT = 480;
+
         // Configurações para manter a qualidade e o tamanho do elemento
         const opt = {
             margin: 5, // Reduzindo a margem para maximizar o espaço na página pequena
@@ -394,14 +398,38 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         issuerDoc: user?.cnpj || '00.000.000/0001-00'
     });
     
-    const [isPrinting, setIsPrinting] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+    const receiptRef = useRef<HTMLDivElement>(null);
 
-    const handlePrint = () => {
-        setIsPrinting(true);
-        setTimeout(() => {
-            window.print();
-            setIsPrinting(false);
-        }, 500);
+    const handleExportPDF = () => {
+        if (!receiptRef.current) {
+            showError("Erro: Elemento do recibo não encontrado.");
+            return;
+        }
+        
+        setIsExporting(true);
+        showSuccess("Gerando PDF, aguarde...");
+
+        const element = receiptRef.current;
+        const filename = `recibo_${formData.payerName.replace(/\s/g, '_')}_${formData.date}.pdf`;
+
+        // Configurações para A4 (210mm x 297mm)
+        const opt = {
+            margin: 10,
+            filename: filename,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, logging: false, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            setIsExporting(false);
+            showSuccess("PDF exportado com sucesso!");
+        }).catch((error: any) => {
+            console.error("Erro ao exportar PDF:", error);
+            showError("Falha ao exportar PDF. Tente novamente.");
+            setIsExporting(false);
+        });
     };
 
     return (
@@ -449,8 +477,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                 </div>
 
                 {/* Preview */}
-                <div className="flex flex-col gap-4 print:w-full print:absolute print:top-0 print:left-0">
-                    <div id="receipt-preview" className="bg-[#fffbeb] text-slate-800 p-8 rounded-sm shadow-lg border-2 border-dashed border-slate-300 relative font-mono text-sm leading-relaxed transform rotate-1 transition-transform hover:rotate-0 print:transform-none print:shadow-none print:border-none print:w-full">
+                <div className="flex flex-col gap-4">
+                    <div ref={receiptRef} id="receipt-preview" className="bg-[#fffbeb] text-slate-800 p-8 rounded-sm shadow-lg border-2 border-dashed border-slate-300 relative font-mono text-sm leading-relaxed transform rotate-1 transition-transform hover:rotate-0">
                         {/* Paper Texture Effect */}
                         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
                         
@@ -487,14 +515,14 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                     </div>
 
                     <button 
-                        onClick={handlePrint}
-                        disabled={isPrinting}
-                        className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-lg font-bold shadow-md flex items-center justify-center gap-2 transition-colors print:hidden"
+                        onClick={handleExportPDF}
+                        disabled={isExporting}
+                        className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2 transition-colors print:hidden"
                     >
-                        {isPrinting ? <span className="material-icons animate-spin text-sm">refresh</span> : <span className="material-icons">print</span>}
-                        Imprimir / Salvar PDF
+                        {isExporting ? <span className="material-icons animate-spin text-sm">refresh</span> : <span className="material-icons">file_download</span>}
+                        Exportar PDF
                     </button>
-                    <p className="text-center text-xs text-slate-400 print:hidden">Dica: Na janela de impressão, escolha "Salvar como PDF" para enviar pelo WhatsApp.</p>
+                    <p className="text-center text-xs text-slate-400 print:hidden">Gera um arquivo PDF de alta qualidade do seu recibo.</p>
                 </div>
             </div>
         </div>
