@@ -338,8 +338,8 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                                 {/* Footer Info */}
                                 <div className="relative z-10 text-center w-full mt-auto">
                                     <p className="text-white/80 text-[10px] uppercase font-bold mb-1 tracking-widest">Beneficiário</p>
-                                    {/* Adjusted to text-lg and line-clamp-2 for better fit */}
-                                    <p className="font-bold text-lg leading-tight px-2 mb-2 line-clamp-2">
+                                    {/* Reduced font size to text-base and added mb-4 */}
+                                    <p className="font-bold text-base leading-tight px-2 mb-4 line-clamp-2">
                                         {formData.name || 'Nome do Recebedor'}
                                     </p>
                                     
