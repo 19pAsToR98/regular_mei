@@ -535,7 +535,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
 
 const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null }) => {
     const [budget, setBudget] = useState({
-        number: String(Math.floor(Math.random() * 10000)),
+        // Removendo a inicialização do número do orçamento
+        number: '', 
         date: new Date().toISOString().split('T')[0],
         validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         issuerName: user?.name || 'Minha Empresa MEI',
@@ -554,10 +555,9 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
         { id: 1, desc: 'Serviço Exemplo', qty: 1, price: 100.00 }
     ]);
     
-    const [isExporting, setIsExporting] = useState(false); // New state for PDF export
-    const budgetRef = useRef<HTMLDivElement>(null); // New ref for the preview area
+    const [isExporting, setIsExporting] = useState(false); 
+    const budgetRef = useRef<HTMLDivElement>(null); 
 
-    // ... (rest of colors, bgColors, addItem, updateItem, removeItem, total logic) ...
     const colors: Record<string, string> = {
         blue: 'text-blue-600 border-blue-600 bg-blue-600',
         emerald: 'text-emerald-600 border-emerald-600 bg-emerald-600',
@@ -603,8 +603,18 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
             margin: 10,
             filename: filename,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, logging: false, useCORS: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            html2canvas: { 
+                scale: 2, 
+                logging: false, 
+                useCORS: true,
+                // Adicionando largura explícita para tentar corrigir o corte
+                width: element.offsetWidth, 
+            },
+            jsPDF: { 
+                unit: 'mm', 
+                format: 'a4', 
+                orientation: 'portrait' 
+            }
         };
 
         html2pdf().set(opt).from(element).save().then(() => {
@@ -616,9 +626,6 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
             setIsExporting(false);
         });
     };
-
-    // Remove native print function as we use PDF export now
-    // const handlePrint = () => { ... };
 
     return (
         <div className="animate-in fade-in slide-in-from-right-8 duration-300">
@@ -763,7 +770,7 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                     </div>
 
                     <button 
-                        onClick={handleExportPDF} // Changed from handlePrint
+                        onClick={handleExportPDF} 
                         disabled={isExporting}
                         className="w-full bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transition-colors"
                     >
@@ -775,17 +782,19 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                 {/* Preview (Right Column) */}
                 <div className="xl:col-span-8 flex justify-center">
                     <div 
-                        ref={budgetRef} // Added ref here
+                        ref={budgetRef} 
                         id="budget-preview"
+                        // Removendo a largura fixa de 210mm para que o html2canvas capture a largura total do container flex
                         className={`bg-white text-slate-900 shadow-2xl mx-auto relative ${budget.template === 'modern' ? 'border-t-8 ' + colors[budget.color].split(' ')[1] : ''}`} 
-                        style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}
+                        style={{ maxWidth: '210mm', minHeight: '297mm', padding: '15mm' }}
                     >
                         
                         {/* HEADER */}
                         <div className={`flex justify-between items-start mb-12 ${budget.template === 'modern' ? 'border-b-2 pb-6 ' + colors[budget.color].split(' ')[1].replace('text-', 'border-') : ''} ${budget.template === 'classic' ? 'border-b border-slate-200 pb-6' : ''}`}>
                             <div>
                                 <h1 className={`text-4xl font-bold uppercase tracking-tight mb-2 ${budget.template === 'minimal' ? 'text-slate-900' : colors[budget.color].split(' ')[0]}`}>Orçamento</h1>
-                                <p className="text-slate-500 font-mono text-sm">#{budget.number}</p>
+                                {/* Removendo o número do orçamento */}
+                                {/* <p className="text-slate-500 font-mono text-sm">#{budget.number}</p> */}
                             </div>
                             <div className="text-right">
                                 <h2 className="font-bold text-xl">{budget.issuerName || 'Sua Empresa'}</h2>
