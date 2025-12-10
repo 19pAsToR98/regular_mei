@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { NewsItem } from '../types';
 
@@ -14,62 +13,6 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
 
-  // Logic to view a single article
-  if (readingId) {
-    const article = news.find(n => n.id === readingId);
-    if (!article) return <div>Artigo não encontrado.</div>;
-
-    return (
-      <div className="max-w-4xl mx-auto bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="relative h-64 md:h-80 w-full">
-           <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover" />
-           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-           <button 
-             onClick={() => onSelectNews(null)}
-             className="absolute top-4 left-4 bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-white/30 transition-colors"
-           >
-             <span className="material-icons text-sm">arrow_back</span> Voltar
-           </button>
-           <div className="absolute bottom-6 left-6 md:left-10 right-6 text-white">
-              <span className="inline-block px-3 py-1 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-md mb-3">
-                {article.category}
-              </span>
-              <h1 className="text-2xl md:text-4xl font-bold leading-tight mb-2">{article.title}</h1>
-              <div className="flex items-center gap-4 text-sm text-slate-200">
-                 <span className="flex items-center gap-1"><span className="material-icons text-sm">event</span> {article.date}</span>
-                 <span className="flex items-center gap-1"><span className="material-icons text-sm">schedule</span> {article.readTime}</span>
-              </div>
-           </div>
-        </div>
-        
-        <div className="p-6 md:p-10">
-           <p className="text-lg text-slate-600 dark:text-slate-300 font-medium mb-8 leading-relaxed border-l-4 border-primary pl-4 italic">
-             {article.excerpt}
-           </p>
-           
-           <div 
-             className="prose prose-slate dark:prose-invert max-w-none prose-a:text-primary prose-headings:text-slate-800 dark:prose-headings:text-white"
-             dangerouslySetInnerHTML={{ __html: article.content.replace(/\n/g, '<br />') }}
-           />
-
-           <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
-              <button 
-                 onClick={() => onSelectNews(null)}
-                 className="text-primary font-medium hover:underline flex items-center gap-2"
-              >
-                 <span className="material-icons">arrow_back</span> Voltar para notícias
-              </button>
-              <button className="text-slate-500 hover:text-primary transition-colors flex items-center gap-2">
-                 <span className="material-icons">share</span> Compartilhar
-              </button>
-           </div>
-        </div>
-      </div>
-    );
-  }
-
-  // --- LIST VIEW ---
-
   const filteredNews = news.filter(item => {
     // Only show published news in the list
     if (item.status === 'draft') return false;
@@ -79,7 +22,103 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
     const matchesCategory = selectedCategory === 'Todas' || item.category === selectedCategory;
     
     return matchesSearch && matchesCategory;
-  });
+  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Ensure consistent sorting
+
+  // Logic to view a single article
+  if (readingId) {
+    const article = filteredNews.find(n => n.id === readingId);
+    if (!article) {
+        // If the article is not in the filtered list (e.g., user navigated directly), find it in the full list
+        const fullArticle = news.find(n => n.id === readingId);
+        if (!fullArticle) return <div>Artigo não encontrado.</div>;
+        // If found but not filtered (e.g., draft), we still show it but without navigation
+        // For simplicity, we assume if readingId is set, we show the article.
+    }
+
+    // Find index for navigation
+    const currentIndex = filteredNews.findIndex(n => n.id === readingId);
+    const prevArticle = currentIndex > 0 ? filteredNews[currentIndex - 1] : null;
+    const nextArticle = currentIndex < filteredNews.length - 1 ? filteredNews[currentIndex + 1] : null;
+
+    return (
+      <div className="max-w-4xl mx-auto bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="relative h-64 md:h-80 w-full">
+           <img src={article?.imageUrl} alt={article?.title} className="w-full h-full object-cover" />
+           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+           <button 
+             onClick={() => onSelectNews(null)}
+             className="absolute top-4 left-4 bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-white/30 transition-colors"
+           >
+             <span className="material-icons text-sm">arrow_back</span> Voltar
+           </button>
+           <div className="absolute bottom-6 left-6 md:left-10 right-6 text-white">
+              <span className="inline-block px-3 py-1 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-md mb-3">
+                {article?.category}
+              </span>
+              <h1 className="text-2xl md:text-4xl font-bold leading-tight mb-2">{article?.title}</h1>
+              <div className="flex items-center gap-4 text-sm text-slate-200">
+                 <span className="flex items-center gap-1"><span className="material-icons text-sm">event</span> {article?.date}</span>
+                 <span className="flex items-center gap-1"><span className="material-icons text-sm">schedule</span> {article?.readTime}</span>
+              </div>
+           </div>
+        </div>
+        
+        <div className="p-6 md:p-10">
+           <p className="text-lg text-slate-600 dark:text-slate-300 font-medium mb-8 leading-relaxed border-l-4 border-primary pl-4 italic">
+             {article?.excerpt}
+           </p>
+           
+           <div 
+             className="prose prose-slate dark:prose-invert max-w-none prose-a:text-primary prose-headings:text-slate-800 dark:prose-headings:text-white"
+             dangerouslySetInnerHTML={{ __html: article?.content.replace(/\n/g, '<br />') }}
+           />
+
+           <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
+              
+              {/* Previous Article Button */}
+              {prevArticle ? (
+                  <button 
+                      onClick={() => onSelectNews(prevArticle.id)}
+                      className="text-slate-500 dark:text-slate-400 font-medium hover:text-primary flex items-center gap-2 transition-colors"
+                  >
+                      <span className="material-icons">chevron_left</span> Artigo Anterior
+                  </button>
+              ) : (
+                  <div className="w-32"></div> // Spacer
+              )}
+
+              {/* Share Button */}
+              <button className="text-slate-500 hover:text-primary transition-colors flex items-center gap-2">
+                 <span className="material-icons">share</span> Compartilhar
+              </button>
+              
+              {/* Next Article Button */}
+              {nextArticle ? (
+                  <button 
+                      onClick={() => onSelectNews(nextArticle.id)}
+                      className="text-slate-500 dark:text-slate-400 font-medium hover:text-primary flex items-center gap-2 transition-colors"
+                  >
+                      Próximo Artigo <span className="material-icons">chevron_right</span>
+                  </button>
+              ) : (
+                  <div className="w-32"></div> // Spacer
+              )}
+           </div>
+           
+           <div className="mt-4 text-center">
+               <button 
+                 onClick={() => onSelectNews(null)}
+                 className="text-primary font-medium hover:underline flex items-center gap-2 mx-auto"
+              >
+                 <span className="material-icons text-sm">arrow_upward</span> Voltar para a lista
+              </button>
+           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- LIST VIEW ---
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-8">
@@ -102,7 +141,7 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border
+              className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border
                 ${selectedCategory === cat 
                   ? 'bg-primary text-white border-primary shadow-md transform scale-105' 
                   : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
