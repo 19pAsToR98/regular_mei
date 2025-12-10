@@ -389,13 +389,19 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
 
 const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null }) => {
     const [formData, setFormData] = useState({
+        template: 'classic' as 'classic' | 'mei' | 'detailed', // New state for template selection
         payerName: '',
         payerDoc: '',
         amount: '',
         service: '',
         date: new Date().toISOString().split('T')[0],
         issuerName: user?.name || 'Minha Empresa MEI',
-        issuerDoc: user?.cnpj || '00.000.000/0001-00'
+        issuerDoc: user?.cnpj || '00.000.000/0001-00',
+        issuerCpf: '', // For Simple template
+        
+        // New fields for payment method
+        paymentMethod: 'pix',
+        otherPaymentMethod: '',
     });
     
     const [isExporting, setIsExporting] = useState(false);
@@ -432,6 +438,203 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         });
     };
 
+    const formatAmountInWords = (amount: string): string => {
+        const num = parseFloat(amount) || 0;
+        if (num === 0) return 'zero reais';
+
+        const units = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+        const teens = ['dez', 'onze', 'doze', 'treze', 'catorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+        const tens = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+        const hundreds = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'];
+        const thousands = ['', 'mil', 'milhões', 'bilhões'];
+
+        const toWords = (n: number): string => {
+            if (n === 0) return '';
+            if (n < 10) return units[n];
+            if (n < 20) return teens[n - 10];
+            if (n < 100) {
+                const t = tens[Math.floor(n / 10)];
+                const u = units[n % 10];
+                return t + (u ? ' e ' + u : '');
+            }
+            if (n < 1000) {
+                const h = hundreds[Math.floor(n / 100)];
+                const rest = toWords(n % 100);
+                return h + (rest ? ' e ' + rest : '');
+            }
+            return '';
+        };
+
+        const integerPart = Math.floor(num);
+        const decimalPart = Math.round((num - integerPart) * 100);
+
+        let result = '';
+        let temp = integerPart;
+        let i = 0;
+
+        while (temp > 0) {
+            const chunk = temp % 1000;
+            if (chunk > 0) {
+                let chunkWords = toWords(chunk);
+                if (chunk === 1 && i === 1) chunkWords = 'mil';
+                
+                if (i > 0) {
+                    chunkWords += ' ' + thousands[i];
+                }
+                
+                if (result) {
+                    result = chunkWords + (i === 1 ? ' e ' : ', ') + result;
+                } else {
+                    result = chunkWords;
+                }
+            }
+            temp = Math.floor(temp / 1000);
+            i++;
+        }
+        
+        result = result.trim();
+        
+        let final = result + (integerPart === 1 ? ' real' : ' reais');
+
+        if (decimalPart > 0) {
+            const centavos = toWords(decimalPart);
+            final += ' e ' + centavos + (decimalPart === 1 ? ' centavo' : ' centavos');
+        }
+
+        return final.charAt(0).toUpperCase() + final.slice(1);
+    };
+
+    const amountInWords = formatAmountInWords(formData.amount);
+    const formattedAmount = parseFloat(formData.amount || '0').toLocaleString('pt-BR', {minimumFractionDigits: 2});
+    const formattedDate = new Date(formData.date).toLocaleDateString('pt-BR');
+    const [day, month, year] = formattedDate.split('/');
+    const locationAndDate = `______________________________, ${formattedDate}`;
+    
+    const paymentOptions = [
+        { label: 'Pix', value: 'pix' },
+        { label: 'Dinheiro', value: 'dinheiro' },
+        { label: 'Transferência', value: 'transferencia' },
+        { label: 'Cartão', value: 'cartao' },
+        { label: 'Boleto', value: 'boleto' },
+    ];
+
+    const renderPaymentCheckboxes = (template: 'mei' | 'detailed') => {
+        const isMei = template === 'mei';
+        return (
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                {paymentOptions.map(opt => (
+                    <span key={opt.value} className="flex items-center">
+                        ({formData.paymentMethod === opt.value ? 'X' : ' '}) {opt.label}
+                    </span>
+                ))}
+                <span className="flex items-center">
+                    ({formData.paymentMethod === 'outro' ? 'X' : ' '}) Outro: {formData.paymentMethod === 'outro' ? formData.otherPaymentMethod : '___________________'}
+                </span>
+                {isMei && <span className="text-xs text-slate-500">( ) Outro: ___________________</span>}
+            </div>
+        );
+    };
+
+    const renderReceiptContent = () => {
+        const issuerName = formData.issuerName || '________________________________________';
+        const issuerDoc = formData.issuerDoc || '________________________';
+        const issuerCpf = formData.issuerCpf || '________________________';
+        const payerName = formData.payerName || '________________________________________';
+        const payerDoc = formData.payerDoc || '________________________';
+        const service = formData.service || '______________________________________________________________________________';
+        const amount = formattedAmount || '__________';
+        const amountExtenso = amountInWords || '_________________________________________';
+        
+        switch (formData.template) {
+            case 'simple':
+                return (
+                    <div className="space-y-6">
+                        <div className="text-center border-b-2 border-slate-800 pb-4 mb-6">
+                            <h2 className="text-2xl font-black uppercase tracking-widest">RECIBO</h2>
+                        </div>
+                        
+                        <p>
+                            Eu, <span className="font-bold border-b border-slate-400 px-1">{issuerName}</span>, CPF nº <span className="font-bold border-b border-slate-400 px-1">{issuerCpf}</span>, recebi de <span className="font-bold border-b border-slate-400 px-1">{payerName}</span>, CPF/CNPJ nº <span className="font-bold border-b border-slate-400 px-1">{payerDoc}</span>, a quantia de R$ <span className="font-bold border-b border-slate-400 px-1">{amount}</span> (<span className="font-bold border-b border-slate-400 px-1">{amountExtenso}</span>), referente a <span className="font-bold border-b border-slate-400 px-1">{service}</span>.
+                        </p>
+
+                        <p>
+                            Declaro que o valor foi recebido integralmente nesta data.
+                        </p>
+
+                        <div className="pt-12">
+                            <p>Local e data: <span className="font-bold border-b border-slate-400 px-1">{locationAndDate}</span></p>
+                            <p className="mt-12">Assinatura: <span className="font-bold border-b border-slate-400 px-1 block w-64 mx-auto"></span></p>
+                        </div>
+                    </div>
+                );
+            case 'mei':
+                return (
+                    <div className="space-y-6">
+                        <div className="text-center border-b-2 border-slate-800 pb-4 mb-6">
+                            <h2 className="text-2xl font-black uppercase tracking-widest">RECIBO MEI</h2>
+                        </div>
+                        
+                        <p>
+                            Eu, <span className="font-bold border-b border-slate-400 px-1">{issuerName}</span>, MEI inscrito no CNPJ <span className="font-bold border-b border-slate-400 px-1">{issuerDoc}</span>, recebi de <span className="font-bold border-b border-slate-400 px-1">{payerName}</span>, CPF/CNPJ <span className="font-bold border-b border-slate-400 px-1">{payerDoc}</span>, o valor de R$ <span className="font-bold border-b border-slate-400 px-1">{amount}</span> (<span className="font-bold border-b border-slate-400 px-1">{amountExtenso}</span>), referente a:
+                        </p>
+
+                        <p className="font-bold mt-4">Serviço prestado / Produto vendido:</p>
+                        <p className="border-b border-slate-400 min-h-[1.5em]">{service}</p>
+
+                        <p className="font-bold mt-4">O pagamento foi realizado em {day}/{month}/{year} por meio de:</p>
+                        {renderPaymentCheckboxes('mei')}
+
+                        <p className="mt-6">
+                            Declaro que este recibo comprova o pagamento integral referente ao item descrito.
+                        </p>
+
+                        <div className="pt-12">
+                            <p>Local e data: <span className="font-bold border-b border-slate-400 px-1">{locationAndDate}</span></p>
+                            <p className="mt-12">Assinatura do MEI: <span className="font-bold border-b border-slate-400 px-1 block w-64 mx-auto"></span></p>
+                        </div>
+                    </div>
+                );
+            case 'detailed':
+                return (
+                    <div className="space-y-6">
+                        <div className="text-center border-b-2 border-slate-800 pb-4 mb-6">
+                            <h2 className="text-2xl font-black uppercase tracking-widest">COMPROVANTE DE PAGAMENTO</h2>
+                        </div>
+                        
+                        <p>
+                            Recebi de <span className="font-bold border-b border-slate-400 px-1">{payerName}</span>, inscrito no CPF/CNPJ nº <span className="font-bold border-b border-slate-400 px-1">{payerDoc}</span>, o valor de R$ <span className="font-bold border-b border-slate-400 px-1">{amount}</span> (<span className="font-bold border-b border-slate-400 px-1">{amountExtenso}</span>), referente ao pagamento de:
+                        </p>
+
+                        <p className="font-bold mt-4">Descrição do serviço/produto:</p>
+                        <p className="border-b border-slate-400 min-h-[3em]">{service}</p>
+
+                        <p className="font-bold mt-4">Forma de pagamento:</p>
+                        {renderPaymentCheckboxes('detailed')}
+
+                        <div className="grid grid-cols-2 gap-4 mt-6">
+                            <div>
+                                <span className="font-bold">Data do pagamento:</span> {day}/{month}/{year}
+                            </div>
+                            <div>
+                                <span className="font-bold">Valor total recebido:</span> R$ {amount}
+                            </div>
+                        </div>
+
+                        <p className="mt-6">
+                            Declaro para os devidos fins que o valor foi quitado integralmente.
+                        </p>
+
+                        <div className="pt-12">
+                            <p>Local e data: <span className="font-bold border-b border-slate-400 px-1">{locationAndDate}</span></p>
+                            <p className="mt-12">Assinatura: <span className="font-bold border-b border-slate-400 px-1 block w-64 mx-auto"></span></p>
+                        </div>
+                    </div>
+                );
+            default:
+                return <p className="text-center text-slate-500">Selecione um modelo de recibo.</p>;
+        }
+    };
+
     return (
         <div className="animate-in fade-in slide-in-from-right-8 duration-300">
             <button onClick={onBack} className="mb-4 flex items-center text-slate-500 hover:text-primary transition-colors font-medium print:hidden">
@@ -444,6 +647,24 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                     <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                         <span className="material-icons text-emerald-500">edit_note</span> Preencher Recibo
                     </h3>
+                    
+                    {/* Template Selector */}
+                    <div className="mb-6">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Modelo de Recibo</label>
+                        <div className="flex gap-2">
+                            {['classic', 'mei', 'detailed'].map(t => (
+                                <button 
+                                    key={t}
+                                    type="button"
+                                    onClick={() => setFormData({...formData, template: t as any})}
+                                    className={`flex-1 py-2 text-xs font-bold uppercase rounded border transition-colors ${formData.template === t ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}
+                                >
+                                    {t === 'classic' ? 'Simples' : t === 'mei' ? 'MEI' : 'Detalhado'}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <div className="space-y-4">
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Valor (R$)</label>
@@ -454,7 +675,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             <input type="text" value={formData.payerName} onChange={e => setFormData({...formData, payerName: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Nome do Cliente" />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Referente a (Serviço)</label>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Referente a (Serviço/Produto)</label>
                             <textarea rows={2} value={formData.service} onChange={e => setFormData({...formData, service: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Ex: Manutenção de Ar Condicionado" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -468,10 +689,39 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             </div>
                         </div>
                         
+                        {/* Payment Method (Only for MEI/Detailed) */}
+                        {(formData.template === 'mei' || formData.template === 'detailed') && (
+                            <div className="pt-2 border-t border-slate-100 dark:border-slate-700 animate-in fade-in slide-in-from-top-2">
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Forma de Pagamento</label>
+                                <select 
+                                    value={formData.paymentMethod}
+                                    onChange={e => setFormData({...formData, paymentMethod: e.target.value, otherPaymentMethod: e.target.value === 'outro' ? formData.otherPaymentMethod : ''})}
+                                    className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50"
+                                >
+                                    {paymentOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                    <option value="outro">Outro</option>
+                                </select>
+                                {formData.paymentMethod === 'outro' && (
+                                    <input 
+                                        type="text" 
+                                        value={formData.otherPaymentMethod} 
+                                        onChange={e => setFormData({...formData, otherPaymentMethod: e.target.value})} 
+                                        className="w-full px-3 py-2 border rounded-lg mt-2 bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" 
+                                        placeholder="Especifique a forma de pagamento"
+                                    />
+                                )}
+                            </div>
+                        )}
+
                         <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Emitente (Você)</label>
                             <input type="text" value={formData.issuerName} onChange={e => setFormData({...formData, issuerName: e.target.value})} className="w-full px-3 py-2 border rounded-lg mb-2 bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Seu Nome ou Razão Social" />
-                            <input type="text" value={formData.issuerDoc} onChange={e => setFormData({...formData, issuerDoc: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Seu CPF ou CNPJ" />
+                            
+                            {formData.template === 'simple' ? (
+                                <input type="text" value={formData.issuerCpf} onChange={e => setFormData({...formData, issuerCpf: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Seu CPF" />
+                            ) : (
+                                <input type="text" value={formData.issuerDoc} onChange={e => setFormData({...formData, issuerDoc: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Seu CNPJ" />
+                            )}
                         </div>
                     </div>
                 </div>
@@ -482,39 +732,10 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         {/* Paper Texture Effect */}
                         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
                         
-                        <div className="text-center border-b-2 border-slate-800 pb-4 mb-6">
-                            <h2 className="text-2xl font-black uppercase tracking-widest">RECIBO</h2>
-                            <p className="text-lg font-bold mt-2">R$ {parseFloat(formData.amount || '0').toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                        </div>
-
-                        <div className="space-y-4">
-                            <p>
-                                Recebi(emos) de <span className="font-bold border-b border-slate-400 px-1">{formData.payerName || '__________________'}</span>
-                                {formData.payerDoc && <span> (CPF/CNPJ: {formData.payerDoc})</span>}
-                            </p>
-                            <p>
-                                A importância de <span className="font-bold bg-slate-200 px-1">R$ {parseFloat(formData.amount || '0').toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                            </p>
-                            <p>
-                                Referente aos serviços de: <br/>
-                                <span className="font-bold border-b border-slate-400 block w-full mt-1 min-h-[1.5em]">{formData.service}</span>
-                            </p>
-                        </div>
-
-                        {/* CENTRALIZED SIGNATURE AND DATE BLOCK */}
-                        <div className="mt-12 flex flex-col items-center">
-                            <div className="text-center w-full max-w-xs">
-                                <div className="mb-2 font-cursive text-2xl text-blue-900">
-                                    {formData.issuerName}
-                                </div>
-                                <div className="border-t border-slate-800 w-full pt-1 text-xs uppercase">Assinatura do Emitente</div>
-                                <div className="text-[10px]">{formData.issuerName}</div>
-                                <div className="text-[10px]">{formData.issuerDoc}</div>
-                            </div>
-                            
-                            <div className="mt-6 text-center">
-                                <p>{new Date(formData.date).toLocaleDateString('pt-BR', {day: 'numeric', month: 'long', year: 'numeric'})}</p>
-                            </div>
+                        {renderReceiptContent()}
+                        
+                        <div className="absolute bottom-4 left-0 w-full text-center text-[10px] text-slate-400">
+                            Gerado via Regular MEI
                         </div>
                     </div>
 
@@ -790,7 +1011,7 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                     >
                         
                         {/* HEADER */}
-                        <div className={`flex justify-between items-start mb-12 ${budget.template === 'modern' ? 'border-b-2 pb-6 ' + colors[budget.color].split(' ')[1].replace('text-', 'border-') : ''} ${budget.template === 'classic' ? 'border-b border-slate-200 pb-6' : ''}`}>
+                        <div className={`flex justify-between items-start mb-12 ${budget.template === 'modern' ? 'border-b-2 pb-6 ' + colors[budget.color].split(' ')[1].replace('text-', 'border-') : ''} ${budget.template === 'classic' ? 'border-b border-slate-200 pb-6' : ''} ${budget.template === 'minimal' ? 'border-b border-slate-200 pb-6' : ''}`}>
                             <div>
                                 <h1 className={`text-4xl font-bold uppercase tracking-tight mb-2 ${budget.template === 'minimal' ? 'text-slate-900' : colors[budget.color].split(' ')[0]}`}>Orçamento</h1>
                                 {/* Removendo o número do orçamento */}
