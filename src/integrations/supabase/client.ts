@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 
-// O Supabase Project ID e a Anon Key são injetados pelo ambiente.
-const supabaseUrl = 'https://ogwjtlkemsqmpvcikrtd.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nd2p0bGtlbXNxbXB2Y2lrcnRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwNjEyOTcsImV4cCI6MjA4MDYzNzI5N30.at2Bl3cAhiZxQ6uuYrEwYVSqkBj7XGaMlD125O8wjRk'
+// O Supabase Project ID e a Anon Key serão carregados das variáveis de ambiente (VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY).
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('Missing Supabase credentials.')
+    console.warn('Missing Supabase credentials in environment variables.')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '')
