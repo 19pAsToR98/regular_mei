@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Reminder, Transaction, Appointment, FiscalData, DasItem } from '../types';
 
@@ -102,6 +101,7 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
                    priority: 1,
                    date: new Date(today.getFullYear(), 4, 31).toISOString(), // Roughly end of May
                    actionLabel: 'Regularizar',
+                   actionTab: 'cnpj', // Navigate to CNPJ page
                });
            }
        });
@@ -182,7 +182,8 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
                 bgClass: bgClass,
                 iconColorClass: iconColorClass,
                 priority: priority,
-                date: item._dueDate.toISOString()
+                date: item._dueDate.toISOString(),
+                actionTab: 'cnpj', // Navigate to CNPJ page
             });
         }
     }
@@ -206,7 +207,8 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
                 bgClass: 'bg-blue-100 dark:bg-blue-900/50',
                 iconColorClass: 'text-blue-500 dark:text-blue-400',
                 priority: 3,
-                date: appt.date
+                date: appt.date,
+                actionTab: 'calendar', // Navigate to Calendar page
             });
         }
     });
@@ -244,7 +246,8 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
                     bgClass: isOverdue ? 'bg-red-50 dark:bg-red-900/20' : (t.type === 'receita' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-slate-100 dark:bg-slate-800'),
                     iconColorClass: isOverdue ? 'text-red-500' : (t.type === 'receita' ? 'text-green-500' : 'text-slate-500'),
                     priority: isOverdue ? 2 : 3,
-                    date: t.date
+                    date: t.date,
+                    actionTab: 'cashflow', // Navigate to Cashflow page
                 });
             }
         }
@@ -275,7 +278,11 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
             </div>
         ) : (
             reminders.map((reminder) => (
-            <div key={reminder.id} className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-slate-700 group">
+            <div 
+                key={reminder.id} 
+                onClick={() => reminder.actionTab && onNavigate(reminder.actionTab)}
+                className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-slate-700 group"
+            >
                 <div className={`p-2.5 rounded-xl ${reminder.bgClass} flex-shrink-0 mt-0.5`}>
                 <span className={`material-icons text-xl ${reminder.iconColorClass}`}>
                     {reminder.icon}

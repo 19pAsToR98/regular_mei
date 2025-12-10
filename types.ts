@@ -1,4 +1,3 @@
-
 export interface NavItem {
   id: string;
   label: string;
@@ -27,6 +26,7 @@ export interface Reminder {
   priority?: number; // 1 = High (DASN/DAS), 2 = Medium, 3 = Low
   actionLabel?: string;
   actionLink?: string;
+  actionTab?: 'cashflow' | 'cnpj' | 'calendar'; // New field for navigation
 }
 
 export interface ForecastItem {
