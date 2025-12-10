@@ -443,6 +443,18 @@ const App: React.FC = () => {
 
   // --- AUTH MONITORING ---
   useEffect(() => {
+    // 0. Check for public route access before anything else
+    if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('page') === 'news') {
+            setIsPublicView(true);
+            setLoadingAuth(false);
+            // Ensure public data is loaded
+            loadNewsAndOffers();
+            return; // Stop further auth processing if public view is active
+        }
+    }
+
     // Load maintenance config first, as it affects rendering
     loadMaintenanceConfig();
 
