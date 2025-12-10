@@ -1283,9 +1283,11 @@ const App: React.FC = () => {
                 <>
                 {/* --- MOBILE LAYOUT --- */}
                 <div className="md:hidden">
-                   <div className="grid grid-cols-12 mb-6">
-                      <AIAnalysis enabled={connectionConfig.ai.enabled} />
-                   </div>
+                   {connectionConfig.ai.enabled && (
+                       <div className="grid grid-cols-12 mb-6">
+                           <AIAnalysis enabled={connectionConfig.ai.enabled} />
+                       </div>
+                   )}
                    <MobileDashboard 
                         transactions={transactions} 
                         user={user} 
@@ -1308,9 +1310,11 @@ const App: React.FC = () => {
 
                 {/* --- DESKTOP LAYOUT --- */}
                 <div className="hidden md:block space-y-6">
-                  <div className="grid grid-cols-12">
-                    <AIAnalysis enabled={connectionConfig.ai.enabled} />
-                  </div>
+                  {connectionConfig.ai.enabled && (
+                      <div className="grid grid-cols-12">
+                          <AIAnalysis enabled={connectionConfig.ai.enabled} />
+                      </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     {dashboardStats.map((stat, index) => (
                       <StatCard key={index} data={stat as StatData} />

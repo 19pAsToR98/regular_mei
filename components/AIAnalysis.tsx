@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { GoogleGenAI } from "@google/genai";
 
@@ -10,8 +9,6 @@ const AIAnalysis: React.FC<AIAnalysisProps> = ({ enabled }) => {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
-
-  if (!enabled) return null;
 
   const generateAnalysis = async () => {
     setExpanded(true);
