@@ -1043,8 +1043,13 @@ const App: React.FC = () => {
     }
     
     showSuccess('Transação(ões) adicionada(s) com sucesso!');
-    // Reload data to update UI
-    loadAllUserData(user.id, user.role || 'user');
+    // Update local state with new data returned from insert
+    const newTransactions = (data as Transaction[]).map(t => ({
+        ...t,
+        amount: parseFloat(t.amount as any),
+        expectedAmount: t.expected_amount ? parseFloat(t.expected_amount as any) : undefined,
+    }));
+    setTransactions(prev => [...newTransactions, ...prev]);
   };
 
   const handleUpdateTransaction = async (t: Transaction) => {
@@ -1076,8 +1081,8 @@ const App: React.FC = () => {
     }
     
     showSuccess('Transação atualizada com sucesso!');
-    // Reload data to update UI
-    loadAllUserData(user.id, user.role || 'user');
+    // Update local state directly
+    setTransactions(prev => prev.map(tr => tr.id === t.id ? t : tr));
   };
 
   const handleDeleteTransaction = async (id: number) => {
@@ -1096,8 +1101,8 @@ const App: React.FC = () => {
     }
     
     showSuccess('Transação excluída.');
-    // Reload data to update UI
-    loadAllUserData(user.id, user.role || 'user');
+    // Update local state directly
+    setTransactions(prev => prev.filter(tr => tr.id !== id));
   };
 
   // --- APPOINTMENT HANDLERS (Needs to be updated for Supabase) ---
@@ -1113,9 +1118,10 @@ const App: React.FC = () => {
         type: a.type,
     };
 
-    const { error } = await supabase
+    const { data, error } = await supabase
         .from('appointments')
-        .insert(payload);
+        .insert(payload)
+        .select();
 
     if (error) {
         console.error('Error adding appointment:', error);
@@ -1123,7 +1129,7 @@ const App: React.FC = () => {
         return;
     }
     showSuccess('Compromisso adicionado!');
-    loadAllUserData(user.id, user.role || 'user');
+    setAppointments(prev => [...(data as Appointment[]), ...prev]);
   };
 
   const handleUpdateAppointment = async (a: Appointment) => {
@@ -1149,7 +1155,7 @@ const App: React.FC = () => {
         return;
     }
     showSuccess('Compromisso atualizado!');
-    loadAllUserData(user.id, user.role || 'user');
+    setAppointments(prev => prev.map(appt => appt.id === a.id ? a : appt));
   };
 
   const handleDeleteAppointment = async (id: number) => {
@@ -1167,7 +1173,7 @@ const App: React.FC = () => {
         return;
     }
     showSuccess('Compromisso excluído.');
-    loadAllUserData(user.id, user.role || 'user');
+    setAppointments(prev => prev.filter(appt => appt.id !== id));
   };
 
   // --- CATEGORY HANDLERS (Local state for now) ---
