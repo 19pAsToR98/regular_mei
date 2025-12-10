@@ -130,7 +130,8 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
 
     const [payload, setPayload] = useState('');
     const [isPrinting, setIsPrinting] = useState(false);
-    const [printSize, setPrintSize] = useState<'a4' | 'a6' | 'original'>('a6');
+    
+    // Removendo printSize e usando apenas o tamanho padrão da placa para visualização/impressão
 
     const handleGenerate = () => {
         if (!formData.key || !formData.name) return;
@@ -156,21 +157,18 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
         }
     }, [formData]);
 
-    // Determine the scale factor for the preview based on the selected print size
-    const previewScale = useMemo(() => {
-        if (printSize === 'a4') return 0.55; // Scale down A4 to fit preview container
-        if (printSize === 'a6') return 1;    // A6 size fits well at 100%
-        return 0.75;                         // Original size (320px width)
-    }, [printSize]);
+    // Tamanho fixo da placa para visualização (320x480)
+    const PLATE_WIDTH = 320;
+    const PLATE_HEIGHT = 480;
 
     return (
         <div className="animate-in fade-in slide-in-from-right-8 duration-300">
             {/* Dynamic Style for Print Control */}
             <style>{`
                 @media print {
-                    /* Define page size based on selection */
+                    /* Define page size to auto/A4 and remove margins */
                     @page {
-                        size: ${printSize === 'a4' ? 'A4' : printSize === 'a6' ? 'A6' : 'auto'};
+                        size: A4;
                         margin: 0;
                     }
                     
@@ -206,6 +204,14 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                     * {
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
+                    }
+                    
+                    /* Ensure the plate itself is printed at its defined size */
+                    #pix-plate {
+                        width: ${PLATE_WIDTH}px !important;
+                        height: ${PLATE_HEIGHT}px !important;
+                        box-shadow: none !important;
+                        border-radius: 0 !important; /* Remove rounded corners for clean print */
                     }
                 }
             `}</style>
@@ -294,33 +300,6 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                                 ))}
                             </div>
                         </div>
-
-                        <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Opções de Impressão</label>
-                            <div className="grid grid-cols-3 gap-2">
-                                <button
-                                    onClick={() => setPrintSize('a4')}
-                                    className={`px-2 py-2 rounded-lg text-xs font-bold border flex flex-col items-center gap-1 ${printSize === 'a4' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'}`}
-                                >
-                                    <span className="material-icons text-lg">description</span>
-                                    Folha A4
-                                </button>
-                                <button
-                                    onClick={() => setPrintSize('a6')}
-                                    className={`px-2 py-2 rounded-lg text-xs font-bold border flex flex-col items-center gap-1 ${printSize === 'a6' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'}`}
-                                >
-                                    <span className="material-icons text-lg">crop_portrait</span>
-                                    Foto (A6)
-                                </button>
-                                <button
-                                    onClick={() => setPrintSize('original')}
-                                    className={`px-2 py-2 rounded-lg text-xs font-bold border flex flex-col items-center gap-1 ${printSize === 'original' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'}`}
-                                >
-                                    <span className="material-icons text-lg">crop_free</span>
-                                    Só Placa
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -333,20 +312,22 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                             Pré-visualização
                         </div>
 
-                        {/* SHEET SIMULATION - Adjusted scale for preview */}
+                        {/* SHEET SIMULATION - Removed scale/transform from container */}
                         <div 
                             id="pix-plate-container" 
                             className={`bg-white shadow-xl transition-all duration-500 flex items-center justify-center relative`}
                             style={{ 
-                                width: '320px', // Fixed width for the plate container in preview
-                                height: '480px', // Fixed height for the plate container in preview
-                                transform: `scale(${previewScale})`, // Apply scale only for visual fit
-                                transformOrigin: 'center center',
+                                // Use max-width/height to ensure it scales down on smaller screens
+                                maxWidth: `${PLATE_WIDTH}px`, 
+                                maxHeight: `${PLATE_HEIGHT}px`,
+                                width: '100%',
+                                height: '100%',
+                                aspectRatio: `${PLATE_WIDTH} / ${PLATE_HEIGHT}`,
                                 margin: '0',
                                 padding: '0'
                             }}
                         >
-                            {/* THE PLATE ITSELF */}
+                            {/* THE PLATE ITSELF - Fixed size for consistency */}
                             <div id="pix-plate" className={`w-[320px] h-[480px] ${formData.color} rounded-3xl relative flex flex-col items-center p-8 text-white overflow-hidden shadow-sm`}>
                                 {/* Decorative background circles */}
                                 <div className="absolute top-0 left-0 w-full h-full opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.2) 2px, transparent 2px)', backgroundSize: '20px 20px' }}></div>
@@ -356,7 +337,9 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                                 {/* Header */}
                                 <div className="relative z-10 flex flex-col items-center mb-6">
                                     <img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo%E2%80%94pix_powered_by_Banco_Central_%28Brazil%2C_2020%29.svg" alt="Pix" className="h-12 mb-2 brightness-0 invert" />
-                                    <h3 className="text-xl font-bold tracking-wide uppercase text-white/90">Pagamento Instantâneo</h3>
+                                    <h3 className="text-xl font-bold tracking-wide uppercase text-white/90 whitespace-nowrap">
+                                        Pagamento Instantâneo
+                                    </h3>
                                 </div>
 
                                 {/* QR Code Container */}
@@ -380,7 +363,9 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                                 {/* Footer Info */}
                                 <div className="relative z-10 text-center w-full mt-auto">
                                     <p className="text-white/80 text-[10px] uppercase font-bold mb-1 tracking-widest">Beneficiário</p>
-                                    <p className="font-bold text-xl leading-tight truncate px-2 mb-2">{formData.name || 'Nome do Recebedor'}</p>
+                                    <p className="font-bold text-xl leading-tight px-2 mb-2 whitespace-nowrap overflow-hidden text-ellipsis">
+                                        {formData.name || 'Nome do Recebedor'}
+                                    </p>
                                     
                                     <div className="bg-black/20 rounded-lg py-2 px-4 inline-block max-w-full">
                                         <p className="text-white font-mono text-sm truncate">{formData.key || 'CHAVE PIX'}</p>
