@@ -296,11 +296,16 @@ const App: React.FC = () => {
     }
   };
 
-  const loadNotifications = async () => {
-    // Notifications (Publicly readable via RLS, but we need user interaction data)
+  const loadNotifications = async (userId?: string) => {
+    // 1. Fetch all active notifications
     const { data: notifData, error: notifError } = await supabase
         .from('notifications')
-        .select('*')
+        .select(`
+            *,
+            poll_votes:user_notification_interactions(
+                user_id, voted_option_id, voted_at
+            )
+        `)
         .eq('active', true)
         .order('created_at', { ascending: false });
     
@@ -309,32 +314,59 @@ const App: React.FC = () => {
         return;
     }
 
-    const currentUserId = user?.id;
-    const processedNotifications: AppNotification[] = notifData.map(n => {
-        let userVotedOptionId: number | undefined = undefined;
-        let read = false;
+    let userInteractions: Record<number, { is_read: boolean, voted_option_id: number | null }> = {};
 
-        // Simulate fetching user interaction (read status and vote)
-        // NOTE: In a real app, we would fetch user_notification_interactions separately for efficiency
-        
-        // For now, we simulate the interaction data based on the existing structure
-        if (currentUserId) {
-            // Check if read (simplification: assume read if interaction exists)
-            // Check if voted (if poll, check if user_notification_interactions has a vote)
-            // Since we don't have the interaction data here, we leave read/voted as default false/undefined
+    // 2. If user is logged in, fetch their specific interactions
+    if (userId) {
+        const { data: interactionsData, error: interactionsError } = await supabase
+            .from('user_notification_interactions')
+            .select('notification_id, is_read, voted_option_id')
+            .eq('user_id', userId);
+
+        if (interactionsError) {
+            console.error('Error fetching user interactions:', interactionsError);
+        } else {
+            interactionsData.forEach(i => {
+                userInteractions[i.notification_id] = {
+                    is_read: i.is_read,
+                    voted_option_id: i.voted_option_id
+                };
+            });
         }
+    }
+
+    // 3. Process and map notifications
+    const processedNotifications: AppNotification[] = notifData.map(n => {
+        const interaction = userInteractions[n.id];
+        
+        // Process poll votes for Admin view (if needed)
+        const pollVotes: PollVote[] = (n.poll_votes || []).map((v: any) => ({
+            userId: v.user_id,
+            optionId: v.voted_option_id,
+            votedAt: v.voted_at,
+            // Note: userName/userEmail are not fetched here for simplicity/RLS reasons
+            userName: 'N/A', 
+            userEmail: 'N/A',
+            optionText: n.poll_options?.find((opt: any) => opt.id === v.voted_option_id)?.text || 'N/A'
+        }));
+
+        // Update poll options with current vote counts for Admin view
+        const pollOptionsWithCounts = n.poll_options?.map((opt: any) => ({
+            ...opt,
+            votes: pollVotes.filter(v => v.optionId === opt.id).length
+        }));
 
         return {
             id: n.id,
             text: n.text,
             type: n.type as 'info' | 'warning' | 'success' | 'poll',
             date: new Date(n.created_at).toLocaleDateString('pt-BR'),
-            pollOptions: n.poll_options,
-            pollVotes: [], // Detailed votes are complex to fetch here, keep empty for now
+            pollOptions: pollOptionsWithCounts,
+            pollVotes: pollVotes,
             active: n.active,
             expiresAt: n.expires_at,
-            read: read,
-            userVotedOptionId: userVotedOptionId
+            read: interaction?.is_read || false,
+            userVotedOptionId: interaction?.voted_option_id || undefined
         } as AppNotification;
     });
 
@@ -348,7 +380,7 @@ const App: React.FC = () => {
           loadTransactions(userId),
           loadAppointments(userId),
           loadNewsAndOffers(),
-          loadNotifications()
+          loadNotifications(userId) // Pass userId to load interactions
       ];
 
       if (userRole === 'admin') {
@@ -432,7 +464,7 @@ const App: React.FC = () => {
 
     // Load public data (News/Offers) even if not logged in
     loadNewsAndOffers();
-    loadNotifications(); // Load public notifications
+    loadNotifications(); // Load public notifications (without user context)
 
     // Cleanup listener
     return () => {
@@ -859,60 +891,112 @@ const App: React.FC = () => {
   };
 
   // --- NOTIFICATION HANDLERS ---
-  const handleAddNotification = (item: AppNotification) => {
-      setNotifications([item, ...notifications]);
+  const handleAddNotification = async (item: AppNotification) => {
+      const payload = {
+          text: item.text,
+          type: item.type,
+          poll_options: item.pollOptions,
+          expires_at: item.expiresAt,
+          active: true,
+      };
+
+      const { error } = await supabase
+          .from('notifications')
+          .insert(payload);
+
+      if (error) {
+          console.error('Error adding notification:', error);
+          showError('Erro ao publicar notificação.');
+          return;
+      }
+      
       showSuccess('Notificação publicada!');
+      loadNotifications(user?.id);
   }
 
-  const handleUpdateNotification = (item: AppNotification) => {
-      setNotifications(notifications.map(n => n.id === item.id ? item : n));
+  const handleUpdateNotification = async (item: AppNotification) => {
+      const payload = {
+          text: item.text,
+          type: item.type,
+          poll_options: item.pollOptions,
+          expires_at: item.expiresAt,
+          active: item.active,
+      };
+
+      const { error } = await supabase
+          .from('notifications')
+          .update(payload)
+          .eq('id', item.id);
+
+      if (error) {
+          console.error('Error updating notification:', error);
+          showError('Erro ao atualizar notificação.');
+          return;
+      }
+      
       showSuccess('Notificação atualizada!');
+      loadNotifications(user?.id);
   }
 
-  const handleDeleteNotification = (id: number) => {
-      setNotifications((prev) => prev.filter(n => n.id !== id));
+  const handleDeleteNotification = async (id: number) => {
+      const { error } = await supabase
+          .from('notifications')
+          .delete()
+          .eq('id', id);
+
+      if (error) {
+          console.error('Error deleting notification:', error);
+          showError('Erro ao excluir notificação.');
+          return;
+      }
+      
       showSuccess('Notificação excluída.');
+      loadNotifications(user?.id);
   }
 
-  const handleMarkAsRead = (id: number) => {
+  const handleMarkAsRead = async (id: number) => {
+    if (!user) return;
+
+    // Insert or update interaction to mark as read
+    const { error } = await supabase
+        .from('user_notification_interactions')
+        .upsert({
+            user_id: user.id,
+            notification_id: id,
+            is_read: true,
+        }, { onConflict: 'user_id, notification_id' });
+
+    if (error) {
+        console.error('Error marking as read:', error);
+        // Continue without showing error, as it's a background task
+    }
+    
+    // Optimistic UI update
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
-  const handleVote = (notificationId: number, optionId: number) => {
-    // This requires a database interaction to record the vote in user_notification_interactions
-    console.warn("Voting functionality requires database interaction (user_notification_interactions).");
+  const handleVote = async (notificationId: number, optionId: number) => {
+    if (!user) return;
+
+    // Insert or update interaction to record vote
+    const { error } = await supabase
+        .from('user_notification_interactions')
+        .upsert({
+            user_id: user.id,
+            notification_id: notificationId,
+            voted_option_id: optionId,
+            is_read: true, // Mark as read upon voting
+            voted_at: new Date().toISOString()
+        }, { onConflict: 'user_id, notification_id' });
+
+    if (error) {
+        console.error('Error recording vote:', error);
+        showError('Erro ao registrar voto.');
+        return;
+    }
     
-    setNotifications(prev => prev.map(n => {
-      if (n.id === notificationId && n.pollOptions && user) {
-        
-        // 1. Update Vote Count (Optimistic UI update)
-        const updatedOptions = n.pollOptions.map(opt => 
-          opt.id === optionId ? { ...opt, votes: opt.votes + 1 } : opt
-        );
-
-        // 2. Record User Vote (Simulated local update)
-        const pollVote: PollVote = {
-            userId: user.id,
-            userName: user.name,
-            userEmail: user.email,
-            optionId: optionId,
-            optionText: n.pollOptions.find(o => o.id === optionId)?.text || '',
-            votedAt: new Date().toISOString()
-        };
-
-        const updatedVotes = [...(n.pollVotes || []), pollVote];
-
-        return { 
-            ...n, 
-            pollOptions: updatedOptions, 
-            pollVotes: updatedVotes,
-            userVotedOptionId: optionId, 
-            read: true 
-        };
-      }
-      return n;
-    }));
     showSuccess('Voto registrado com sucesso!');
+    loadNotifications(user.id); // Reload notifications to update vote counts and userVoted status
   };
 
   // --- CASHFLOW HANDLERS (Needs to be updated for Supabase) ---
