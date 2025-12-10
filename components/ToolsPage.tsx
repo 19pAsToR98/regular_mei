@@ -212,7 +212,7 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                         width: ${PLATE_WIDTH}px !important;
                         height: ${PLATE_HEIGHT}px !important;
                         box-shadow: none !important;
-                        /* Keep border-radius */
+                        /* Preserve border-radius */
                     }
                 }
             `}</style>
@@ -335,7 +335,7 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                                 {/* Header */}
                                 <div className="relative z-10 flex flex-col items-center mb-6">
                                     <img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo%E2%80%94pix_powered_by_Banco_Central_%28Brazil%2C_2020%29.svg" alt="Pix" className="h-12 mb-2 brightness-0 invert" />
-                                    <h3 className="text-xl font-bold tracking-wide uppercase text-white/90 text-center">
+                                    <h3 className="text-xl font-bold tracking-wide uppercase text-white/90 text-center whitespace-nowrap">
                                         Pagamento Instantâneo
                                     </h3>
                                 </div>
@@ -361,7 +361,7 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                                 {/* Footer Info */}
                                 <div className="relative z-10 text-center w-full mt-auto">
                                     <p className="text-white/80 text-[10px] uppercase font-bold mb-1 tracking-widest">Beneficiário</p>
-                                    {/* Adjusted text size and added line-clamp-2 for graceful wrapping */}
+                                    {/* Adjusted to text-lg and line-clamp-2 for better fit */}
                                     <p className="font-bold text-lg leading-tight px-2 mb-2 line-clamp-2">
                                         {formData.name || 'Nome do Recebedor'}
                                     </p>
