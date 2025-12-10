@@ -1,5 +1,9 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { User } from '../types';
+import { showSuccess, showError } from '../utils/toastUtils';
+
+// Declaração global para html2pdf (disponível via script tag no index.html)
+declare const html2pdf: any;
 
 interface Tool {
   id: string;
@@ -129,9 +133,9 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
     });
 
     const [payload, setPayload] = useState('');
-    const [isPrinting, setIsPrinting] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
     
-    // Removendo printSize e usando apenas o tamanho padrão da placa para visualização/impressão
+    const plateRef = useRef<HTMLDivElement>(null);
 
     const handleGenerate = () => {
         if (!formData.key || !formData.name) return;
@@ -139,12 +143,36 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
         setPayload(p);
     };
 
-    const handlePrint = () => {
-        setIsPrinting(true);
-        setTimeout(() => {
-            window.print();
-            setIsPrinting(false);
-        }, 500);
+    const handleExportPDF = () => {
+        if (!plateRef.current) {
+            showError("Erro: Elemento da placa não encontrado.");
+            return;
+        }
+        
+        setIsExporting(true);
+        showSuccess("Gerando PDF, aguarde...");
+
+        // Configuração para o PDF (tamanho da placa 320x480px)
+        const element = plateRef.current;
+        const filename = `plaquinha_pix_${formData.name.replace(/\s/g, '_')}.pdf`;
+
+        // Configurações para manter a qualidade e o tamanho do elemento
+        const opt = {
+            margin: 10,
+            filename: filename,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 3, logging: false, useCORS: true },
+            jsPDF: { unit: 'mm', format: [80, 120], orientation: 'portrait' } // Tamanho aproximado de uma placa pequena
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            setIsExporting(false);
+            showSuccess("PDF exportado com sucesso!");
+        }).catch((error: any) => {
+            console.error("Erro ao exportar PDF:", error);
+            showError("Falha ao exportar PDF. Tente novamente.");
+            setIsExporting(false);
+        });
     };
 
     // Auto-generate on field change if valid
@@ -164,58 +192,7 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
 
     return (
         <div className="animate-in fade-in slide-in-from-right-8 duration-300">
-            {/* Dynamic Style for Print Control */}
-            <style>{`
-                @media print {
-                    /* Define page size to auto/A4 and remove margins */
-                    @page {
-                        size: A4;
-                        margin: 0;
-                    }
-                    
-                    /* Hide everything except the print container */
-                    body * {
-                        visibility: hidden;
-                    }
-                    #pix-plate-container, #pix-plate-container * {
-                        visibility: visible;
-                    }
-                    
-                    /* Force the container to fill the page/area and center the plate */
-                    #pix-plate-container {
-                        position: absolute;
-                        left: 0;
-                        top: 0;
-                        width: 100%;
-                        height: 100%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        background: white !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        box-shadow: none !important;
-                        border: none !important;
-                        /* Ensure the plate itself is not scaled/transformed */
-                        transform: none !important;
-                        scale: 1 !important;
-                    }
-                    
-                    /* Force background colors on print */
-                    * {
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
-                    }
-                    
-                    /* Ensure the plate itself is printed at its defined size */
-                    #pix-plate {
-                        width: ${PLATE_WIDTH}px !important;
-                        height: ${PLATE_HEIGHT}px !important;
-                        box-shadow: none !important;
-                        /* Preserve border-radius */
-                    }
-                }
-            `}</style>
+            {/* Removendo o bloco <style> print:hidden, pois usaremos html2pdf */}
 
             <button onClick={onBack} className="mb-4 flex items-center text-slate-500 hover:text-primary transition-colors font-medium print:hidden">
                 <span className="material-icons text-sm mr-1">arrow_back</span> Voltar para ferramentas
@@ -304,7 +281,7 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                     </div>
                 </div>
 
-                {/* Preview / Print Area */}
+                {/* Preview / Export Area */}
                 <div className="flex flex-col gap-6 items-center">
                     
                     {/* VISUAL PREVIEW CONTAINER */}
@@ -326,7 +303,7 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                             }}
                         >
                             {/* THE PLATE ITSELF - Fixed size for consistency */}
-                            <div id="pix-plate" className={`w-[320px] h-[480px] ${formData.color} rounded-3xl relative flex flex-col items-center p-8 text-white overflow-hidden shadow-sm`}>
+                            <div ref={plateRef} id="pix-plate" className={`w-[320px] h-[480px] ${formData.color} rounded-3xl relative flex flex-col items-center p-8 text-white overflow-hidden shadow-sm`}>
                                 {/* Decorative background circles */}
                                 <div className="absolute top-0 left-0 w-full h-full opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.2) 2px, transparent 2px)', backgroundSize: '20px 20px' }}></div>
                                 <div className="absolute -top-10 -right-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
@@ -380,14 +357,14 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
 
                     <div className="flex flex-col gap-2 w-full max-w-xs print:hidden">
                         <button 
-                            onClick={handlePrint}
-                            disabled={!payload || isPrinting}
+                            onClick={handleExportPDF}
+                            disabled={!payload || isExporting}
                             className="w-full bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2 transition-colors"
                         >
-                            {isPrinting ? <span className="material-icons animate-spin text-sm">refresh</span> : <span className="material-icons">print</span>}
-                            Imprimir Agora
+                            {isExporting ? <span className="material-icons animate-spin text-sm">refresh</span> : <span className="material-icons">file_download</span>}
+                            Exportar PDF
                         </button>
-                        <p className="text-center text-xs text-slate-400">Certifique-se de ativar "Gráficos de plano de fundo" na janela de impressão.</p>
+                        <p className="text-center text-xs text-slate-400">Gera um arquivo PDF de alta qualidade da sua placa.</p>
                     </div>
                 </div>
             </div>
