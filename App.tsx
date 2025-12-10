@@ -1242,8 +1242,15 @@ const App: React.FC = () => {
   }
 
   const isPageInMaintenance = (page: string) => {
+      // Admins bypass all maintenance checks
+      if (user?.role === 'admin') return false;
+
+      // Global maintenance check
       if (maintenance.global && page !== 'admin' && page !== 'settings') return true;
+      
+      // Per-page maintenance check
       if (maintenance[page as keyof MaintenanceConfig]) return true;
+      
       return false;
   }
 
@@ -1411,7 +1418,7 @@ const App: React.FC = () => {
         <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth relative">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Conditional rendering for global maintenance */}
-            {maintenance.global && activeTab !== 'admin' && activeTab !== 'settings' ? (
+            {maintenance.global && activeTab !== 'admin' && activeTab !== 'settings' && user?.role !== 'admin' ? (
                 <div className="h-full flex items-center justify-center">
                     <MaintenanceOverlay type="global" />
                 </div>
