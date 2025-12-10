@@ -478,7 +478,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
 
                 {/* Preview */}
                 <div className="flex flex-col gap-4">
-                    <div ref={receiptRef} id="receipt-preview" className="bg-[#fffbeb] text-slate-800 p-8 rounded-sm shadow-lg border-2 border-dashed border-slate-300 relative font-mono text-sm leading-relaxed transform rotate-1 transition-transform hover:rotate-0">
+                    <div ref={receiptRef} id="receipt-preview" className="bg-[#fffbeb] text-slate-800 p-8 rounded-sm shadow-lg border-2 border-dashed border-slate-300 relative font-mono text-sm leading-relaxed">
                         {/* Paper Texture Effect */}
                         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
                         
@@ -506,7 +506,9 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                                 <p>{new Date(formData.date).toLocaleDateString('pt-BR', {day: 'numeric', month: 'long', year: 'numeric'})}</p>
                             </div>
                             <div className="text-center">
-                                <div className="mb-2 font-cursive text-xl text-blue-900 transform -rotate-3">{formData.issuerName}</div>
+                                <div className="mb-2 font-cursive text-xl text-blue-900 transform -rotate-3 font-cursive">
+                                    {formData.issuerName}
+                                </div>
                                 <div className="border-t border-slate-800 w-48 pt-1 text-xs uppercase">Assinatura do Emitente</div>
                                 <div className="text-[10px]">{formData.issuerName}</div>
                                 <div className="text-[10px]">{formData.issuerDoc}</div>
