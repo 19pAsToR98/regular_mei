@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { CNPJResponse, DasItem, DasnItem, Mei360Response, FiscalData } from '../types';
 
@@ -252,10 +251,9 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
     // Adding query param as fallback for proxies that strip headers
     const urlWithParams = `${webhookUrl}?cnpj=${cleanCnpj}`;
 
-    // Define strategies with Proxy fallback to bypass CORS (POST method)
+    // Define strategies with ONLY DIRECT connection
     const strategies = [
-        { name: 'corsproxy', url: `https://corsproxy.io/?${encodeURIComponent(urlWithParams)}` },
-        { name: 'direct', url: urlWithParams } // Fallback
+        { name: 'direct', url: urlWithParams }
     ];
 
     let success = false;
