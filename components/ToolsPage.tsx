@@ -527,7 +527,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
     const formattedDate = new Date(formData.date).toLocaleDateString('pt-BR');
     const [day, month, year] = formattedDate.split('/');
     
-    // Removendo a linha de preenchimento do local e data
+    // Local e data para preenchimento
     const locationAndDate = `${formattedDate}`;
     
     const paymentOptions = [
@@ -552,6 +552,13 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
             </div>
         );
     };
+
+    // Helper para renderizar campos com linha de preenchimento
+    const renderLine = (content: string, minWidth: string = 'w-64') => (
+        <span className={`font-bold border-b border-slate-400 px-1 inline-block ${minWidth} whitespace-normal`}>
+            {content}
+        </span>
+    );
 
     const renderReceiptContent = () => {
         // Usando valores preenchidos ou um espaço vazio
@@ -582,11 +589,11 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </div>
                         
                         <p>
-                            Eu, {renderValue(issuerName)}
-                            , CPF nº {renderValue(issuerCpf)}
-                            , recebi de {renderValue(payerName)}
-                            , CPF/CNPJ nº {renderValue(payerDoc)}
-                            , a quantia de R$ {renderValue(amount)} ({renderValue(amountExtenso)}), referente a {renderValue(serviceDescription)}.
+                            Eu, {renderLine(issuerName)}
+                            , CPF nº {renderLine(issuerCpf)}
+                            , recebi de {renderLine(payerName)}
+                            , CPF/CNPJ nº {renderLine(payerDoc)}
+                            , a quantia de R$ {renderLine(amount)} ({renderLine(amountExtenso)}), referente a {renderLine(serviceDescription)}.
                         </p>
 
                         <p>
@@ -594,8 +601,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </p>
 
                         <div className="pt-12">
-                            <p>Local e data: {renderValue(locationAndDate)}</p>
-                            <p className="mt-12">Assinatura: {renderValue(' ')}</p>
+                            <p>Local e data: {renderLine(locationAndDate)}</p>
+                            <p className="mt-12">Assinatura: {renderLine(' ', 'w-64 mx-auto block')}</p>
                         </div>
                     </div>
                 );
@@ -607,15 +614,15 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </div>
                         
                         <p>
-                            Eu, {renderValue(issuerName)}
-                            , MEI inscrito no CNPJ {renderValue(issuerDoc)}
-                            , recebi de {renderValue(payerName)}
-                            , CPF/CNPJ {renderValue(payerDoc)}
-                            , o valor de R$ {renderValue(amount)} ({renderValue(amountExtenso)}), referente a:
+                            Eu, {renderLine(issuerName)}
+                            , MEI inscrito no CNPJ {renderLine(issuerDoc)}
+                            , recebi de {renderLine(payerName)}
+                            , CPF/CNPJ {renderLine(payerDoc)}
+                            , o valor de R$ {renderLine(amount)} ({renderLine(amountExtenso)}), referente a:
                         </p>
 
                         <p className="font-bold mt-4">Serviço prestado / Produto vendido:</p>
-                        <p className="min-h-[1.5em]">{serviceDescription}</p>
+                        <p className="border-b border-slate-400 min-h-[1.5em]">{serviceDescription}</p>
 
                         <p className="font-bold mt-4">O pagamento foi realizado em {day}/{month}/{year} por meio de:</p>
                         {renderPaymentCheckboxes('mei')}
@@ -625,8 +632,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </p>
 
                         <div className="pt-12">
-                            <p>Local e data: {renderValue(locationAndDate)}</p>
-                            <p className="mt-12">Assinatura do MEI: {renderValue(' ')}</p>
+                            <p>Local e data: {renderLine(locationAndDate)}</p>
+                            <p className="mt-12">Assinatura do MEI: {renderLine(' ', 'w-64 mx-auto block')}</p>
                         </div>
                     </div>
                 );
@@ -638,23 +645,49 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </div>
                         
                         <p>
-                            Recebi de {renderValue(payerName)}
-                            , inscrito no CPF/CNPJ nº {renderValue(payerDoc)}
-                            , o valor de R$ {renderValue(amount)} ({renderValue(amountExtenso)}), referente ao pagamento de:
+                            Recebi de {renderLine(payerName)}
+                            , inscrito no CPF/CNPJ nº {renderLine(payerDoc)}
+                            , o valor de R$ {renderLine(amount)} ({renderLine(amountExtenso)}), referente ao pagamento de:
                         </p>
 
-                        <p className="font-bold mt-4">Descrição do serviço/produto:</p>
-                        <p className="min-h-[3em]">{serviceDescription}</p>
+                        {/* Tabela de Itens para o modelo detalhado */}
+                        <table className="w-full text-sm border-collapse">
+                            <thead>
+                                <tr className="bg-slate-100 border-y border-slate-300">
+                                    <th className="py-2 px-2 text-left text-xs font-bold uppercase text-slate-500">Descrição</th>
+                                    <th className="py-2 px-2 text-center text-xs font-bold uppercase text-slate-500 w-16">Qtd</th>
+                                    <th className="py-2 px-2 text-right text-xs font-bold uppercase text-slate-500 w-24">Preço</th>
+                                    <th className="py-2 px-2 text-right text-xs font-bold uppercase text-slate-500 w-24">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-sm">
+                                {items.map((item) => (
+                                    <tr key={item.id} className="border-b border-slate-100">
+                                        <td className="py-1 px-2 font-medium">{item.desc || 'Item sem descrição'}</td>
+                                        <td className="py-1 px-2 text-center text-slate-600">{item.qty}</td>
+                                        <td className="py-1 px-2 text-right text-slate-600">R$ {item.price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                                        <td className="py-1 px-2 text-right font-bold">R$ {(item.qty * item.price).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        
+                        <div className="flex justify-end mt-2">
+                            <div className="w-48 flex justify-between border-t border-slate-400 pt-1">
+                                <span className="font-bold">TOTAL:</span>
+                                <span className="font-bold">R$ {formattedAmount}</span>
+                            </div>
+                        </div>
 
                         <p className="font-bold mt-4">Forma de pagamento:</p>
                         {renderPaymentCheckboxes('detailed')}
 
                         <div className="grid grid-cols-2 gap-4 mt-6">
                             <div>
-                                <span className="font-bold">Data do pagamento:</span> {day}/{month}/{year}
+                                <span className="font-bold">Data do pagamento:</span> {renderLine(formattedDate)}
                             </div>
                             <div>
-                                <span className="font-bold">Valor total recebido:</span> R$ {amount}
+                                <span className="font-bold">Valor total recebido:</span> {renderLine(`R$ ${amount}`)}
                             </div>
                         </div>
 
@@ -663,8 +696,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </p>
 
                         <div className="pt-12">
-                            <p>Local e data: {renderValue(locationAndDate)}</p>
-                            <p className="mt-12">Assinatura: {renderValue(' ')}</p>
+                            <p>Local e data: {renderLine(locationAndDate)}</p>
+                            <p className="mt-12">Assinatura: {renderLine(' ', 'w-64 mx-auto block')}</p>
                         </div>
                     </div>
                 );
