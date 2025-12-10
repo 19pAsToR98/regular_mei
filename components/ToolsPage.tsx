@@ -554,7 +554,8 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
         { id: 1, desc: 'Serviço Exemplo', qty: 1, price: 100.00 }
     ]);
     
-    const [isPrinting, setIsPrinting] = useState(false);
+    const [isExporting, setIsExporting] = useState(false); // New state for PDF export
+    const budgetRef = useRef<HTMLDivElement>(null); // New ref for the preview area
 
     // ... (rest of colors, bgColors, addItem, updateItem, removeItem, total logic) ...
     const colors: Record<string, string> = {
@@ -585,13 +586,39 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
 
     const total = items.reduce((acc, item) => acc + (item.qty * item.price), 0);
 
-    const handlePrint = () => {
-        setIsPrinting(true);
-        setTimeout(() => {
-            window.print();
-            setIsPrinting(false);
-        }, 500);
+    const handleExportPDF = () => {
+        if (!budgetRef.current) {
+            showError("Erro: Elemento do orçamento não encontrado.");
+            return;
+        }
+        
+        setIsExporting(true);
+        showSuccess("Gerando PDF, aguarde...");
+
+        const element = budgetRef.current;
+        const filename = `orcamento_${budget.clientName.replace(/\s/g, '_')}_${budget.date}.pdf`;
+
+        // Configurações para A4 (210mm x 297mm)
+        const opt = {
+            margin: 10,
+            filename: filename,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, logging: false, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            setIsExporting(false);
+            showSuccess("PDF exportado com sucesso!");
+        }).catch((error: any) => {
+            console.error("Erro ao exportar PDF:", error);
+            showError("Falha ao exportar PDF. Tente novamente.");
+            setIsExporting(false);
+        });
     };
+
+    // Remove native print function as we use PDF export now
+    // const handlePrint = () => { ... };
 
     return (
         <div className="animate-in fade-in slide-in-from-right-8 duration-300">
@@ -736,18 +763,19 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                     </div>
 
                     <button 
-                        onClick={handlePrint}
-                        disabled={isPrinting}
+                        onClick={handleExportPDF} // Changed from handlePrint
+                        disabled={isExporting}
                         className="w-full bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transition-colors"
                     >
-                        {isPrinting ? <span className="material-icons animate-spin">refresh</span> : <span className="material-icons">print</span>}
-                        Imprimir Orçamento
+                        {isExporting ? <span className="material-icons animate-spin">refresh</span> : <span className="material-icons">file_download</span>}
+                        Exportar PDF
                     </button>
                 </div>
 
                 {/* Preview (Right Column) */}
                 <div className="xl:col-span-8 flex justify-center">
                     <div 
+                        ref={budgetRef} // Added ref here
                         id="budget-preview"
                         className={`bg-white text-slate-900 shadow-2xl mx-auto relative ${budget.template === 'modern' ? 'border-t-8 ' + colors[budget.color].split(' ')[1] : ''}`} 
                         style={{ width: '210mm', minHeight: '297mm', padding: '15mm' }}
