@@ -506,7 +506,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                                 <p>{new Date(formData.date).toLocaleDateString('pt-BR', {day: 'numeric', month: 'long', year: 'numeric'})}</p>
                             </div>
                             <div className="text-center">
-                                <div className="mb-2 font-cursive text-xl text-blue-900 transform -rotate-3 font-cursive">
+                                <div className="mb-2 font-cursive text-2xl text-blue-900">
                                     {formData.issuerName}
                                 </div>
                                 <div className="border-t border-slate-800 w-48 pt-1 text-xs uppercase">Assinatura do Emitente</div>
