@@ -158,11 +158,22 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
 
         // Configurações para manter a qualidade e o tamanho do elemento
         const opt = {
-            margin: 10,
+            margin: 5, // Reduzindo a margem para maximizar o espaço na página pequena
             filename: filename,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 3, logging: false, useCORS: true },
-            jsPDF: { unit: 'mm', format: [80, 120], orientation: 'portrait' } // Tamanho aproximado de uma placa pequena
+            html2canvas: { 
+                scale: 3, // Alta escala para qualidade
+                logging: false, 
+                useCORS: true,
+                // Definir largura e altura exatas do elemento para evitar quebras
+                width: PLATE_WIDTH, 
+                height: PLATE_HEIGHT 
+            },
+            jsPDF: { 
+                unit: 'mm', 
+                format: [80, 120], // Formato pequeno (80mm x 120mm)
+                orientation: 'portrait' 
+            } 
         };
 
         html2pdf().set(opt).from(element).save().then(() => {
@@ -270,7 +281,7 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Cor do Fundo</label>
                             <div className="flex gap-2">
                                 {['bg-emerald-600', 'bg-blue-600', 'bg-purple-600', 'bg-slate-900', 'bg-pink-600'].map(color => (
-                                    <button 
+                                    <button
                                         key={color}
                                         onClick={() => setFormData({...formData, color})}
                                         className={`w-8 h-8 rounded-full ${color} ${formData.color === color ? 'ring-2 ring-offset-2 ring-slate-400' : ''}`}
