@@ -519,7 +519,6 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
     ];
 
     const renderPaymentCheckboxes = (template: 'mei' | 'detailed') => {
-        const isMei = template === 'mei';
         return (
             <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
                 {paymentOptions.map(opt => (
@@ -530,7 +529,6 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                 <span className="flex items-center">
                     ({formData.paymentMethod === 'outro' ? 'X' : ' '}) Outro: {formData.paymentMethod === 'outro' ? formData.otherPaymentMethod : '___________________'}
                 </span>
-                {isMei && <span className="text-xs text-slate-500">( ) Outro: ___________________</span>}
             </div>
         );
     };
@@ -545,8 +543,15 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         const amount = formattedAmount || '__________';
         const amountExtenso = amountInWords || '_________________________________________';
         
+        // Helper para renderizar campos com linha de preenchimento
+        const renderLine = (content: string, minWidth: string = 'w-64') => (
+            <span className={`font-bold border-b border-slate-400 px-1 inline-block ${minWidth} whitespace-normal`}>
+                {content}
+            </span>
+        );
+
         switch (formData.template) {
-            case 'simple':
+            case 'classic':
                 return (
                     <div className="space-y-6">
                         <div className="text-center border-b-2 border-slate-800 pb-4 mb-6">
@@ -554,7 +559,11 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </div>
                         
                         <p>
-                            Eu, <span className="font-bold border-b border-slate-400 px-1">{issuerName}</span>, CPF nº <span className="font-bold border-b border-slate-400 px-1">{issuerCpf}</span>, recebi de <span className="font-bold border-b border-slate-400 px-1">{payerName}</span>, CPF/CNPJ nº <span className="font-bold border-b border-slate-400 px-1">{payerDoc}</span>, a quantia de R$ <span className="font-bold border-b border-slate-400 px-1">{amount}</span> (<span className="font-bold border-b border-slate-400 px-1">{amountExtenso}</span>), referente a <span className="font-bold border-b border-slate-400 px-1">{service}</span>.
+                            Eu, {renderLine(issuerName, 'w-full')}
+                            , CPF nº {renderLine(issuerCpf, 'w-48')}
+                            , recebi de {renderLine(payerName, 'w-full')}
+                            , CPF/CNPJ nº {renderLine(payerDoc, 'w-48')}
+                            , a quantia de R$ {renderLine(amount, 'w-24')} ({renderLine(amountExtenso, 'w-full')}), referente a {renderLine(service, 'w-full')}.
                         </p>
 
                         <p>
@@ -562,8 +571,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </p>
 
                         <div className="pt-12">
-                            <p>Local e data: <span className="font-bold border-b border-slate-400 px-1">{locationAndDate}</span></p>
-                            <p className="mt-12">Assinatura: <span className="font-bold border-b border-slate-400 px-1 block w-64 mx-auto"></span></p>
+                            <p>Local e data: {renderLine(locationAndDate, 'w-full')}</p>
+                            <p className="mt-12">Assinatura: {renderLine('', 'w-64 mx-auto block')}</p>
                         </div>
                     </div>
                 );
@@ -575,7 +584,11 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </div>
                         
                         <p>
-                            Eu, <span className="font-bold border-b border-slate-400 px-1">{issuerName}</span>, MEI inscrito no CNPJ <span className="font-bold border-b border-slate-400 px-1">{issuerDoc}</span>, recebi de <span className="font-bold border-b border-slate-400 px-1">{payerName}</span>, CPF/CNPJ <span className="font-bold border-b border-slate-400 px-1">{payerDoc}</span>, o valor de R$ <span className="font-bold border-b border-slate-400 px-1">{amount}</span> (<span className="font-bold border-b border-slate-400 px-1">{amountExtenso}</span>), referente a:
+                            Eu, {renderLine(issuerName, 'w-full')}
+                            , MEI inscrito no CNPJ {renderLine(issuerDoc, 'w-48')}
+                            , recebi de {renderLine(payerName, 'w-full')}
+                            , CPF/CNPJ {renderLine(payerDoc, 'w-48')}
+                            , o valor de R$ {renderLine(amount, 'w-24')} ({renderLine(amountExtenso, 'w-full')}), referente a:
                         </p>
 
                         <p className="font-bold mt-4">Serviço prestado / Produto vendido:</p>
@@ -589,8 +602,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </p>
 
                         <div className="pt-12">
-                            <p>Local e data: <span className="font-bold border-b border-slate-400 px-1">{locationAndDate}</span></p>
-                            <p className="mt-12">Assinatura do MEI: <span className="font-bold border-b border-slate-400 px-1 block w-64 mx-auto"></span></p>
+                            <p>Local e data: {renderLine(locationAndDate, 'w-full')}</p>
+                            <p className="mt-12">Assinatura do MEI: {renderLine('', 'w-64 mx-auto block')}</p>
                         </div>
                     </div>
                 );
@@ -602,7 +615,9 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </div>
                         
                         <p>
-                            Recebi de <span className="font-bold border-b border-slate-400 px-1">{payerName}</span>, inscrito no CPF/CNPJ nº <span className="font-bold border-b border-slate-400 px-1">{payerDoc}</span>, o valor de R$ <span className="font-bold border-b border-slate-400 px-1">{amount}</span> (<span className="font-bold border-b border-slate-400 px-1">{amountExtenso}</span>), referente ao pagamento de:
+                            Recebi de {renderLine(payerName, 'w-full')}
+                            , inscrito no CPF/CNPJ nº {renderLine(payerDoc, 'w-48')}
+                            , o valor de R$ {renderLine(amount, 'w-24')} ({renderLine(amountExtenso, 'w-full')}), referente ao pagamento de:
                         </p>
 
                         <p className="font-bold mt-4">Descrição do serviço/produto:</p>
@@ -625,8 +640,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </p>
 
                         <div className="pt-12">
-                            <p>Local e data: <span className="font-bold border-b border-slate-400 px-1">{locationAndDate}</span></p>
-                            <p className="mt-12">Assinatura: <span className="font-bold border-b border-slate-400 px-1 block w-64 mx-auto"></span></p>
+                            <p>Local e data: {renderLine(locationAndDate, 'w-full')}</p>
+                            <p className="mt-12">Assinatura: {renderLine('', 'w-64 mx-auto block')}</p>
                         </div>
                     </div>
                 );
@@ -717,7 +732,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Emitente (Você)</label>
                             <input type="text" value={formData.issuerName} onChange={e => setFormData({...formData, issuerName: e.target.value})} className="w-full px-3 py-2 border rounded-lg mb-2 bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Seu Nome ou Razão Social" />
                             
-                            {formData.template === 'simple' ? (
+                            {formData.template === 'classic' ? (
                                 <input type="text" value={formData.issuerCpf} onChange={e => setFormData({...formData, issuerCpf: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Seu CPF" />
                             ) : (
                                 <input type="text" value={formData.issuerDoc} onChange={e => setFormData({...formData, issuerDoc: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Seu CNPJ" />
