@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useMemo } from 'react';
 import { User } from '../types';
 
@@ -157,21 +156,33 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
         }
     }, [formData]);
 
+    // Determine the scale factor for the preview based on the selected print size
+    const previewScale = useMemo(() => {
+        if (printSize === 'a4') return 0.55; // Scale down A4 to fit preview container
+        if (printSize === 'a6') return 1;    // A6 size fits well at 100%
+        return 0.75;                         // Original size (320px width)
+    }, [printSize]);
+
     return (
         <div className="animate-in fade-in slide-in-from-right-8 duration-300">
             {/* Dynamic Style for Print Control */}
             <style>{`
                 @media print {
+                    /* Define page size based on selection */
                     @page {
                         size: ${printSize === 'a4' ? 'A4' : printSize === 'a6' ? 'A6' : 'auto'};
                         margin: 0;
                     }
+                    
+                    /* Hide everything except the print container */
                     body * {
                         visibility: hidden;
                     }
                     #pix-plate-container, #pix-plate-container * {
                         visibility: visible;
                     }
+                    
+                    /* Force the container to fill the page/area and center the plate */
                     #pix-plate-container {
                         position: absolute;
                         left: 0;
@@ -186,7 +197,11 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                         padding: 0 !important;
                         box-shadow: none !important;
                         border: none !important;
+                        /* Ensure the plate itself is not scaled/transformed */
+                        transform: none !important;
+                        scale: 1 !important;
                     }
+                    
                     /* Force background colors on print */
                     * {
                         -webkit-print-color-adjust: exact !important;
@@ -318,13 +333,18 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                             Pré-visualização
                         </div>
 
-                        {/* SHEET SIMULATION */}
+                        {/* SHEET SIMULATION - Adjusted scale for preview */}
                         <div 
                             id="pix-plate-container" 
-                            className={`bg-white shadow-xl transition-all duration-500 flex items-center justify-center relative ${
-                                printSize === 'a4' ? 'w-[210mm] h-[297mm] scale-[0.45] lg:scale-[0.55]' : 
-                                printSize === 'a6' ? 'w-[105mm] h-[148mm] scale-100' : 'scale-75'
-                            }`}
+                            className={`bg-white shadow-xl transition-all duration-500 flex items-center justify-center relative`}
+                            style={{ 
+                                width: '320px', // Fixed width for the plate container in preview
+                                height: '480px', // Fixed height for the plate container in preview
+                                transform: `scale(${previewScale})`, // Apply scale only for visual fit
+                                transformOrigin: 'center center',
+                                margin: '0',
+                                padding: '0'
+                            }}
                         >
                             {/* THE PLATE ITSELF */}
                             <div id="pix-plate" className={`w-[320px] h-[480px] ${formData.color} rounded-3xl relative flex flex-col items-center p-8 text-white overflow-hidden shadow-sm`}>
