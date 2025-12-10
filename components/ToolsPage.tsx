@@ -160,6 +160,7 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
     // Tamanho fixo da placa para visualização (320x480)
     const PLATE_WIDTH = 320;
     const PLATE_HEIGHT = 480;
+    const PREVIEW_SCALE = 0.75; // Scale down for preview container fit
 
     return (
         <div className="animate-in fade-in slide-in-from-right-8 duration-300">
@@ -211,7 +212,7 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                         width: ${PLATE_WIDTH}px !important;
                         height: ${PLATE_HEIGHT}px !important;
                         box-shadow: none !important;
-                        border-radius: 0 !important; /* Remove rounded corners for clean print */
+                        /* Keep border-radius */
                     }
                 }
             `}</style>
@@ -312,17 +313,14 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                             Pré-visualização
                         </div>
 
-                        {/* SHEET SIMULATION - Removed scale/transform from container */}
+                        {/* SHEET SIMULATION - Adjusted scale for preview */}
                         <div 
                             id="pix-plate-container" 
                             className={`bg-white shadow-xl transition-all duration-500 flex items-center justify-center relative`}
                             style={{ 
-                                // Use max-width/height to ensure it scales down on smaller screens
-                                maxWidth: `${PLATE_WIDTH}px`, 
-                                maxHeight: `${PLATE_HEIGHT}px`,
-                                width: '100%',
-                                height: '100%',
-                                aspectRatio: `${PLATE_WIDTH} / ${PLATE_HEIGHT}`,
+                                // Apply scale only for visual fit
+                                transform: `scale(${PREVIEW_SCALE})`, 
+                                transformOrigin: 'center center',
                                 margin: '0',
                                 padding: '0'
                             }}
@@ -337,7 +335,7 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                                 {/* Header */}
                                 <div className="relative z-10 flex flex-col items-center mb-6">
                                     <img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo%E2%80%94pix_powered_by_Banco_Central_%28Brazil%2C_2020%29.svg" alt="Pix" className="h-12 mb-2 brightness-0 invert" />
-                                    <h3 className="text-xl font-bold tracking-wide uppercase text-white/90 whitespace-nowrap">
+                                    <h3 className="text-xl font-bold tracking-wide uppercase text-white/90 text-center">
                                         Pagamento Instantâneo
                                     </h3>
                                 </div>
@@ -363,7 +361,8 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                                 {/* Footer Info */}
                                 <div className="relative z-10 text-center w-full mt-auto">
                                     <p className="text-white/80 text-[10px] uppercase font-bold mb-1 tracking-widest">Beneficiário</p>
-                                    <p className="font-bold text-xl leading-tight px-2 mb-2 whitespace-nowrap overflow-hidden text-ellipsis">
+                                    {/* Adjusted text size and added line-clamp-2 for graceful wrapping */}
+                                    <p className="font-bold text-lg leading-tight px-2 mb-2 line-clamp-2">
                                         {formData.name || 'Nome do Recebedor'}
                                     </p>
                                     
