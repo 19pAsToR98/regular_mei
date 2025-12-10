@@ -392,8 +392,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         template: 'classic' as 'classic' | 'mei' | 'detailed', // New state for template selection
         payerName: '',
         payerDoc: '',
-        amount: '',
-        service: '',
+        // amount: '', // Removed, now calculated
         date: new Date().toISOString().split('T')[0],
         issuerName: user?.name || 'Minha Empresa MEI',
         issuerDoc: user?.cnpj || '00.000.000/0001-00',
@@ -403,9 +402,29 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         paymentMethod: 'pix',
         otherPaymentMethod: '',
     });
+
+    const [items, setItems] = useState<{id: number, desc: string, qty: number, price: number}[]>([
+        { id: 1, desc: 'Serviço Exemplo', qty: 1, price: 100.00 }
+    ]);
     
     const [isExporting, setIsExporting] = useState(false);
     const receiptRef = useRef<HTMLDivElement>(null);
+
+    const total = useMemo(() => {
+        return items.reduce((acc, item) => acc + (item.qty * item.price), 0);
+    }, [items]);
+
+    const addItem = () => {
+        setItems([...items, { id: Date.now(), desc: '', qty: 1, price: 0 }]);
+    };
+
+    const updateItem = (id: number, field: string, value: string | number) => {
+        setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
+    };
+
+    const removeItem = (id: number) => {
+        setItems(items.filter(item => item.id !== id));
+    };
 
     const handleExportPDF = () => {
         if (!receiptRef.current) {
@@ -438,8 +457,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         });
     };
 
-    const formatAmountInWords = (amount: string): string => {
-        const num = parseFloat(amount) || 0;
+    const formatAmountInWords = (amount: number): string => {
+        const num = amount || 0;
         if (num === 0) return 'zero reais';
 
         const units = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
@@ -504,8 +523,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         return final.charAt(0).toUpperCase() + final.slice(1);
     };
 
-    const amountInWords = formatAmountInWords(formData.amount);
-    const formattedAmount = parseFloat(formData.amount || '0').toLocaleString('pt-BR', {minimumFractionDigits: 2});
+    const amountInWords = formatAmountInWords(total);
+    const formattedAmount = total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
     const formattedDate = new Date(formData.date).toLocaleDateString('pt-BR');
     const [day, month, year] = formattedDate.split('/');
     const locationAndDate = `______________________________, ${formattedDate}`;
@@ -539,9 +558,11 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         const issuerCpf = formData.issuerCpf || '________________________';
         const payerName = formData.payerName || '________________________________________';
         const payerDoc = formData.payerDoc || '________________________';
-        const service = formData.service || '______________________________________________________________________________';
         const amount = formattedAmount || '__________';
         const amountExtenso = amountInWords || '_________________________________________';
+        
+        // Concatena a descrição dos itens
+        const serviceDescription = items.map(i => `${i.desc} (Qtd: ${i.qty}, R$ ${i.price.toLocaleString('pt-BR', {minimumFractionDigits: 2})})`).join('; ');
         
         // Helper para renderizar campos com linha de preenchimento
         const renderLine = (content: string, minWidth: string = 'w-64') => (
@@ -563,7 +584,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             , CPF nº {renderLine(issuerCpf, 'w-48')}
                             , recebi de {renderLine(payerName, 'w-full')}
                             , CPF/CNPJ nº {renderLine(payerDoc, 'w-48')}
-                            , a quantia de R$ {renderLine(amount, 'w-24')} ({renderLine(amountExtenso, 'w-full')}), referente a {renderLine(service, 'w-full')}.
+                            , a quantia de R$ {renderLine(amount, 'w-24')} ({renderLine(amountExtenso, 'w-full')}), referente a {renderLine(serviceDescription, 'w-full')}.
                         </p>
 
                         <p>
@@ -592,7 +613,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </p>
 
                         <p className="font-bold mt-4">Serviço prestado / Produto vendido:</p>
-                        <p className="border-b border-slate-400 min-h-[1.5em]">{service}</p>
+                        <p className="border-b border-slate-400 min-h-[1.5em]">{serviceDescription}</p>
 
                         <p className="font-bold mt-4">O pagamento foi realizado em {day}/{month}/{year} por meio de:</p>
                         {renderPaymentCheckboxes('mei')}
@@ -621,7 +642,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </p>
 
                         <p className="font-bold mt-4">Descrição do serviço/produto:</p>
-                        <p className="border-b border-slate-400 min-h-[3em]">{service}</p>
+                        <p className="border-b border-slate-400 min-h-[3em]">{serviceDescription}</p>
 
                         <p className="font-bold mt-4">Forma de pagamento:</p>
                         {renderPaymentCheckboxes('detailed')}
@@ -682,17 +703,41 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
 
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Valor (R$)</label>
-                            <input type="number" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="0,00" />
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Valor Total (Calculado)</label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
+                                <input 
+                                    type="text" 
+                                    value={formattedAmount} 
+                                    readOnly
+                                    className="w-full pl-10 pr-4 py-3 text-lg font-bold border rounded-lg bg-slate-100 text-slate-900 border-slate-300 dark:bg-slate-700 dark:text-white dark:border-slate-700 outline-none" 
+                                />
+                            </div>
                         </div>
+                        
+                        {/* Item List Editor */}
+                        <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Itens / Serviços</label>
+                            <div className="space-y-3">
+                                {items.map((item) => (
+                                    <div key={item.id} className="flex gap-2 items-start">
+                                        <input type="text" value={item.desc} onChange={e => updateItem(item.id, 'desc', e.target.value)} className="flex-1 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Descrição" />
+                                        <input type="number" value={item.qty} onChange={e => updateItem(item.id, 'qty', parseFloat(e.target.value))} className="w-16 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Qtd" />
+                                        <input type="number" value={item.price} onChange={e => updateItem(item.id, 'price', parseFloat(e.target.value))} className="w-20 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="R$" />
+                                        <button onClick={() => removeItem(item.id)} className="text-red-500 hover:text-red-700"><span className="material-icons text-sm">close</span></button>
+                                    </div>
+                                ))}
+                                <button onClick={addItem} className="w-full py-2 border border-dashed border-slate-300 rounded text-slate-500 hover:bg-slate-50 text-sm flex items-center justify-center gap-1">
+                                    <span className="material-icons text-sm">add</span> Adicionar Item
+                                </button>
+                            </div>
+                        </div>
+                        
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nome do Pagador (Cliente)</label>
                             <input type="text" value={formData.payerName} onChange={e => setFormData({...formData, payerName: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Nome do Cliente" />
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Referente a (Serviço/Produto)</label>
-                            <textarea rows={2} value={formData.service} onChange={e => setFormData({...formData, service: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Ex: Manutenção de Ar Condicionado" />
-                        </div>
+                        
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Data</label>
