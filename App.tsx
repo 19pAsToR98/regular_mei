@@ -1247,20 +1247,6 @@ const App: React.FC = () => {
       return false;
   }
 
-  if (maintenance.global && activeTab !== 'admin' && activeTab !== 'settings') {
-      return (
-        <div className="flex h-screen bg-background-light dark:bg-background-dark overflow-hidden">
-            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} userRole={user?.role} />
-             <div className="flex-1 flex flex-col overflow-hidden">
-                 <Header activeTab={activeTab} onMenuClick={() => setIsSidebarOpen(true)} notifications={notifications} onMarkAsRead={handleMarkAsRead} onVote={handleVote} user={user} onLogout={handleLogout} onNavigateToProfile={() => setActiveTab('settings')} />
-                 <main className="flex-1 flex items-center justify-center p-4">
-                     <MaintenanceOverlay type="global" />
-                 </main>
-             </div>
-        </div>
-      );
-  }
-
   const renderContent = () => {
       // Permission check for Admin page
       if (activeTab === 'admin' && user.role !== 'admin') {
@@ -1314,7 +1300,7 @@ const App: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     {dashboardStats.map((stat, index) => (
-                      <StatCard key={index} data={stat} />
+                      <StatCard key={index} data={stat as StatData} />
                     ))}
                   </div>
                   
@@ -1416,6 +1402,7 @@ const App: React.FC = () => {
       }
   };
 
+  // Main App Structure
   return (
     <div className="flex h-screen bg-background-light dark:bg-background-dark overflow-hidden relative">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} userRole={user?.role} />
@@ -1423,7 +1410,14 @@ const App: React.FC = () => {
         <Header activeTab={activeTab} onMenuClick={() => setIsSidebarOpen(true)} notifications={notifications} onMarkAsRead={handleMarkAsRead} onVote={handleVote} user={user} onLogout={handleLogout} onNavigateToProfile={() => setActiveTab('settings')} />
         <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth relative">
           <div className="max-w-7xl mx-auto space-y-6">
-            {renderContent()}
+            {/* Conditional rendering for global maintenance */}
+            {maintenance.global && activeTab !== 'admin' && activeTab !== 'settings' ? (
+                <div className="h-full flex items-center justify-center">
+                    <MaintenanceOverlay type="global" />
+                </div>
+            ) : (
+                renderContent()
+            )}
           </div>
           <footer className="mt-8 text-center text-sm text-slate-400 pb-4">
             <p>&copy; {new Date().getFullYear()} Regular MEI. Todos os direitos reservados.</p>
