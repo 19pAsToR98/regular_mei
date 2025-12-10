@@ -581,7 +581,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
       
       {/* Admin Tabs */}
       <div className="flex flex-wrap gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full md:w-auto self-start inline-flex">
-        {/* ... Tab buttons ... */}
         <button onClick={() => setActiveTab('users')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
           Usuários
         </button>
@@ -1326,6 +1325,167 @@ const AdminPage: React.FC<AdminPageProps> = ({
                           </button>
                           <p className="text-xs text-center text-slate-400 mt-2">Baixa planilha com lista de usuários e votos.</p>
                       </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* --- CONTENT: CONNECTIONS --- */}
+      {activeTab === 'connections' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white">Configuração de Conexões (APIs)</h3>
+              <form onSubmit={handleSaveConnection} className="space-y-6">
+                  
+                  {/* CNPJ API */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                          <span className="material-icons text-blue-500">business</span> API de Dados Cadastrais (CNPJ)
+                      </h4>
+                      <div className="space-y-4">
+                          <div>
+                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Base URL</label>
+                              <input 
+                                  type="text" 
+                                  value={localConnConfig.cnpjApi.baseUrl} 
+                                  onChange={e => setLocalConnConfig({...localConnConfig, cnpjApi: {...localConnConfig.cnpjApi, baseUrl: e.target.value}})}
+                                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm"
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Token (Opcional)</label>
+                              <input 
+                                  type="text" 
+                                  value={localConnConfig.cnpjApi.token || ''} 
+                                  onChange={e => setLocalConnConfig({...localConnConfig, cnpjApi: {...localConnConfig.cnpjApi, token: e.target.value}})}
+                                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm"
+                              />
+                          </div>
+                          <h5 className="text-sm font-bold text-slate-700 dark:text-slate-300 mt-4">Mapeamento de Campos</h5>
+                          <MappingEditor mappings={localConnConfig.cnpjApi.mappings} apiType="cnpj" />
+                          <button type="button" onClick={() => { setTestType('cnpj'); setTestModalOpen(true); }} className="mt-4 text-sm font-medium text-primary hover:underline flex items-center gap-1">
+                              <span className="material-icons text-sm">science</span> Testar Conexão
+                          </button>
+                      </div>
+                  </div>
+
+                  {/* Diagnostic API */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                          <span className="material-icons text-purple-500">analytics</span> API de Diagnóstico Fiscal (Webhook)
+                      </h4>
+                      <div className="space-y-4">
+                          <div>
+                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Webhook URL</label>
+                              <input 
+                                  type="text" 
+                                  value={localConnConfig.diagnosticApi.webhookUrl} 
+                                  onChange={e => setLocalConnConfig({...localConnConfig, diagnosticApi: {...localConnConfig.diagnosticApi, webhookUrl: e.target.value}})}
+                                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm"
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Header Key para CNPJ (Opcional)</label>
+                              <input 
+                                  type="text" 
+                                  value={localConnConfig.diagnosticApi.headerKey || ''} 
+                                  onChange={e => setLocalConnConfig({...localConnConfig, diagnosticApi: {...localConnConfig.diagnosticApi, headerKey: e.target.value}})}
+                                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm"
+                              />
+                          </div>
+                          <h5 className="text-sm font-bold text-slate-700 dark:text-slate-300 mt-4">Mapeamento de Campos</h5>
+                          <MappingEditor mappings={localConnConfig.diagnosticApi.mappings} apiType="diagnostic" />
+                          <button type="button" onClick={() => { setTestType('diagnostic'); setTestModalOpen(true); }} className="mt-4 text-sm font-medium text-primary hover:underline flex items-center gap-1">
+                              <span className="material-icons text-sm">science</span> Testar Conexão
+                          </button>
+                      </div>
+                  </div>
+
+                  {/* SMTP Config */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                          <span className="material-icons text-emerald-500">mail</span> Configuração de E-mail (SMTP)
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                          <div><label className="block text-sm mb-1">Host</label><input type="text" value={localConnConfig.smtp.host} onChange={e => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, host: e.target.value}})} className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm" /></div>
+                          <div><label className="block text-sm mb-1">Porta</label><input type="number" value={localConnConfig.smtp.port} onChange={e => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, port: parseInt(e.target.value)}})} className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm" /></div>
+                          <div><label className="block text-sm mb-1">Usuário</label><input type="text" value={localConnConfig.smtp.user} onChange={e => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, user: e.target.value}})} className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm" /></div>
+                          <div><label className="block text-sm mb-1">Senha</label><input type="password" value={localConnConfig.smtp.pass} onChange={e => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, pass: e.target.value}})} className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm" /></div>
+                          <div className="col-span-2 flex items-center gap-4">
+                              <label className="flex items-center gap-2 text-sm">
+                                  <input type="checkbox" checked={localConnConfig.smtp.secure} onChange={e => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, secure: e.target.checked}})} className="rounded text-primary focus:ring-primary" />
+                                  Conexão Segura (SSL/TLS)
+                              </label>
+                          </div>
+                          <div className="col-span-2"><label className="block text-sm mb-1">E-mail Remetente</label><input type="email" value={localConnConfig.smtp.fromEmail} onChange={e => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, fromEmail: e.target.value}})} className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm" /></div>
+                      </div>
+                  </div>
+
+                  {/* AI Config */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                          <span className="material-icons text-indigo-500">auto_awesome</span> Configuração de IA (Gemini)
+                      </h4>
+                      <label className="flex items-center gap-3 text-sm font-medium">
+                          <input 
+                              type="checkbox" 
+                              checked={localConnConfig.ai.enabled} 
+                              onChange={e => setLocalConnConfig({...localConnConfig, ai: {...localConnConfig.ai, enabled: e.target.checked}})}
+                              className="rounded text-primary focus:ring-primary"
+                          />
+                          Habilitar Análise Financeira Inteligente
+                      </label>
+                      <p className="text-xs text-slate-500 mt-2">A chave de API deve ser configurada no arquivo `.env.local`.</p>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+                      <button 
+                          type="submit" 
+                          disabled={isSubmitting}
+                          className="bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
+                      >
+                          {isSubmitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'Salvar Configurações'}
+                      </button>
+                  </div>
+              </form>
+          </div>
+      )}
+
+      {/* --- CONTENT: MAINTENANCE --- */}
+      {activeTab === 'maintenance' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white">Controle de Manutenção</h3>
+              <p className="text-slate-500 dark:text-slate-400">Ative o modo de manutenção para desabilitar temporariamente partes da aplicação ou o sistema inteiro.</p>
+
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                  <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
+                      <h4 className="text-lg font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+                          <span className="material-icons">warning</span> Manutenção Global
+                      </h4>
+                      <button 
+                          onClick={() => toggleMaintenance('global')}
+                          className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${maintenance.global ? 'bg-red-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+                      >
+                          <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${maintenance.global ? 'translate-x-7' : 'translate-x-1'}`} />
+                      </button>
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Se ativado, todos os usuários (exceto Admin) verão a tela de manutenção global.</p>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                  <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Manutenção por Módulo</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {Object.entries(maintenance).filter(([key]) => key !== 'global').map(([key, value]) => (
+                          <div key={key} className="flex justify-between items-center p-3 border border-slate-100 dark:border-slate-800 rounded-lg">
+                              <span className="text-sm font-medium text-slate-700 dark:text-slate-300 capitalize">{key}</span>
+                              <button 
+                                  onClick={() => toggleMaintenance(key as keyof MaintenanceConfig)}
+                                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${value ? 'bg-yellow-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                              >
+                                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${value ? 'translate-x-6' : 'translate-x-1'}`} />
+                              </button>
+                          </div>
+                      ))}
                   </div>
               </div>
           </div>
