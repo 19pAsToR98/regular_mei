@@ -69,14 +69,43 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
     }
 
     setIsLoading(true);
+    
+    // 1. Clean and Validate Phone Number
+    const cleanPhone = phone.replace(/[^\d]/g, '');
+    if (cleanPhone.length < 8) {
+        setAuthError("Número de telefone inválido.");
+        setIsLoading(false);
+        return;
+    }
 
+    // 2. Check if phone number already exists in profiles table
+    const { data: existingPhone, error: phoneCheckError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone', cleanPhone)
+        .maybeSingle();
+
+    if (phoneCheckError) {
+        console.error('Phone check error:', phoneCheckError);
+        setAuthError('Erro ao verificar telefone. Tente novamente.');
+        setIsLoading(false);
+        return;
+    }
+
+    if (existingPhone) {
+        setAuthError('Este número de telefone já está cadastrado em outra conta.');
+        setIsLoading(false);
+        return;
+    }
+
+    // 3. Proceed with Supabase Sign Up
     const { error } = await supabase.auth.signUp({
         email: regEmail,
         password: regPassword,
         options: {
             data: {
                 name: name,
-                phone: phone,
+                phone: cleanPhone, // Use clean phone number for storage
             }
         }
     });
