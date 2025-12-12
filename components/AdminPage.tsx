@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Offer, NewsItem, MaintenanceConfig, AppNotification, PollOption, ConnectionConfig, ApiFieldMapping, User } from '../types';
+import ApiDocsPage from './ApiDocsPage'; // Importando o novo componente
 
 interface AdminPageProps {
   offers: Offer[];
@@ -59,7 +60,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
     connectionConfig, onUpdateConnectionConfig,
     users, onAddUser, onUpdateUser, onDeleteUser
 }) => {
-  const [activeTab, setActiveTab] = useState<'users' | 'news' | 'offers' | 'notifications' | 'maintenance' | 'connections'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'news' | 'offers' | 'notifications' | 'maintenance' | 'connections' | 'api_docs'>('users');
   const [isSubmitting, setIsSubmitting] = useState(false); // Global loading state for admin actions
 
   // --- USERS STATE ---
@@ -596,10 +597,20 @@ const AdminPage: React.FC<AdminPageProps> = ({
         <button onClick={() => setActiveTab('connections')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'connections' ? 'bg-white dark:bg-slate-700 text-blue-500 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
           Conexões
         </button>
+        <button onClick={() => setActiveTab('api_docs')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'api_docs' ? 'bg-white dark:bg-slate-700 text-indigo-500 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
+          Documentação API
+        </button>
         <button onClick={() => setActiveTab('maintenance')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'maintenance' ? 'bg-white dark:bg-slate-700 text-red-500 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
           Manutenção
         </button>
       </div>
+
+      {/* --- CONTENT: API DOCS --- */}
+      {activeTab === 'api_docs' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4">
+              <ApiDocsPage />
+          </div>
+      )}
 
       {/* --- CONTENT: USERS --- */}
       {activeTab === 'users' && (
