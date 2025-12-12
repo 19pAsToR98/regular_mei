@@ -49,7 +49,8 @@ const ApiDocsPage: React.FC = () => {
         </p>
         <ul className="space-y-2 text-sm font-mono bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
           <li className="text-slate-800 dark:text-white">
-            <span className="font-bold">Header Obrigatório:</span> <code className="text-primary">{`apikey: ${SUPABASE_ANON_KEY}`}</code>
+            <span className="font-bold">Header Obrigatório:</span> <br/>
+            <code className="text-primary break-all">{`apikey: ${SUPABASE_ANON_KEY}`}</code>
           </li>
         </ul>
         <p className="text-xs text-slate-500 mt-4">
