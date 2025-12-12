@@ -2,18 +2,26 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Category, User } from '../types';
 import { showSuccess, showError, showWarning } from '../utils/toastUtils';
 
-const availableIcons = [
-  // Financeiro e Transações
-  'payments', 'account_balance_wallet', 'credit_card', 'attach_money', 'savings', 'trending_up', 'trending_down', 'receipt_long', 'paid', 'sell',
-  // Negócios e Serviços
-  'work', 'store', 'business', 'groups', 'campaign', 'local_shipping', 'inventory_2', 'construction', 'gavel', 'verified_user',
-  // Tecnologia e Infraestrutura
-  'computer', 'phone_iphone', 'wifi', 'router', 'cloud', 'subscriptions', 'bolt', 'lightbulb', 'build', 'settings',
-  // Casa e Pessoal
-  'home', 'apartment', 'directions_car', 'local_gas_station', 'fastfood', 'restaurant', 'pets', 'school', 'fitness_center', 'medical_services',
-  // Diversos
-  'palette', 'brush', 'camera_alt', 'music_note', 'redeem', 'volunteer_activism', 'public', 'event', 'schedule', 'pie_chart', 'sync', 'category', 'more_horiz'
-];
+const categorizedIcons = {
+  'Financeiro': [
+    'payments', 'attach_money', 'credit_card', 'account_balance_wallet', 'savings', 'receipt_long', 'paid', 'sell', 'trending_up', 'trending_down', 'pie_chart', 'sync', 'query_stats', 'account_balance', 'money_off', 'price_check', 'redeem', 'local_offer'
+  ],
+  'Negócios': [
+    'work', 'store', 'business', 'groups', 'campaign', 'local_shipping', 'inventory_2', 'construction', 'gavel', 'verified_user', 'badge', 'handshake', 'person_add', 'support_agent', 'domain', 'factory', 'warehouse', 'content_cut', 'palette', 'brush'
+  ],
+  'Casa & Pessoal': [
+    'home', 'apartment', 'directions_car', 'local_gas_station', 'fastfood', 'restaurant', 'pets', 'school', 'medical_services', 'fitness_center', 'shopping_bag', 'shopping_cart', 'local_cafe', 'local_bar', 'luggage', 'child_care', 'flight', 'pool', 'park'
+  ],
+  'Tecnologia': [
+    'computer', 'phone_iphone', 'wifi', 'router', 'cloud', 'subscriptions', 'bolt', 'lightbulb', 'build', 'settings', 'laptop_mac', 'security', 'storage', 'developer_mode', 'code', 'print', 'smartphone', 'tv', 'gamepad'
+  ],
+  'Datas & Eventos': [
+    'event', 'schedule', 'calendar_today', 'alarm', 'watch_later', 'hourglass_empty', 'date_range', 'notifications', 'celebration', 'public', 'music_note', 'camera_alt', 'mic', 'movie'
+  ],
+  'Diversos': [
+    'category', 'more_horiz', 'attach_file', 'edit', 'delete', 'check_circle', 'warning', 'error', 'volunteer_activism', 'info', 'help', 'lock', 'star', 'favorite'
+  ]
+};
 
 interface SettingsPageProps {
   user?: User | null;
@@ -72,6 +80,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const [newCatInput, setNewCatInput] = useState('');
   const [selectedNewIcon, setSelectedNewIcon] = useState('sell');
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [activeIconCategory, setActiveIconCategory] = useState('Financeiro'); // New state for icon picker category
   
   // Feedback State
   const [isSaving, setIsSaving] = useState(false);
@@ -585,20 +594,37 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                 </button>
                                 
                                 {showIconPicker && (
-                                    <div className="absolute top-full left-0 mt-2 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 w-72 grid grid-cols-6 gap-2 animate-in fade-in zoom-in-95 duration-200">
-                                        {availableIcons.map((icon) => (
-                                        <button
-                                            key={icon}
-                                            type="button"
-                                            onClick={() => {
-                                            setSelectedNewIcon(icon);
-                                            setShowIconPicker(false);
-                                            }}
-                                            className={`p-2 rounded-lg flex items-center justify-center transition-all ${selectedNewIcon === icon ? 'bg-primary text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                                        >
-                                            <span className="material-icons text-xl">{icon}</span>
-                                        </button>
-                                        ))}
+                                    <div className="absolute top-full left-0 mt-2 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 w-80 animate-in fade-in zoom-in-95 duration-200">
+                                        {/* Category Tabs */}
+                                        <div className="flex overflow-x-auto border-b border-slate-200 dark:border-slate-700 pb-2 mb-3 gap-2 scrollbar-hide">
+                                            {Object.keys(categorizedIcons).map(cat => (
+                                                <button
+                                                    key={cat}
+                                                    type="button"
+                                                    onClick={() => setActiveIconCategory(cat)}
+                                                    className={`text-xs font-medium px-3 py-1 rounded-full transition-colors whitespace-nowrap ${activeIconCategory === cat ? 'bg-primary text-white' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                                >
+                                                    {cat}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        
+                                        {/* Icons Grid */}
+                                        <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
+                                            {categorizedIcons[activeIconCategory as keyof typeof categorizedIcons].map((icon) => (
+                                                <button
+                                                    key={icon}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedNewIcon(icon);
+                                                        setShowIconPicker(false);
+                                                    }}
+                                                    className={`p-2 rounded-lg flex items-center justify-center transition-all ${selectedNewIcon === icon ? 'bg-primary text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                                >
+                                                    <span className="material-icons text-xl">{icon}</span>
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </div>
