@@ -3,17 +3,16 @@ import { Category, User } from '../types';
 import { showSuccess, showError, showWarning } from '../utils/toastUtils';
 
 const availableIcons = [
-  'work', 'shopping_cart', 'shopping_bag', 'inventory_2', 'savings', 
-  'account_balance', 'payments', 'attach_money', 'receipt_long', 'credit_card',
-  'local_shipping', 'wifi', 'computer', 'phone_iphone', 'build', 
-  'restaurant', 'flight', 'directions_car', 'home', 'apartment',
-  'school', 'health_and_safety', 'fitness_center', 'groups', 'campaign',
-  'content_cut', 'palette', 'camera_alt', 'music_note', 'pets',
-  'store', 'laptop_mac', 'verified_user', 'analytics', 'fastfood',
-  'local_gas_station', 'medical_services', 'subscriptions', 'lightbulb',
-  'gavel', 'brush', 'construction', 'fitness_center', 'public',
-  'attach_file', 'trending_up', 'trending_down', 'sync', 'pie_chart',
-  'schedule', 'event', 'paid', 'sell', 'redeem', 'volunteer_activism'
+  // Financeiro e Transações
+  'payments', 'account_balance_wallet', 'credit_card', 'attach_money', 'savings', 'trending_up', 'trending_down', 'receipt_long', 'paid', 'sell',
+  // Negócios e Serviços
+  'work', 'store', 'business', 'groups', 'campaign', 'local_shipping', 'inventory_2', 'construction', 'gavel', 'verified_user',
+  // Tecnologia e Infraestrutura
+  'computer', 'phone_iphone', 'wifi', 'router', 'cloud', 'subscriptions', 'bolt', 'lightbulb', 'build', 'settings',
+  // Casa e Pessoal
+  'home', 'apartment', 'directions_car', 'local_gas_station', 'fastfood', 'restaurant', 'pets', 'school', 'fitness_center', 'medical_services',
+  // Diversos
+  'palette', 'brush', 'camera_alt', 'music_note', 'redeem', 'volunteer_activism', 'public', 'event', 'schedule', 'pie_chart', 'sync', 'category', 'more_horiz'
 ];
 
 interface SettingsPageProps {
