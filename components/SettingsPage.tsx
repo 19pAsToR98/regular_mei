@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Category, User } from '../types';
 import { showSuccess, showError, showWarning } from '../utils/toastUtils';
 
@@ -80,7 +80,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const [newCatInput, setNewCatInput] = useState('');
   const [selectedNewIcon, setSelectedNewIcon] = useState('sell');
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const [activeIconCategory, setActiveIconCategory] = useState('Financeiro'); // New state for icon picker category
+  const [activeIconCategory, setActiveIconCategory] = useState('Financeiro');
+  const [iconSearchTerm, setIconSearchTerm] = useState(''); // New state for icon search
   
   // Feedback State
   const [isSaving, setIsSaving] = useState(false);
@@ -95,6 +96,16 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       receita: ['Serviços', 'Vendas', 'Produtos', 'Rendimentos', 'Outros'],
       despesa: ['Impostos', 'Fornecedores', 'Infraestrutura', 'Pessoal', 'Marketing', 'Software', 'Outros']
   };
+
+  // Filtered Icons based on search and active category
+  const filteredIcons = useMemo(() => {
+    const icons = categorizedIcons[activeIconCategory as keyof typeof categorizedIcons] || [];
+    const searchLower = iconSearchTerm.toLowerCase();
+    
+    if (!searchLower) return icons;
+
+    return icons.filter(icon => icon.toLowerCase().includes(searchLower));
+  }, [activeIconCategory, iconSearchTerm]);
 
   useEffect(() => {
     if (document.documentElement.classList.contains('dark')) {
@@ -594,15 +605,31 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                 </button>
                                 
                                 {showIconPicker && (
-                                    <div className="absolute top-full left-0 mt-2 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 w-80 animate-in fade-in zoom-in-95 duration-200">
-                                        {/* Category Tabs */}
-                                        <div className="flex overflow-x-auto border-b border-slate-200 dark:border-slate-700 pb-2 mb-3 gap-2 scrollbar-hide">
+                                    <div className="absolute top-full left-0 mt-2 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 w-[360px] max-w-[90vw] animate-in fade-in zoom-in-95 duration-200">
+                                        
+                                        {/* Search Bar */}
+                                        <div className="relative mb-3">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">search</span>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Buscar ícone..." 
+                                                value={iconSearchTerm}
+                                                onChange={(e) => setIconSearchTerm(e.target.value)}
+                                                className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                                            />
+                                        </div>
+
+                                        {/* Category Tabs (Grid Layout) */}
+                                        <div className="grid grid-cols-3 gap-2 border-b border-slate-200 dark:border-slate-700 pb-3 mb-3">
                                             {Object.keys(categorizedIcons).map(cat => (
                                                 <button
                                                     key={cat}
                                                     type="button"
-                                                    onClick={() => setActiveIconCategory(cat)}
-                                                    className={`text-xs font-medium px-3 py-1 rounded-full transition-colors whitespace-nowrap ${activeIconCategory === cat ? 'bg-primary text-white' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                                    onClick={() => {
+                                                        setActiveIconCategory(cat);
+                                                        setIconSearchTerm(''); // Clear search when changing category
+                                                    }}
+                                                    className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap text-center ${activeIconCategory === cat ? 'bg-primary text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                                                 >
                                                     {cat}
                                                 </button>
@@ -610,20 +637,27 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                         </div>
                                         
                                         {/* Icons Grid */}
-                                        <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
-                                            {categorizedIcons[activeIconCategory as keyof typeof categorizedIcons].map((icon) => (
-                                                <button
-                                                    key={icon}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setSelectedNewIcon(icon);
-                                                        setShowIconPicker(false);
-                                                    }}
-                                                    className={`p-2 rounded-lg flex items-center justify-center transition-all ${selectedNewIcon === icon ? 'bg-primary text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                                                >
-                                                    <span className="material-icons text-xl">{icon}</span>
-                                                </button>
-                                            ))}
+                                        <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto custom-scrollbar">
+                                            {filteredIcons.length > 0 ? (
+                                                filteredIcons.map((icon) => (
+                                                    <button
+                                                        key={icon}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSelectedNewIcon(icon);
+                                                            setShowIconPicker(false);
+                                                        }}
+                                                        title={icon}
+                                                        className={`p-2 rounded-lg flex items-center justify-center transition-all ${selectedNewIcon === icon ? 'bg-primary text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                                    >
+                                                        <span className="material-icons text-2xl">{icon}</span>
+                                                    </button>
+                                                ))
+                                            ) : (
+                                                <div className="col-span-8 text-center py-4 text-slate-400 text-sm">
+                                                    Nenhum ícone encontrado.
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 )}
