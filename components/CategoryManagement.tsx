@@ -191,70 +191,8 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            {/* Column 1: Category List */}
-            <div className="lg:col-span-2">
-                <h4 className="text-sm font-bold text-slate-700 dark:text-white mb-3 flex items-center gap-2">
-                    <span className="material-icons text-lg text-slate-400">list</span>
-                    Categorias Ativas ({activeCatTab === 'receita' ? 'Receitas' : 'Despesas'})
-                </h4>
-                
-                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
-                    {currentCategories.map((cat, idx) => {
-                        const isDefault = isDefaultCategory(cat.name, activeCatTab);
-                        const isSelected = editingCategory?.name === cat.name;
-                        
-                        return (
-                            <div 
-                                key={idx} 
-                                className={`group flex items-center justify-between p-4 rounded-xl border transition-all ${
-                                    isSelected 
-                                        ? 'border-primary ring-2 ring-primary/20 bg-blue-50 dark:bg-blue-900/20' 
-                                        : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                                }`}
-                                onClick={() => isSelected ? handleCancelEdit() : handleStartEdit(cat)}
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className={`p-2 rounded-lg flex-shrink-0 ${activeCatTab === 'receita' ? 'bg-green-100 text-green-600 dark:bg-green-900/30' : 'bg-red-100 text-red-600 dark:bg-red-900/30'}`}>
-                                        <span className="material-icons text-xl block">{cat.icon}</span>
-                                    </div>
-                                    <span className="font-medium text-slate-800 dark:text-white text-base">{cat.name}</span>
-                                </div>
-                                
-                                <div className="flex items-center gap-2">
-                                    {isDefault && (
-                                        <span className="text-slate-400 cursor-help" title="Categoria padrão não pode ser removida.">
-                                            <span className="material-icons text-sm">lock</span>
-                                        </span>
-                                    )}
-                                    
-                                    {!isDefault && (
-                                        <button 
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (window.confirm(`Tem certeza que deseja excluir a categoria '${cat.name}'?`)) {
-                                                    onDeleteCategory(activeCatTab, cat.name);
-                                                }
-                                            }}
-                                            className="p-1 text-slate-400 hover:text-red-500 transition-colors"
-                                            title="Remover"
-                                        >
-                                            <span className="material-icons text-lg">delete</span>
-                                        </button>
-                                    )}
-                                    
-                                    <span className={`material-icons text-slate-400 text-lg transition-transform ${isSelected ? 'rotate-90' : ''}`}>
-                                        chevron_right
-                                    </span>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* Column 2: Add/Edit Form */}
-            <div className="lg:col-span-1 bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-200 dark:border-slate-700 h-fit">
+            {/* Column 2: Add/Edit Form (Moved to order-1 on large screens) */}
+            <div className="lg:col-span-1 bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-200 dark:border-slate-700 h-fit order-1">
                 <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">
                     {isEditing ? 'Editar Categoria' : 'Nova Categoria'}
                 </h4>
@@ -370,6 +308,67 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({
                             {isEditing ? 'Salvar Edição' : 'Adicionar'}
                         </button>
                     </div>
+                </div>
+            
+            {/* Column 1: Category List (Moved to order-2 on large screens) */}
+            <div className="lg:col-span-2 order-2">
+                <h4 className="text-sm font-bold text-slate-700 dark:text-white mb-3 flex items-center gap-2">
+                    <span className="material-icons text-lg text-slate-400">list</span>
+                    Categorias Ativas ({activeCatTab === 'receita' ? 'Receitas' : 'Despesas'})
+                </h4>
+                
+                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
+                    {currentCategories.map((cat, idx) => {
+                        const isDefault = isDefaultCategory(cat.name, activeCatTab);
+                        const isSelected = editingCategory?.name === cat.name;
+                        
+                        return (
+                            <div 
+                                key={idx} 
+                                className={`group flex items-center justify-between p-4 rounded-xl border transition-all ${
+                                    isSelected 
+                                        ? 'border-primary ring-2 ring-primary/20 bg-blue-50 dark:bg-blue-900/20' 
+                                        : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                                }`}
+                                onClick={() => isSelected ? handleCancelEdit() : handleStartEdit(cat)}
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className={`p-2 rounded-lg flex-shrink-0 ${activeCatTab === 'receita' ? 'bg-green-100 text-green-600 dark:bg-green-900/30' : 'bg-red-100 text-red-600 dark:bg-red-900/30'}`}>
+                                        <span className="material-icons text-xl block">{cat.icon}</span>
+                                    </div>
+                                    <span className="font-medium text-slate-800 dark:text-white text-base">{cat.name}</span>
+                                </div>
+                                
+                                <div className="flex items-center gap-2">
+                                    {isDefault && (
+                                        <span className="text-slate-400 cursor-help" title="Categoria padrão não pode ser removida.">
+                                            <span className="material-icons text-sm">lock</span>
+                                        </span>
+                                    )}
+                                    
+                                    {!isDefault && (
+                                        <button 
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (window.confirm(`Tem certeza que deseja excluir a categoria '${cat.name}'?`)) {
+                                                    onDeleteCategory(activeCatTab, cat.name);
+                                                }
+                                            }}
+                                            className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                                            title="Remover"
+                                        >
+                                            <span className="material-icons text-lg">delete</span>
+                                        </button>
+                                    )}
+                                    
+                                    <span className={`material-icons text-slate-400 text-lg transition-transform ${isSelected ? 'rotate-90' : ''}`}>
+                                        chevron_right
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>
