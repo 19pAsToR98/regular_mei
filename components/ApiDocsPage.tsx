@@ -96,37 +96,49 @@ const ApiDocsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Appointments API (PostgREST - Requires JWT) */}
+      {/* Appointments API (Edge Function for Creation) */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-          <span className="material-icons text-blue-600">calendar_today</span> Compromissos (PostgREST)
+          <span className="material-icons text-blue-600">calendar_today</span> Compromissos (Edge Function)
         </h3>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
-          Endpoint para gerenciar lembretes e compromissos no calendário. Este endpoint requer autenticação JWT (Bearer Token).
+          Endpoint seguro para criar compromissos usando o número de telefone do usuário.
         </p>
         
         {renderEndpoint(
           'POST',
-          `${SUPABASE_URL}/rest/v1/appointments`,
-          'Cria um novo compromisso. O campo user_id é preenchido automaticamente pelo RLS.',
+          `${SUPABASE_URL}/functions/v1/create-appointment-by-phone`,
+          'Cria um novo compromisso no calendário do usuário.',
           `{
+  "phone": "31996634201",
   "title": "Reunião com Fornecedor X",
   "date": "2024-11-10",
   "time": "14:30",
   "notify": true,
   "type": "compromisso"
 }`,
-          `[
-  {
+          `{
+  "message": "Appointment created successfully",
+  "appointment": {
     "id": 456,
     "user_id": "uuid-do-usuario",
     "title": "Reunião com Fornecedor X",
     "date": "2024-11-10",
     // ... outros campos
   }
-]`,
-          "Este endpoint requer o cabeçalho 'Authorization: Bearer [YOUR_JWT_TOKEN]'."
+}`,
+          "O campo 'phone' deve corresponder exatamente ao número cadastrado pelo usuário (apenas dígitos)."
         )}
+      </div>
+      
+      {/* Appointments API (PostgREST - Read/Delete) */}
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+          <span className="material-icons text-blue-600">calendar_today</span> Compromissos (Leitura/Deleção - PostgREST)
+        </h3>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+          Para operações de leitura e exclusão, você deve usar o endpoint PostgREST padrão, que exige o token JWT do usuário logado.
+        </p>
         
         {renderEndpoint(
           'GET',
@@ -137,6 +149,14 @@ const ApiDocsPage: React.FC = () => {
   { "id": 456, "title": "Reunião...", "date": "2024-11-10", ... }
 ]`,
           "Este endpoint requer o cabeçalho 'Authorization: Bearer [YOUR_JWT_TOKEN]'."
+        )}
+        
+        {renderEndpoint(
+          'DELETE',
+          `${SUPABASE_URL}/rest/v1/appointments?id=eq.456`,
+          'Exclui um compromisso específico pelo ID.',
+          'N/A',
+          'Status 204 No Content (Sucesso)',
         )}
       </div>
     </div>
