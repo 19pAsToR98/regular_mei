@@ -1,7 +1,27 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Category, User } from '../types';
 import { showSuccess, showError, showWarning } from '../utils/toastUtils';
-import CategoryManagement from './CategoryManagement'; // Import the new component
+
+const categorizedIcons = {
+  'Financeiro': [
+    'payments', 'attach_money', 'credit_card', 'account_balance_wallet', 'savings', 'receipt_long', 'paid', 'sell', 'trending_up', 'trending_down', 'pie_chart', 'sync', 'query_stats', 'account_balance', 'money_off', 'price_check', 'redeem', 'local_offer'
+  ],
+  'Negócios': [
+    'work', 'store', 'business', 'groups', 'campaign', 'local_shipping', 'inventory_2', 'construction', 'gavel', 'verified_user', 'badge', 'handshake', 'person_add', 'support_agent', 'domain', 'factory', 'warehouse', 'content_cut', 'palette', 'brush'
+  ],
+  'Casa & Pessoal': [
+    'home', 'apartment', 'directions_car', 'local_gas_station', 'fastfood', 'restaurant', 'pets', 'school', 'medical_services', 'fitness_center', 'shopping_bag', 'shopping_cart', 'local_cafe', 'local_bar', 'luggage', 'child_care', 'flight', 'pool', 'park'
+  ],
+  'Tecnologia': [
+    'computer', 'phone_iphone', 'wifi', 'router', 'cloud', 'subscriptions', 'bolt', 'lightbulb', 'build', 'settings', 'laptop_mac', 'security', 'storage', 'developer_mode', 'code', 'print', 'smartphone', 'tv', 'gamepad'
+  ],
+  'Datas & Eventos': [
+    'event', 'schedule', 'calendar_today', 'alarm', 'watch_later', 'hourglass_empty', 'date_range', 'notifications', 'celebration', 'public', 'music_note', 'camera_alt', 'mic', 'movie'
+  ],
+  'Diversos': [
+    'category', 'more_horiz', 'attach_file', 'edit', 'delete', 'check_circle', 'warning', 'error', 'volunteer_activism', 'info', 'help', 'lock', 'star', 'favorite'
+  ]
+};
 
 interface SettingsPageProps {
   user?: User | null;
@@ -55,12 +75,54 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const [verificationCode, setVerificationCode] = useState('');
   const [pendingEmail, setPendingEmail] = useState('');
   
+  // Category State
+  const [activeCatTab, setActiveCatTab] = useState<'receita' | 'despesa'>('receita');
+  const [newCatInput, setNewCatInput] = useState('');
+  const [selectedNewIcon, setSelectedNewIcon] = useState('sell');
+  const [showIconPicker, setShowIconPicker] = useState(false);
+  const [activeIconCategory, setActiveIconCategory] = useState('Financeiro');
+  const [iconSearchTerm, setIconSearchTerm] = useState(''); // New state for icon search
+  
   // Feedback State
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false); 
+  const [isDeleting, setIsDeleting] = useState(false); // New state for deletion
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   
+  const iconPickerRef = useRef<HTMLDivElement>(null);
+
+  // Lista de categorias padrão (para bloquear exclusão)
+  const defaultCategories = {
+      receita: ['Serviços', 'Vendas', 'Produtos', 'Rendimentos', 'Outros'],
+      despesa: ['Impostos', 'Fornecedores', 'Infraestrutura', 'Pessoal', 'Marketing', 'Software', 'Outros']
+  };
+
+  // Filtered Icons based on search and active category
+  const filteredIcons = useMemo(() => {
+    const icons = categorizedIcons[activeIconCategory as keyof typeof categorizedIcons] || [];
+    const searchLower = iconSearchTerm.toLowerCase();
+    
+    if (!searchLower) return icons;
+
+    return icons.filter(icon => icon.toLowerCase().includes(searchLower));
+  }, [activeIconCategory, iconSearchTerm]);
+
+  useEffect(() => {
+    if (document.documentElement.classList.contains('dark')) {
+      setTheme('dark');
+    } else {
+      setTheme('light');
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (iconPickerRef.current && !iconPickerRef.current.contains(event.target as Node)) {
+        setShowIconPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Update local form when user prop updates
   useEffect(() => {
       if (user) {
@@ -69,11 +131,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               phone: user.phone || '',
               email: user.email
           });
-      }
-      if (document.documentElement.classList.contains('dark')) {
-        setTheme('dark');
-      } else {
-        setTheme('light');
       }
   }, [user]);
 
@@ -86,14 +143,26 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     }
   };
 
-  const handleSaveProfile = async () => {
-    if (!localCnpj.trim()) {
-        showError("O CNPJ é obrigatório para o perfil.");
+  const handleAddCategory = () => {
+    if (!newCatInput.trim()) {
+        showWarning("O nome da categoria não pode ser vazio.");
         return;
     }
     
+    const newCategory: Category = {
+      name: newCatInput.trim(),
+      icon: selectedNewIcon
+    };
+
+    onAddCategory(activeCatTab, newCategory);
+    setNewCatInput('');
+    setShowIconPicker(false);
+    setSelectedNewIcon('sell');
+  };
+
+  const handleSaveProfile = async () => {
     setIsSaving(true);
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 1000)); // Simulate save delay
 
     // 1. Save CNPJ
     if (onCnpjChange) {
@@ -115,8 +184,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         onUpdateUser({
             ...user,
             name: profileForm.name,
-            phone: profileForm.phone,
-            cnpj: localCnpj // Ensure CNPJ is saved here too
+            phone: profileForm.phone
         });
         showSuccessFeedback();
     }
@@ -130,8 +198,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                   ...user,
                   name: profileForm.name,
                   phone: profileForm.phone,
-                  email: pendingEmail,
-                  cnpj: localCnpj
+                  email: pendingEmail
               });
           }
           setIsVerifyingEmail(false);
@@ -155,6 +222,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       
       if (onChangePassword) {
           setIsSavingPass(true);
+          // Note: App.tsx handles success/error toasts for password change
           const success = await onChangePassword(passForm.new);
           setIsSavingPass(false);
           
@@ -169,21 +237,28 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     setTimeout(() => setShowSaveSuccess(false), 3000);
   };
   
+  const isDefaultCategory = (name: string, type: 'receita' | 'despesa') => {
+      return defaultCategories[type].includes(name);
+  };
+
   const handleExportDataClick = async () => {
       if (onExportData) {
           setIsExporting(true);
+          // App.tsx handles the actual export and success toast
           await onExportData();
           setIsExporting(false);
       }
   };
 
   const handleDeleteAccountClick = async () => {
-      const confirmDelete = window.confirm("ATENÇÃO: Tem certeza que deseja excluir sua conta permanentemente? Todos os dados serão perdidos. Esta ação é irreversível.");
+      const confirmDelete = window.confirm("ATENÇÃO: Tem certeza que deseja excluir sua conta permanentemente? Todos os dados serão perdidos. Esta ação não pode ser desfeita.");
       if (confirmDelete && onDeleteAccount) {
           setIsDeleting(true);
           try {
+              // App.tsx handles the deletion and redirects/toasts
               await onDeleteAccount();
           } catch (e) {
+              // If App.tsx fails to catch and display error, we catch here
               showError("Falha crítica ao iniciar a exclusão da conta.");
           } finally {
               setIsDeleting(false);
@@ -302,7 +377,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                     <div className="pt-2 pb-8 border-b border-slate-100 dark:border-slate-800">
                          <button 
                             onClick={handleSaveProfile}
-                            disabled={isSaving || !localCnpj.trim()}
+                            disabled={isSaving}
                             className="w-full md:w-auto bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
                          >
                             {isSaving ? (
@@ -456,16 +531,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                 </div>
               )}
 
-              {/* --- CATEGORIES SECTION --- */}
-              {activeSection === 'categories' && (
-                 <CategoryManagement 
-                    revenueCats={revenueCats}
-                    expenseCats={expenseCats}
-                    onAddCategory={onAddCategory}
-                    onDeleteCategory={onDeleteCategory}
-                 />
-              )}
-
               {/* --- APPEARANCE SECTION --- */}
               {activeSection === 'appearance' && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -505,6 +570,149 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                         </button>
                     </div>
                   </div>
+              )}
+
+              {/* --- CATEGORIES SECTION --- */}
+              {activeSection === 'categories' && (
+                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl inline-flex w-full md:w-auto">
+                        <button
+                            onClick={() => setActiveCatTab('receita')}
+                            className={`flex-1 md:flex-none px-6 py-2 text-sm font-bold rounded-lg transition-all ${activeCatTab === 'receita' ? 'bg-white dark:bg-slate-700 text-green-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            Receitas
+                        </button>
+                        <button
+                            onClick={() => setActiveCatTab('despesa')}
+                            className={`flex-1 md:flex-none px-6 py-2 text-sm font-bold rounded-lg transition-all ${activeCatTab === 'despesa' ? 'bg-white dark:bg-slate-700 text-red-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            Despesas
+                        </button>
+                    </div>
+
+                    <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/30">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Adicionar Nova Categoria</label>
+                        <div className="flex flex-col sm:flex-row gap-2 items-stretch" ref={iconPickerRef}>
+                            <div className="relative">
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowIconPicker(!showIconPicker)}
+                                    className="w-full sm:w-auto h-full px-4 py-2 sm:py-0 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center justify-center text-slate-600 dark:text-slate-300 gap-2 min-w-[80px]"
+                                    title="Escolher ícone"
+                                >
+                                    <span className="material-icons text-xl">{selectedNewIcon}</span>
+                                    <span className="material-icons text-sm opacity-50">expand_more</span>
+                                </button>
+                                
+                                {showIconPicker && (
+                                    <div className="absolute top-full left-0 mt-2 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 w-[360px] max-w-[90vw] animate-in fade-in zoom-in-95 duration-200">
+                                        
+                                        {/* Search Bar */}
+                                        <div className="relative mb-3">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">search</span>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Buscar ícone..." 
+                                                value={iconSearchTerm}
+                                                onChange={(e) => setIconSearchTerm(e.target.value)}
+                                                className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                                            />
+                                        </div>
+
+                                        {/* Category Tabs (Grid Layout) */}
+                                        <div className="grid grid-cols-3 gap-2 border-b border-slate-200 dark:border-slate-700 pb-3 mb-3">
+                                            {Object.keys(categorizedIcons).map(cat => (
+                                                <button
+                                                    key={cat}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setActiveIconCategory(cat);
+                                                        setIconSearchTerm(''); // Clear search when changing category
+                                                    }}
+                                                    className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap text-center ${activeIconCategory === cat ? 'bg-primary text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                                >
+                                                    {cat}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        
+                                        {/* Icons Grid */}
+                                        <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto custom-scrollbar">
+                                            {filteredIcons.length > 0 ? (
+                                                filteredIcons.map((icon) => (
+                                                    <button
+                                                        key={icon}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSelectedNewIcon(icon);
+                                                            setShowIconPicker(false);
+                                                        }}
+                                                        title={icon}
+                                                        className={`p-2 rounded-lg flex items-center justify-center transition-all ${selectedNewIcon === icon ? 'bg-primary text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                                    >
+                                                        <span className="material-icons text-2xl">{icon}</span>
+                                                    </button>
+                                                ))
+                                            ) : (
+                                                <div className="col-span-8 text-center py-4 text-slate-400 text-sm">
+                                                    Nenhum ícone encontrado.
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <input 
+                                type="text" 
+                                value={newCatInput}
+                                onChange={(e) => setNewCatInput(e.target.value)}
+                                placeholder={`Nome da categoria...`}
+                                className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none"
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+                            />
+                            <button 
+                                type="button"
+                                onClick={handleAddCategory}
+                                className="bg-primary hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-bold transition-colors shadow-sm"
+                            >
+                                <span className="hidden sm:inline">Adicionar</span>
+                                <span className="sm:hidden material-icons">add</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 className="text-sm font-bold text-slate-700 dark:text-white mb-3">Categorias Ativas</h4>
+                        <div className="flex flex-wrap gap-2 md:gap-3">
+                            {(activeCatTab === 'receita' ? revenueCats : expenseCats).map((cat, idx) => (
+                                <div key={idx} className="group flex items-center gap-3 px-3 py-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 shadow-sm hover:shadow-md transition-all text-sm md:text-base">
+                                    <div className={`p-1.5 rounded-md ${activeCatTab === 'receita' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                        <span className="material-icons text-sm block">{cat.icon}</span>
+                                    </div>
+                                    <span className="font-medium">{cat.name}</span>
+                                    
+                                    {/* Only show delete button if it's NOT a default category */}
+                                    {!isDefaultCategory(cat.name, activeCatTab) && (
+                                        <button 
+                                            type="button"
+                                            onClick={() => onDeleteCategory(activeCatTab, cat.name)}
+                                            className="ml-1 text-slate-300 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                                            title="Remover"
+                                        >
+                                            <span className="material-icons text-sm">close</span>
+                                        </button>
+                                    )}
+                                    {isDefaultCategory(cat.name, activeCatTab) && (
+                                        <span className="ml-1 text-slate-300 cursor-help" title="Categoria padrão não pode ser removida.">
+                                            <span className="material-icons text-sm">lock</span>
+                                        </span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                 </div>
               )}
 
            </div>
