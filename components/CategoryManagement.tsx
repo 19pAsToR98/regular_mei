@@ -435,7 +435,7 @@ const CategoryManagement: React.FC<CategoryManagementProps> = ({
                             </div>
                         );
                     })}
-                </div>
+                )}
             </div>
         </div>
     </div>
