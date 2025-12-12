@@ -5,7 +5,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const ApiDocsPage: React.FC = () => {
   
-  const renderEndpoint = (method: string, path: string, description: string, payloadExample: string, responseExample: string) => (
+  const renderEndpoint = (method: string, path: string, description: string, payloadExample: string, responseExample: string, notes?: string) => (
     <div className="mb-8 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
       <div className="flex items-center gap-3 mb-3">
         <span className={`px-3 py-1 rounded-lg text-sm font-bold text-white ${method === 'POST' ? 'bg-green-600' : method === 'GET' ? 'bg-blue-600' : 'bg-red-600'}`}>{method}</span>
@@ -13,6 +13,12 @@ const ApiDocsPage: React.FC = () => {
       </div>
       <p className="text-slate-600 dark:text-slate-400 mb-4 text-sm">{description}</p>
       
+      {notes && (
+          <div className="p-3 mb-4 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-900/50 dark:text-yellow-300">
+              <strong>Atenção:</strong> {notes}
+          </div>
+      )}
+
       <h4 className="text-xs font-bold uppercase text-slate-500 mb-2">Exemplo de Payload (JSON)</h4>
       <pre className="bg-slate-900 text-green-400 p-3 rounded-lg overflow-x-auto text-xs font-mono mb-4">
         {payloadExample}
@@ -27,10 +33,10 @@ const ApiDocsPage: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Documentação da API (PostgREST)</h2>
+      <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Documentação da API</h2>
       <p className="text-slate-600 dark:text-slate-400 max-w-3xl">
-        Esta API permite que sistemas externos interajam com seus dados de Fluxo de Caixa e Calendário de forma segura, utilizando a infraestrutura Supabase.
-        Lembre-se que todas as requisições devem ser autenticadas com o token JWT do usuário.
+        Para integrações externas (como WhatsApp ou sistemas de terceiros), utilize os endpoints abaixo.
+        Eles foram projetados para usar o número de telefone como identificador seguro.
       </p>
 
       {/* Authentication Section */}
@@ -39,35 +45,33 @@ const ApiDocsPage: React.FC = () => {
           <span className="material-icons text-primary">lock</span> Autenticação
         </h3>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-          Para acessar os endpoints, você precisa de dois cabeçalhos (Headers) obrigatórios:
+          Para acessar os endpoints de Edge Function, você precisa apenas da API Key pública. O token JWT não é necessário, pois a função usa a Chave de Serviço (Service Role Key) internamente para buscar o usuário pelo telefone.
         </p>
         <ul className="space-y-2 text-sm font-mono bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
           <li className="text-slate-800 dark:text-white">
-            <span className="font-bold">1. API Key:</span> <code className="text-primary">{`apikey: ${SUPABASE_ANON_KEY}`}</code>
-          </li>
-          <li className="text-slate-800 dark:text-white">
-            <span className="font-bold">2. Autorização (JWT):</span> <code className="text-red-500">Authorization: Bearer [YOUR_JWT_TOKEN]</code>
+            <span className="font-bold">Header Obrigatório:</span> <code className="text-primary">{`apikey: ${SUPABASE_ANON_KEY}`}</code>
           </li>
         </ul>
         <p className="text-xs text-slate-500 mt-4">
-          O token JWT é obtido após o login do usuário. O RLS (Row Level Security) garante que o usuário só acesse seus próprios dados.
+          O número de telefone deve ser enviado no corpo da requisição (Payload).
         </p>
       </div>
 
-      {/* Transactions API */}
+      {/* Transactions API (Edge Function) */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-          <span className="material-icons text-green-600">swap_horiz</span> Lançamentos Financeiros (Transactions)
+          <span className="material-icons text-green-600">swap_horiz</span> Lançamentos Financeiros (Edge Function)
         </h3>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
-          Endpoint para gerenciar receitas e despesas.
+          Endpoint seguro para criar receitas ou despesas usando o número de telefone do usuário.
         </p>
         
         {renderEndpoint(
           'POST',
-          `${SUPABASE_URL}/rest/v1/transactions`,
-          'Cria um novo lançamento (receita ou despesa).',
+          `${SUPABASE_URL}/functions/v1/create-transaction-by-phone`,
+          'Cria um novo lançamento (receita ou despesa) associado ao usuário com o número de telefone fornecido.',
           `{
+  "phone": "31996634201",
   "description": "Venda de consultoria",
   "category": "Serviços",
   "type": "receita",
@@ -77,8 +81,9 @@ const ApiDocsPage: React.FC = () => {
   "is_recurring": false,
   "installments": null
 }`,
-          `[
-  {
+          `{
+  "message": "Transaction created successfully",
+  "transaction": {
     "id": 123,
     "user_id": "uuid-do-usuario",
     "description": "Venda de consultoria",
@@ -86,34 +91,24 @@ const ApiDocsPage: React.FC = () => {
     "date": "2024-10-25",
     // ... outros campos
   }
-]`
-        )}
-        
-        {renderEndpoint(
-          'GET',
-          `${SUPABASE_URL}/rest/v1/transactions?select=*&limit=10`,
-          'Lista os lançamentos do usuário (máximo 10 por padrão). Use filtros como `date=eq.2024-10-25`.',
-          'N/A',
-          `[
-  { "id": 123, "description": "Venda...", "amount": 500.00, ... },
-  { "id": 124, "description": "Aluguel...", "amount": 1200.00, ... }
-]`
+}`,
+          "O campo 'phone' deve corresponder exatamente ao número cadastrado pelo usuário (apenas dígitos)."
         )}
       </div>
 
-      {/* Appointments API */}
+      {/* Appointments API (PostgREST - Requires JWT) */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-          <span className="material-icons text-blue-600">calendar_today</span> Compromissos (Appointments)
+          <span className="material-icons text-blue-600">calendar_today</span> Compromissos (PostgREST)
         </h3>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
-          Endpoint para gerenciar lembretes e compromissos no calendário.
+          Endpoint para gerenciar lembretes e compromissos no calendário. Este endpoint requer autenticação JWT (Bearer Token).
         </p>
         
         {renderEndpoint(
           'POST',
           `${SUPABASE_URL}/rest/v1/appointments`,
-          'Cria um novo compromisso.',
+          'Cria um novo compromisso. O campo user_id é preenchido automaticamente pelo RLS.',
           `{
   "title": "Reunião com Fornecedor X",
   "date": "2024-11-10",
@@ -129,15 +124,19 @@ const ApiDocsPage: React.FC = () => {
     "date": "2024-11-10",
     // ... outros campos
   }
-]`
+]`,
+          "Este endpoint requer o cabeçalho 'Authorization: Bearer [YOUR_JWT_TOKEN]'."
         )}
         
         {renderEndpoint(
-          'DELETE',
-          `${SUPABASE_URL}/rest/v1/appointments?id=eq.456`,
-          'Exclui um compromisso específico pelo ID.',
+          'GET',
+          `${SUPABASE_URL}/rest/v1/appointments?select=*&limit=10`,
+          'Lista os compromissos do usuário (máximo 10 por padrão).',
           'N/A',
-          'Status 204 No Content (Sucesso)'
+          `[
+  { "id": 456, "title": "Reunião...", "date": "2024-11-10", ... }
+]`,
+          "Este endpoint requer o cabeçalho 'Authorization: Bearer [YOUR_JWT_TOKEN]'."
         )}
       </div>
     </div>
