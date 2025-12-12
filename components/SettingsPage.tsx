@@ -77,6 +77,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   
   const iconPickerRef = useRef<HTMLDivElement>(null);
 
+  // Lista de categorias padrão (para bloquear exclusão)
+  const defaultCategories = {
+      receita: ['Serviços', 'Vendas', 'Produtos', 'Rendimentos', 'Outros'],
+      despesa: ['Impostos', 'Fornecedores', 'Infraestrutura', 'Pessoal', 'Marketing', 'Software', 'Outros']
+  };
+
   useEffect(() => {
     if (document.documentElement.classList.contains('dark')) {
       setTheme('dark');
@@ -205,6 +211,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const showSuccessFeedback = () => {
     setShowSaveSuccess(true);
     setTimeout(() => setShowSaveSuccess(false), 3000);
+  };
+  
+  const isDefaultCategory = (name: string, type: 'receita' | 'despesa') => {
+      return defaultCategories[type].includes(name);
   };
 
   const handleExportDataClick = async () => {
@@ -561,6 +571,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                         <div className="flex flex-col sm:flex-row gap-2 items-stretch" ref={iconPickerRef}>
                             <div className="relative">
                                 <button 
+                                    type="button"
                                     onClick={() => setShowIconPicker(!showIconPicker)}
                                     className="w-full sm:w-auto h-full px-4 py-2 sm:py-0 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center justify-center text-slate-600 dark:text-slate-300 gap-2 min-w-[80px]"
                                     title="Escolher ícone"
@@ -574,6 +585,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                         {availableIcons.map((icon) => (
                                         <button
                                             key={icon}
+                                            type="button"
                                             onClick={() => {
                                             setSelectedNewIcon(icon);
                                             setShowIconPicker(false);
@@ -596,6 +608,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                 onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
                             />
                             <button 
+                                type="button"
                                 onClick={handleAddCategory}
                                 className="bg-primary hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-bold transition-colors shadow-sm"
                             >
@@ -614,13 +627,23 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                         <span className="material-icons text-sm block">{cat.icon}</span>
                                     </div>
                                     <span className="font-medium">{cat.name}</span>
-                                    <button 
-                                        onClick={() => onDeleteCategory(activeCatTab, cat.name)}
-                                        className="ml-1 text-slate-300 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                                        title="Remover"
-                                    >
-                                        <span className="material-icons text-sm">close</span>
-                                    </button>
+                                    
+                                    {/* Only show delete button if it's NOT a default category */}
+                                    {!isDefaultCategory(cat.name, activeCatTab) && (
+                                        <button 
+                                            type="button"
+                                            onClick={() => onDeleteCategory(activeCatTab, cat.name)}
+                                            className="ml-1 text-slate-300 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                                            title="Remover"
+                                        >
+                                            <span className="material-icons text-sm">close</span>
+                                        </button>
+                                    )}
+                                    {isDefaultCategory(cat.name, activeCatTab) && (
+                                        <span className="ml-1 text-slate-300 cursor-help" title="Categoria padrão não pode ser removida.">
+                                            <span className="material-icons text-sm">lock</span>
+                                        </span>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -656,12 +679,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
                     <div className="flex gap-3">
                         <button 
+                            type="button"
                             onClick={() => setIsVerifyingEmail(false)}
                             className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                         >
                             Cancelar
                         </button>
                         <button 
+                            type="button"
                             onClick={handleVerifyEmail}
                             className="flex-1 px-4 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold shadow-sm transition-colors"
                         >

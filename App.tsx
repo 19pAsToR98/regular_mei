@@ -27,7 +27,24 @@ import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Tr
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast } from './utils/toastUtils';
 
-// --- MOCK DATA REMOVED ---
+// --- CATEGORIAS PADRÃO ---
+const defaultRevenueCats: Category[] = [
+    { name: 'Serviços', icon: 'work' },
+    { name: 'Vendas', icon: 'shopping_cart' },
+    { name: 'Produtos', icon: 'inventory_2' },
+    { name: 'Rendimentos', icon: 'savings' },
+    { name: 'Outros', icon: 'attach_money' }
+];
+
+const defaultExpenseCats: Category[] = [
+    { name: 'Impostos', icon: 'account_balance' },
+    { name: 'Fornecedores', icon: 'local_shipping' },
+    { name: 'Infraestrutura', icon: 'wifi' },
+    { name: 'Pessoal', icon: 'groups' },
+    { name: 'Marketing', icon: 'campaign' },
+    { name: 'Software', icon: 'computer' },
+    { name: 'Outros', icon: 'receipt_long' }
+];
 
 const App: React.FC = () => {
   // --- AUTH STATE ---
@@ -105,22 +122,9 @@ const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
-  const [revenueCats, setRevenueCats] = useState<Category[]>([
-    { name: 'Serviços', icon: 'work' },
-    { name: 'Vendas', icon: 'shopping_cart' },
-    { name: 'Produtos', icon: 'inventory_2' },
-    { name: 'Rendimentos', icon: 'savings' },
-    { name: 'Outros', icon: 'attach_money' }
-  ]);
-  const [expenseCats, setExpenseCats] = useState<Category[]>([
-    { name: 'Impostos', icon: 'account_balance' },
-    { name: 'Fornecedores', icon: 'local_shipping' },
-    { name: 'Infraestrutura', icon: 'wifi' },
-    { name: 'Pessoal', icon: 'groups' },
-    { name: 'Marketing', icon: 'campaign' },
-    { name: 'Software', icon: 'computer' },
-    { name: 'Outros', icon: 'receipt_long' }
-  ]);
+  // --- CATEGORY STATE (Now includes default + user custom) ---
+  const [revenueCats, setRevenueCats] = useState<Category[]>(defaultRevenueCats);
+  const [expenseCats, setExpenseCats] = useState<Category[]>(defaultExpenseCats);
 
   // --- MAINTENANCE STATE ---
   const [maintenance, setMaintenance] = useState<MaintenanceConfig>({
@@ -242,6 +246,40 @@ const App: React.FC = () => {
         notify: a.notify || false,
         type: 'compromisso' as const,
     })) as Appointment[];
+  };
+  
+  const loadUserCategories = async (userId: string) => {
+      const { data, error } = await supabase
+          .from('user_categories')
+          .select('name, icon, type')
+          .eq('user_id', userId);
+
+      if (error) {
+          console.error('Error fetching user categories:', error);
+          // Fallback to defaults if fetch fails
+          setRevenueCats(defaultRevenueCats);
+          setExpenseCats(defaultExpenseCats);
+          return;
+      }
+
+      const customRevenue: Category[] = [];
+      const customExpense: Category[] = [];
+
+      data.forEach(cat => {
+          const category: Category = { name: cat.name, icon: cat.icon };
+          if (cat.type === 'receita') {
+              customRevenue.push(category);
+          } else if (cat.type === 'despesa') {
+              customExpense.push(category);
+          }
+      });
+      
+      // Combine defaults with custom categories, ensuring no duplicates by name
+      const combinedRevenue = [...defaultRevenueCats, ...customRevenue.filter(c => !defaultRevenueCats.some(d => d.name === c.name))];
+      const combinedExpense = [...defaultExpenseCats, ...customExpense.filter(c => !defaultExpenseCats.some(d => d.name === c.name))];
+
+      setRevenueCats(combinedRevenue);
+      setExpenseCats(combinedExpense);
   };
 
   const loadNewsAndOffers = async () => {
@@ -379,6 +417,7 @@ const App: React.FC = () => {
       const promises = [
           loadTransactions(userId),
           loadAppointments(userId),
+          loadUserCategories(userId), // Load user-specific categories
           loadNewsAndOffers(),
           loadNotifications(userId) // Pass userId to load interactions
       ];
@@ -1176,23 +1215,65 @@ const App: React.FC = () => {
     setAppointments(prev => prev.filter(appt => appt.id !== id));
   };
 
-  // --- CATEGORY HANDLERS (Local state for now) ---
-  const handleAddCategory = (type: 'receita' | 'despesa', cat: Category) => {
-    if (type === 'receita') {
-      setRevenueCats([...revenueCats, cat]);
-    } else {
-      setExpenseCats([...expenseCats, cat]);
+  // --- CATEGORY HANDLERS (Now uses Supabase) ---
+  const handleAddCategory = async (type: 'receita' | 'despesa', cat: Category) => {
+    if (!user) return;
+    
+    // Check if category already exists locally (including defaults)
+    const currentCats = type === 'receita' ? revenueCats : expenseCats;
+    if (currentCats.some(c => c.name.toLowerCase() === cat.name.toLowerCase())) {
+        showError(`A categoria '${cat.name}' já existe.`);
+        return;
     }
+
+    const payload = {
+        user_id: user.id,
+        name: cat.name,
+        icon: cat.icon,
+        type: type,
+    };
+
+    const { error } = await supabase
+        .from('user_categories')
+        .insert(payload);
+
+    if (error) {
+        console.error('Error adding category:', error);
+        showError('Erro ao adicionar categoria. Verifique se ela já existe.');
+        return;
+    }
+    
     showSuccess(`Categoria '${cat.name}' adicionada.`);
+    // Optimistic update + reload to ensure consistency
+    loadUserCategories(user.id);
   };
 
-  const handleDeleteCategory = (type: 'receita' | 'despesa', name: string) => {
-    if (type === 'receita') {
-      setRevenueCats(revenueCats.filter(c => c.name !== name));
-    } else {
-      setExpenseCats(expenseCats.filter(c => c.name !== name));
+  const handleDeleteCategory = async (type: 'receita' | 'despesa', name: string) => {
+    if (!user) return;
+    
+    // Prevent deletion of default categories
+    const isDefault = (type === 'receita' ? defaultRevenueCats : defaultExpenseCats).some(c => c.name === name);
+    if (isDefault) {
+        showError(`A categoria padrão '${name}' não pode ser excluída.`);
+        return;
     }
+
+    const { error } = await supabase
+        .from('user_categories')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('name', name)
+        .eq('type', type);
+
+    if (error) {
+        console.error('Error deleting category:', error);
+        showError('Erro ao excluir categoria.');
+        return;
+    }
+    
     showSuccess(`Categoria '${name}' excluída.`);
+    // Optimistic update + reload to ensure consistency
+    loadUserCategories(user.id);
   };
 
   // --- RENDER LOGIC ---
