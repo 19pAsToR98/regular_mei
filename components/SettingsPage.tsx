@@ -23,6 +23,39 @@ const categorizedIcons = {
   ]
 };
 
+// Mapeamento de termos em Português para nomes de ícones (em inglês)
+const portugueseIconMap: Record<string, string[]> = {
+    'dinheiro': ['payments', 'attach_money', 'paid', 'savings'],
+    'pagamento': ['payments', 'paid', 'credit_card'],
+    'cartão': ['credit_card'],
+    'casa': ['home', 'apartment'],
+    'carro': ['directions_car', 'local_gas_station'],
+    'comida': ['fastfood', 'restaurant'],
+    'trabalho': ['work', 'business', 'store'],
+    'loja': ['store', 'shopping_cart', 'shopping_bag'],
+    'imposto': ['account_balance', 'gavel'],
+    'saúde': ['medical_services', 'fitness_center'],
+    'escola': ['school'],
+    'viagem': ['flight', 'luggage'],
+    'data': ['event', 'calendar_today', 'date_range'],
+    'alerta': ['warning', 'error', 'notifications'],
+    'config': ['settings', 'build'],
+    'computador': ['computer', 'laptop_mac'],
+    'celular': ['phone_iphone', 'smartphone'],
+    'internet': ['wifi', 'router', 'cloud'],
+    'serviço': ['work', 'build', 'support_agent'],
+    'venda': ['sell', 'shopping_cart', 'inventory_2'],
+    'compra': ['shopping_cart', 'shopping_bag'],
+    'presente': ['redeem', 'local_offer'],
+    'ajuda': ['help', 'info', 'support_agent'],
+    'segurança': ['security', 'lock', 'verified_user'],
+    'ferramenta': ['build', 'construction'],
+    'equipe': ['groups', 'person_add'],
+    'marketing': ['campaign'],
+    'corte': ['content_cut'],
+    'pintura': ['palette', 'brush'],
+};
+
 interface SettingsPageProps {
   user?: User | null;
   onUpdateUser?: (user: User) => void;
@@ -81,7 +114,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const [selectedNewIcon, setSelectedNewIcon] = useState('sell');
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [activeIconCategory, setActiveIconCategory] = useState('Financeiro');
-  const [iconSearchTerm, setIconSearchTerm] = useState(''); // New state for icon search
+  const [iconSearchTerm, setIconSearchTerm] = useState('');
   
   // Feedback State
   const [isSaving, setIsSaving] = useState(false);
@@ -99,12 +132,39 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
   // Filtered Icons based on search and active category
   const filteredIcons = useMemo(() => {
-    const icons = categorizedIcons[activeIconCategory as keyof typeof categorizedIcons] || [];
-    const searchLower = iconSearchTerm.toLowerCase();
+    const allIcons = Object.values(categorizedIcons).flat();
+    const searchLower = iconSearchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     
-    if (!searchLower) return icons;
+    if (!searchLower) {
+        return categorizedIcons[activeIconCategory as keyof typeof categorizedIcons] || [];
+    }
 
-    return icons.filter(icon => icon.toLowerCase().includes(searchLower));
+    // 1. Search by icon name (English)
+    const matchedByEnglish = allIcons.filter(icon => icon.toLowerCase().includes(searchLower));
+    
+    // 2. Search by Portuguese terms
+    const matchedByPortuguese = new Set<string>();
+    Object.entries(portugueseIconMap).forEach(([term, icons]) => {
+        if (term.includes(searchLower)) {
+            icons.forEach(icon => matchedByPortuguese.add(icon));
+        }
+    });
+
+    // Combine and deduplicate results
+    const combinedResults = new Set([...matchedByEnglish, ...Array.from(matchedByPortuguese)]);
+    
+    // Sort results: prioritize icons from the active category, then alphabetically
+    const activeCategoryIcons = categorizedIcons[activeIconCategory as keyof typeof categorizedIcons] || [];
+    
+    return Array.from(combinedResults).sort((a, b) => {
+        const aInActive = activeCategoryIcons.includes(a);
+        const bInActive = activeCategoryIcons.includes(b);
+        
+        if (aInActive && !bInActive) return -1;
+        if (!aInActive && bInActive) return 1;
+        return a.localeCompare(b);
+    });
+
   }, [activeIconCategory, iconSearchTerm]);
 
   useEffect(() => {
@@ -605,14 +665,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                 </button>
                                 
                                 {showIconPicker && (
-                                    <div className="absolute top-full left-0 mt-2 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 w-[360px] max-w-[90vw] animate-in fade-in zoom-in-95 duration-200">
+                                    <div className="absolute top-full left-0 mt-2 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 w-[450px] max-w-[90vw] animate-in fade-in zoom-in-95 duration-200">
                                         
                                         {/* Search Bar */}
                                         <div className="relative mb-3">
                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">search</span>
                                             <input 
                                                 type="text" 
-                                                placeholder="Buscar ícone..." 
+                                                placeholder="Buscar ícone (ex: dinheiro, casa, carro)..." 
                                                 value={iconSearchTerm}
                                                 onChange={(e) => setIconSearchTerm(e.target.value)}
                                                 className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
@@ -620,7 +680,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                         </div>
 
                                         {/* Category Tabs (Grid Layout) */}
-                                        <div className="grid grid-cols-3 gap-2 border-b border-slate-200 dark:border-slate-700 pb-3 mb-3">
+                                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 border-b border-slate-200 dark:border-slate-700 pb-3 mb-3">
                                             {Object.keys(categorizedIcons).map(cat => (
                                                 <button
                                                     key={cat}
@@ -637,7 +697,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                         </div>
                                         
                                         {/* Icons Grid */}
-                                        <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto custom-scrollbar">
+                                        <div className="grid grid-cols-8 gap-1 max-h-64 overflow-y-auto custom-scrollbar">
                                             {filteredIcons.length > 0 ? (
                                                 filteredIcons.map((icon) => (
                                                     <button
