@@ -23,9 +23,10 @@ import OnboardingPage from './components/OnboardingPage';
 import IntroWalkthrough from './components/IntroWalkthrough';
 import FinancialScore from './components/FinancialScore';
 import MobileDashboard from './components/MobileDashboard';
+import InstallPrompt from './components/InstallPrompt'; // Importando o novo componente
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
-import { showSuccess, showError, showLoading, dismissToast } from './utils/toastUtils';
+import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
 
 // --- CATEGORIAS PADRÃO ---
 const defaultRevenueCats: Category[] = [
@@ -221,8 +222,8 @@ const App: React.FC = () => {
     return data.map(t => ({
         ...t,
         id: t.id, // Assuming ID is number/bigint
-        amount: parseFloat(t.amount),
-        expectedAmount: t.expected_amount ? parseFloat(t.expected_amount) : undefined,
+        amount: parseFloat(t.amount as any),
+        expectedAmount: t.expected_amount ? parseFloat(t.expected_amount as any) : undefined,
         isRecurring: t.is_recurring,
         installments: t.installments,
         // Ensure date is in YYYY-MM-DD format if needed
@@ -1523,6 +1524,7 @@ const App: React.FC = () => {
           {showIntro && <IntroWalkthrough onFinish={() => setShowIntro(false)} />}
         </main>
       </div>
+      <InstallPrompt /> {/* Adicionando o prompt de instalação aqui */}
     </div>
   );
 };
