@@ -272,6 +272,51 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     { id: 'appearance', label: 'Aparência', icon: 'palette', desc: 'Tema e Cores' },
   ];
 
+  // --- RENDER HELPERS ---
+
+  const renderCategoryList = (type: 'receita' | 'despesa', categories: Category[]) => {
+    const colorClass = type === 'receita' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400';
+    const title = type === 'receita' ? 'Receitas' : 'Despesas';
+
+    return (
+        <div className="flex-1 min-w-0">
+            <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                <span className={`material-icons text-xl ${type === 'receita' ? 'text-green-500' : 'text-red-500'}`}>{type === 'receita' ? 'arrow_upward' : 'arrow_downward'}</span>
+                {title}
+            </h4>
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {categories.map((cat, idx) => (
+                    <div key={idx} className="group flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg flex-shrink-0 ${colorClass}`}>
+                                <span className="material-icons text-xl block">{cat.icon}</span>
+                            </div>
+                            <span className="font-medium text-slate-800 dark:text-white">{cat.name}</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                            {isDefaultCategory(cat.name, type) ? (
+                                <span className="text-slate-300 cursor-help" title="Categoria padrão não pode ser removida.">
+                                    <span className="material-icons text-sm">lock</span>
+                                </span>
+                            ) : (
+                                <button 
+                                    type="button"
+                                    onClick={() => onDeleteCategory(type, cat.name)}
+                                    className="p-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    title="Remover"
+                                >
+                                    <span className="material-icons text-sm">delete</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+  };
+
   return (
      <div className="space-y-6 animate-in fade-in duration-500 pb-20 md:pb-8 flex flex-col md:flex-row gap-6 max-w-6xl mx-auto items-start">
         
@@ -574,26 +619,29 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
               {/* --- CATEGORIES SECTION --- */}
               {activeSection === 'categories' && (
-                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl inline-flex w-full md:w-auto">
-                        <button
-                            onClick={() => setActiveCatTab('receita')}
-                            className={`flex-1 md:flex-none px-6 py-2 text-sm font-bold rounded-lg transition-all ${activeCatTab === 'receita' ? 'bg-white dark:bg-slate-700 text-green-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            Receitas
-                        </button>
-                        <button
-                            onClick={() => setActiveCatTab('despesa')}
-                            className={`flex-1 md:flex-none px-6 py-2 text-sm font-bold rounded-lg transition-all ${activeCatTab === 'despesa' ? 'bg-white dark:bg-slate-700 text-red-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            Despesas
-                        </button>
-                    </div>
+                 <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                    
+                    {/* ADD NEW CATEGORY FORM */}
+                    <div className="p-6 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                        <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Criar Nova Categoria</h4>
+                        
+                        <div className="flex gap-2 mb-4">
+                            <button
+                                onClick={() => setActiveCatTab('receita')}
+                                className={`flex-1 px-4 py-2 text-sm font-bold rounded-lg transition-all border ${activeCatTab === 'receita' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-300 dark:border-slate-700 hover:bg-slate-100'}`}
+                            >
+                                <span className="material-icons text-sm mr-1">arrow_upward</span> Receita
+                            </button>
+                            <button
+                                onClick={() => setActiveCatTab('despesa')}
+                                className={`flex-1 px-4 py-2 text-sm font-bold rounded-lg transition-all border ${activeCatTab === 'despesa' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-300 dark:border-slate-700 hover:bg-slate-100'}`}
+                            >
+                                <span className="material-icons text-sm mr-1">arrow_downward</span> Despesa
+                            </button>
+                        </div>
 
-                    <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/30">
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Adicionar Nova Categoria</label>
-                        <div className="flex flex-col sm:flex-row gap-2 items-stretch" ref={iconPickerRef}>
-                            <div className="relative">
+                        <div className="flex flex-col sm:flex-row gap-3 items-stretch" ref={iconPickerRef}>
+                            <div className="relative flex-shrink-0">
                                 <button 
                                     type="button"
                                     onClick={() => setShowIconPicker(!showIconPicker)}
@@ -605,7 +653,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                 </button>
                                 
                                 {showIconPicker && (
-                                    <div className="absolute top-full left-0 mt-2 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 w-[360px] max-w-[90vw] animate-in fade-in zoom-in-95 duration-200">
+                                    <div className="absolute top-full left-0 mt-2 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 w-[400px] max-w-[90vw] animate-in fade-in zoom-in-95 duration-200">
                                         
                                         {/* Search Bar */}
                                         <div className="relative mb-3">
@@ -637,7 +685,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                         </div>
                                         
                                         {/* Icons Grid */}
-                                        <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto custom-scrollbar">
+                                        <div className="grid grid-cols-8 gap-1 max-h-64 overflow-y-auto custom-scrollbar">
                                             {filteredIcons.length > 0 ? (
                                                 filteredIcons.map((icon) => (
                                                     <button
@@ -674,43 +722,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             <button 
                                 type="button"
                                 onClick={handleAddCategory}
-                                className="bg-primary hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-bold transition-colors shadow-sm"
+                                className="bg-primary hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-bold transition-colors shadow-sm flex items-center justify-center gap-2"
                             >
-                                <span className="hidden sm:inline">Adicionar</span>
-                                <span className="sm:hidden material-icons">add</span>
+                                <span className="material-icons text-xl">add</span>
+                                Adicionar
                             </button>
                         </div>
                     </div>
 
-                    <div>
-                        <h4 className="text-sm font-bold text-slate-700 dark:text-white mb-3">Categorias Ativas</h4>
-                        <div className="flex flex-wrap gap-2 md:gap-3">
-                            {(activeCatTab === 'receita' ? revenueCats : expenseCats).map((cat, idx) => (
-                                <div key={idx} className="group flex items-center gap-3 px-3 py-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 shadow-sm hover:shadow-md transition-all text-sm md:text-base">
-                                    <div className={`p-1.5 rounded-md ${activeCatTab === 'receita' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                                        <span className="material-icons text-sm block">{cat.icon}</span>
-                                    </div>
-                                    <span className="font-medium">{cat.name}</span>
-                                    
-                                    {/* Only show delete button if it's NOT a default category */}
-                                    {!isDefaultCategory(cat.name, activeCatTab) && (
-                                        <button 
-                                            type="button"
-                                            onClick={() => onDeleteCategory(activeCatTab, cat.name)}
-                                            className="ml-1 text-slate-300 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                                            title="Remover"
-                                        >
-                                            <span className="material-icons text-sm">close</span>
-                                        </button>
-                                    )}
-                                    {isDefaultCategory(cat.name, activeCatTab) && (
-                                        <span className="ml-1 text-slate-300 cursor-help" title="Categoria padrão não pode ser removida.">
-                                            <span className="material-icons text-sm">lock</span>
-                                        </span>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
+                    {/* CATEGORY LISTS */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4">
+                        {renderCategoryList('receita', revenueCats)}
+                        <div className="hidden lg:block border-l border-slate-200 dark:border-slate-800"></div>
+                        {renderCategoryList('despesa', expenseCats)}
                     </div>
                  </div>
               )}
