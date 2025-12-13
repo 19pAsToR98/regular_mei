@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Transaction, Appointment, Category, CalendarEvent } from '../types';
 import { supabase } from '../src/integrations/supabase/client';
 import { showWarning, showError } from '../utils/toastUtils';
@@ -145,7 +145,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
         if (!response.ok) {
             const errorData = await response.json();
             showWarning(`Erro ao sincronizar Google Calendar: ${errorData.error || 'Falha na conexão.'}`);
-            setGoogleCalendarConnected(false); // Assume connection issue
+            // Note: We don't disconnect here, App.tsx handles the disconnect logic if the token refresh fails in the Edge Function
             setLoadingGoogleEvents(false);
             return;
         }
