@@ -117,6 +117,32 @@ const ApiDocsPage: React.FC = () => {
           "Use 'date_start' e 'date_end' para definir um período. Se omitidos, retorna as 10 transações mais recentes."
         )}
       </div>
+      
+      {/* --- CATEGORIES --- */}
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+          <span className="material-icons text-purple-600">category</span> Categorias
+        </h3>
+        
+        {/* GET CATEGORIES */}
+        {renderEndpoint(
+          'POST',
+          `${SUPABASE_URL}/functions/v1/get-user-categories-by-phone`,
+          'Retorna as categorias personalizadas do usuário (receita e despesa).',
+          `{
+  "phone": "31996634201",
+  "type": "despesa" // Opcional: 'receita' ou 'despesa'. Se omitido, retorna todas.
+}`,
+          `{
+  "message": "Categories retrieved successfully",
+  "categories": [
+    { "name": "Aluguel", "icon": "home", "type": "despesa" },
+    { "name": "Consultoria", "icon": "work", "type": "receita" }
+  ]
+}`,
+          "Este endpoint retorna apenas categorias personalizadas salvas no banco de dados. As categorias padrão devem ser combinadas no sistema cliente."
+        )}
+      </div>
 
       {/* --- CALENDÁRIO (APPOINTMENTS) --- */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
