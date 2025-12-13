@@ -1,6 +1,7 @@
-
-import React, { useState, useMemo } from 'react';
-import { Transaction, Appointment, Category } from '../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Transaction, Appointment, Category, CalendarEvent } from '../types';
+import { supabase } from '../src/integrations/supabase/client';
+import { showWarning, showError } from '../utils/toastUtils';
 
 interface CalendarPageProps {
   transactions: Transaction[];
@@ -13,19 +14,14 @@ interface CalendarPageProps {
   onAddAppointment: (a: Appointment) => void;
   onUpdateAppointment: (a: Appointment) => void;
   onDeleteAppointment: (id: number) => void;
+  
+  // New props for integration
+  googleCalendarConnected: boolean;
+  userId: string;
 }
 
-// Internal unified interface for display
-interface CalendarEvent {
-  id: number;
-  date: Date;
-  title: string;
-  type: 'receita' | 'despesa' | 'compromisso';
-  category?: string;
-  amount?: number;
-  time?: string;
-  notify?: boolean;
-}
+// Internal unified interface for display (using the updated type from types.ts)
+// interface CalendarEvent { ... }
 
 interface Holiday {
   date: Date;
@@ -89,12 +85,16 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
   onDeleteTransaction,
   onAddAppointment,
   onUpdateAppointment,
-  onDeleteAppointment
+  onDeleteAppointment,
+  googleCalendarConnected,
+  userId
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date()); 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDayDetailsOpen, setIsDayDetailsOpen] = useState(false); // New state for mobile modal
+  const [loadingGoogleEvents, setLoadingGoogleEvents] = useState(false);
+  const [googleEvents, setGoogleEvents] = useState<CalendarEvent[]>([]);
 
   // Form States
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -104,6 +104,85 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
   const [newEventAmount, setNewEventAmount] = useState('');
   const [newEventTime, setNewEventTime] = useState('');
   const [newEventNotify, setNewEventNotify] = useState(false);
+
+  // --- DATA FETCHING FOR GOOGLE CALENDAR ---
+  const fetchGoogleEvents = useCallback(async (date: Date) => {
+    if (!googleCalendarConnected) return;
+
+    setLoadingGoogleEvents(true);
+    setGoogleEvents([]);
+    
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    
+    // Calculate timeMin (Start of the month) and timeMax (End of the month)
+    const timeMin = new Date(year, month, 1).toISOString();
+    const timeMax = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
+
+    try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+
+        if (!token) {
+            showError("Sessão expirada. Faça login novamente.");
+            setLoadingGoogleEvents(false);
+            return;
+        }
+
+        const response = await fetch(`https://ogwjtlkemsqmpvcikrtd.supabase.co/functions/v1/get-google-calendar-events`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                userId: userId,
+                timeMin: timeMin,
+                timeMax: timeMax
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            showWarning(`Erro ao sincronizar Google Calendar: ${errorData.error || 'Falha na conexão.'}`);
+            setGoogleCalendarConnected(false); // Assume connection issue
+            setLoadingGoogleEvents(false);
+            return;
+        }
+
+        const result = await response.json();
+        
+        if (result.events) {
+            const mappedEvents: CalendarEvent[] = result.events.map((e: any) => {
+                const dateStr = e.start.date || e.start.dateTime.split('T')[0];
+                const [y, m, d] = dateStr.split('-').map(Number);
+                
+                return {
+                    id: e.id,
+                    date: new Date(y, m - 1, d),
+                    title: e.summary || 'Evento sem título',
+                    type: 'compromisso',
+                    time: e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Dia todo',
+                    isExternal: true,
+                    externalLink: e.htmlLink
+                } as CalendarEvent;
+            });
+            setGoogleEvents(mappedEvents);
+        }
+
+    } catch (error) {
+        console.error("Fetch Google Events Error:", error);
+        showError("Erro de rede ao buscar eventos do Google.");
+    } finally {
+        setLoadingGoogleEvents(false);
+    }
+  }, [googleCalendarConnected, userId]);
+
+  // Fetch events when month changes or connection status changes
+  useEffect(() => {
+    fetchGoogleEvents(currentDate);
+  }, [currentDate, googleCalendarConnected, fetchGoogleEvents]);
+
 
   // --- MERGE DATA SOURCES ---
   const events: CalendarEvent[] = useMemo(() => {
@@ -117,7 +196,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
               category: t.category,
               amount: t.amount || t.expectedAmount,
               time: t.time || '00:00',
-              notify: false
+              notify: false,
+              isExternal: false
           } as CalendarEvent;
       });
 
@@ -129,12 +209,14 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
               title: a.title,
               type: 'compromisso',
               time: a.time,
-              notify: a.notify
+              notify: a.notify,
+              isExternal: false
           } as CalendarEvent;
       });
 
-      return [...transEvents, ...apptEvents];
-  }, [transactions, appointments]);
+      // Merge local events and Google events
+      return [...transEvents, ...apptEvents, ...googleEvents];
+  }, [transactions, appointments, googleEvents]);
 
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
@@ -196,7 +278,13 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
   };
 
   const openEditModal = (event: CalendarEvent) => {
-    setEditingId(event.id);
+    if (event.isExternal) {
+        showWarning("Este é um evento do Google Calendar. Edite-o diretamente no Google.");
+        if (event.externalLink) window.open(event.externalLink, '_blank');
+        return;
+    }
+
+    setEditingId(event.id as number);
     setNewEventTitle(event.title);
     setNewEventType(event.type);
     setNewEventCategory(event.category || '');
@@ -208,11 +296,17 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
   };
 
   const handleDeleteEvent = (event: CalendarEvent) => {
+    if (event.isExternal) {
+        showWarning("Este é um evento do Google Calendar. Exclua-o diretamente no Google.");
+        if (event.externalLink) window.open(event.externalLink, '_blank');
+        return;
+    }
+
     if (window.confirm('Tem certeza que deseja excluir este evento?')) {
         if (event.type === 'compromisso') {
-            onDeleteAppointment(event.id);
+            onDeleteAppointment(event.id as number);
         } else {
-            onDeleteTransaction(event.id);
+            onDeleteTransaction(event.id as number);
         }
     }
   };
@@ -275,8 +369,9 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
         ))}
         {dayEvents.slice(0, 4).map((ev, idx) => {
           let colorClass = 'bg-blue-500';
-          if (ev.type === 'receita') colorClass = 'bg-green-500';
-          if (ev.type === 'despesa') colorClass = 'bg-red-500';
+          if (ev.isExternal) colorClass = 'bg-orange-500';
+          else if (ev.type === 'receita') colorClass = 'bg-green-500';
+          else if (ev.type === 'despesa') colorClass = 'bg-red-500';
           return <div key={idx} className={`w-3 h-3 rounded-full ${colorClass} ring-2 ring-white dark:ring-slate-900`} title={ev.title}></div>;
         })}
         {dayEvents.length > 4 && <span className="text-[10px] font-bold text-slate-400">+</span>}
@@ -304,6 +399,12 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
           <span className="w-3 h-3 rounded-full bg-blue-500"></span>
           <span className="text-sm text-slate-600 dark:text-slate-400">Compromissos</span>
         </div>
+        {googleCalendarConnected && (
+            <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-orange-500"></span>
+                <span className="text-sm text-slate-600 dark:text-slate-400">Google Calendar</span>
+            </div>
+        )}
       </div>
     </div>
   );
@@ -328,8 +429,15 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
           </div>
       )}
 
+      {loadingGoogleEvents && (
+          <div className="flex items-center justify-center p-4 text-primary">
+              <span className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2"></span>
+              <span className="text-sm">Sincronizando Google...</span>
+          </div>
+      )}
+
       <div className="space-y-3">
-        {selectedDayEvents.length === 0 && selectedDayHolidays.length === 0 ? (
+        {selectedDayEvents.length === 0 && selectedDayHolidays.length === 0 && !loadingGoogleEvents ? (
           <div className="text-center py-8 text-slate-400">
             <span className="material-icons text-4xl mb-2 opacity-50">event_busy</span>
             <p className="text-sm">Nenhum evento para este dia.</p>
@@ -339,13 +447,14 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
             <div key={ev.id} className="group flex flex-col gap-2 p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 transition-colors shadow-sm relative">
               <div className="flex gap-3 items-start">
                 <div className={`w-1 self-stretch rounded-full flex-shrink-0 ${
+                  ev.isExternal ? 'bg-orange-500' :
                   ev.type === 'receita' ? 'bg-green-500' : 
                   ev.type === 'despesa' ? 'bg-red-500' : 'bg-blue-500'
                 }`} />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-slate-800 dark:text-white text-sm truncate">{ev.title}</p>
                   
-                  {ev.category && (
+                  {ev.category && !ev.isExternal && (
                     <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                       {ev.category}
                     </span>
@@ -355,7 +464,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
                     <span className="text-xs text-slate-500 flex items-center gap-1">
                       <span className="material-icons text-[12px]">schedule</span> {ev.time}
                     </span>
-                    {ev.amount !== undefined && (
+                    {ev.amount !== undefined && !ev.isExternal && (
                       <span className={`text-xs font-bold ${
                         ev.type === 'receita' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                       }`}>
@@ -365,7 +474,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
                   </div>
                   <div className="flex justify-between items-center mt-1">
                     <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
-                      {ev.type === 'receita' ? 'Conta a Receber' : 
+                      {ev.isExternal ? 'Google Calendar' : 
+                      ev.type === 'receita' ? 'Conta a Receber' : 
                       ev.type === 'despesa' ? 'Conta a Pagar' : 'Compromisso'}
                     </span>
                      {ev.notify && (
@@ -376,20 +486,34 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
               </div>
               
               <div className="flex justify-end gap-2 border-t border-slate-200 dark:border-slate-700 pt-2 mt-1 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); openEditModal(ev); }}
-                    className="p-1 text-slate-400 hover:text-primary transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
-                    title="Editar"
-                  >
-                    <span className="material-icons text-sm">edit</span>
-                  </button>
-                  <button 
-                     onClick={(e) => { e.stopPropagation(); handleDeleteEvent(ev); }}
-                     className="p-1 text-slate-400 hover:text-red-500 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
-                     title="Excluir"
-                  >
-                    <span className="material-icons text-sm">delete</span>
-                  </button>
+                  {ev.isExternal && ev.externalLink ? (
+                      <a 
+                          href={ev.externalLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="p-1 text-slate-400 hover:text-orange-500 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+                          title="Ver no Google Calendar"
+                      >
+                          <span className="material-icons text-sm">open_in_new</span>
+                      </a>
+                  ) : (
+                      <>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); openEditModal(ev); }}
+                            className="p-1 text-slate-400 hover:text-primary transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+                            title="Editar"
+                          >
+                            <span className="material-icons text-sm">edit</span>
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleDeleteEvent(ev); }}
+                            className="p-1 text-slate-400 hover:text-red-500 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+                            title="Excluir"
+                          >
+                            <span className="material-icons text-sm">delete</span>
+                          </button>
+                      </>
+                  )}
               </div>
             </div>
           ))

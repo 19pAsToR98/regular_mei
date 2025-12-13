@@ -267,3 +267,16 @@ export interface Appointment {
   notify: boolean;
   type: 'compromisso';
 }
+
+export interface CalendarEvent {
+  id: number | string;
+  date: Date;
+  title: string;
+  type: 'receita' | 'despesa' | 'compromisso';
+  category?: string;
+  amount?: number;
+  time?: string;
+  notify?: boolean;
+  isExternal?: boolean; // New flag for external events
+  externalLink?: string; // Link to external event source
+}

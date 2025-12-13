@@ -67,17 +67,23 @@ interface SettingsPageProps {
   onAddCategory: (type: 'receita' | 'despesa', cat: Category) => void;
   onDeleteCategory: (type: 'receita' | 'despesa', name: string) => void;
   onExportData?: () => void;
-  onDeleteAccount?: () => Promise<void>; // Updated signature to reflect async operation
+  onDeleteAccount?: () => Promise<void>;
   onChangePassword?: (newPassword: string) => Promise<boolean>;
+  
+  // NEW PROPS FOR INTEGRATION
+  googleCalendarConnected: boolean;
+  onConnectGoogleCalendar: () => void;
+  onDisconnectGoogleCalendar: () => void;
 }
 
-type SettingsSection = 'profile' | 'categories' | 'appearance';
+type SettingsSection = 'profile' | 'categories' | 'appearance' | 'integrations';
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ 
   user, onUpdateUser,
   cnpj, onCnpjChange, 
   revenueCats, expenseCats, onAddCategory, onDeleteCategory,
-  onExportData, onDeleteAccount, onChangePassword
+  onExportData, onDeleteAccount, onChangePassword,
+  googleCalendarConnected, onConnectGoogleCalendar, onDisconnectGoogleCalendar
 }) => {
   // State
   const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
@@ -262,6 +268,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const menuItems = [
     { id: 'profile', label: 'Perfil e Dados', icon: 'person', desc: 'Dados Pessoais e CNPJ' },
     { id: 'categories', label: 'Categorias', icon: 'category', desc: 'Gerenciar Financeiro' },
+    { id: 'integrations', label: 'Integrações', icon: 'link', desc: 'Conectar serviços externos' },
     { id: 'appearance', label: 'Aparência', icon: 'palette', desc: 'Tema e Cores' },
   ];
 
@@ -522,6 +529,44 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                         </div>
                     </div>
                 </div>
+              )}
+
+              {/* --- INTEGRATIONS SECTION --- */}
+              {activeSection === 'integrations' && (
+                  <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                      <p className="text-slate-500 dark:text-slate-400">Conecte serviços externos para sincronizar dados e automatizar tarefas.</p>
+                      
+                      <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                          <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                              <span className="material-icons text-blue-500">calendar_month</span> Google Calendar
+                          </h4>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                              Sincronize seus compromissos do Google Calendar com o calendário do Regular MEI para uma visão unificada.
+                          </p>
+
+                          {googleCalendarConnected ? (
+                              <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex justify-between items-center dark:bg-green-900/20 dark:border-green-900/50">
+                                  <span className="text-sm font-bold text-green-700 dark:text-green-300 flex items-center gap-2">
+                                      <span className="material-icons text-lg">check_circle</span> Conectado
+                                  </span>
+                                  <button 
+                                      onClick={onDisconnectGoogleCalendar}
+                                      className="text-sm font-medium text-red-600 hover:underline"
+                                  >
+                                      Desconectar
+                                  </button>
+                              </div>
+                          ) : (
+                              <button 
+                                  onClick={onConnectGoogleCalendar}
+                                  className="w-full md:w-auto bg-primary hover:bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2"
+                              >
+                                  <span className="material-icons text-lg">link</span>
+                                  Conectar Google Calendar
+                              </button>
+                          )}
+                      </div>
+                  </div>
               )}
 
               {/* --- APPEARANCE SECTION --- */}
