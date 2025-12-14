@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import StatCard from './components/StatCard';
@@ -27,10 +27,6 @@ import InstallPrompt from './components/InstallPrompt'; // Importando o novo com
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
-
-// --- CONSTANTS ---
-const SUPABASE_URL = 'https://ogwjtlkemsqmpvcikrtd.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nd2p0bGtlbXNxbXB2Y2lrcnRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwNjEyOTcsInJlcHgiOjIwODA2MzcyOTd9.at2Bl3cAhiZxQ6uuYrEwYVSqkBj7XGaMlD125O8wjRk';
 
 // --- CATEGORIAS PADRÃO ---
 const defaultRevenueCats: Category[] = [
@@ -85,10 +81,6 @@ const App: React.FC = () => {
 
   // --- USER MANAGEMENT STATE (Used for Admin view) ---
   const [allUsers, setAllUsers] = useState<User[]>([]); 
-
-  // --- INTEGRATION STATE ---
-  const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false);
-  const [googleIntegrationId, setGoogleIntegrationId] = useState<string | null>(null);
 
   // --- CONNECTION STATE (ADMIN) ---
   const [connectionConfig, setConnectionConfig] = useState<ConnectionConfig>({
@@ -343,27 +335,6 @@ const App: React.FC = () => {
     }
   };
 
-  const loadIntegrations = async (userId: string) => {
-    const { data, error } = await supabase
-        .from('user_integrations')
-        .select('id, service_name')
-        .eq('user_id', userId);
-
-    if (error) {
-        console.error('Error fetching integrations:', error);
-        return;
-    }
-
-    const googleIntegration = data.find(i => i.service_name === 'google_calendar');
-    if (googleIntegration) {
-        setGoogleCalendarConnected(true);
-        setGoogleIntegrationId(googleIntegration.id);
-    } else {
-        setGoogleCalendarConnected(false);
-        setGoogleIntegrationId(null);
-    }
-  };
-
   const loadNotifications = async (userId?: string) => {
     // 1. Fetch all active notifications
     const { data: notifData, error: notifError } = await supabase
@@ -449,8 +420,7 @@ const App: React.FC = () => {
           loadAppointments(userId),
           loadUserCategories(userId), // Load user-specific categories
           loadNewsAndOffers(),
-          loadNotifications(userId), // Pass userId to load interactions
-          loadIntegrations(userId) // Load integrations status
+          loadNotifications(userId) // Pass userId to load interactions
       ];
 
       if (userRole === 'admin') {
@@ -547,25 +517,6 @@ const App: React.FC = () => {
     // Load public data (News/Offers) even if not logged in
     loadNewsAndOffers();
     loadNotifications(); // Load public notifications (without user context)
-
-    // Check for OAuth callback success/error
-    if (typeof window !== 'undefined') {
-        const params = new URLSearchParams(window.location.search);
-        const integrationStatus = params.get('integration_status');
-        const integrationError = params.get('integration_error');
-
-        if (integrationStatus === 'success') {
-            showSuccess('Google Calendar conectado com sucesso!');
-            // Clean URL
-            params.delete('integration_status');
-            window.history.replaceState({}, document.title, `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`);
-        } else if (integrationError) {
-            showError(`Erro na conexão: ${integrationError}`);
-            // Clean URL
-            params.delete('integration_error');
-            window.history.replaceState({}, document.title, `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`);
-        }
-    }
 
     // Cleanup listener
     return () => {
@@ -694,41 +645,6 @@ const App: React.FC = () => {
       loadAllUserData(user.id, updatedUser.role || 'user');
   }
 
-  // --- INTEGRATION HANDLERS ---
-  const handleConnectGoogleCalendar = () => {
-      if (!user) {
-          showError('Você precisa estar logado para conectar integrações.');
-          return;
-      }
-      // Redirect to the Edge Function that starts the OAuth flow
-      const redirectUrl = `${SUPABASE_URL}/functions/v1/google-oauth-start?user_id=${user.id}`;
-      window.location.href = redirectUrl;
-  };
-
-  const handleDisconnectGoogleCalendar = async () => {
-      if (!user || !googleIntegrationId) return;
-
-      const loadingToastId = showLoading('Desconectando Google Calendar...');
-
-      const { error } = await supabase
-          .from('user_integrations')
-          .delete()
-          .eq('id', googleIntegrationId)
-          .eq('user_id', user.id);
-
-      dismissToast(loadingToastId);
-
-      if (error) {
-          console.error('Error disconnecting Google Calendar:', error);
-          showError('Erro ao desconectar o Google Calendar.');
-          return;
-      }
-
-      setGoogleCalendarConnected(false);
-      setGoogleIntegrationId(null);
-      showSuccess('Google Calendar desconectado com sucesso.');
-  };
-
   // --- USER MANAGEMENT HANDLERS (Admin) ---
   const handleAddUser = (newUser: User) => {
       setAllUsers([...allUsers, newUser]);
@@ -826,7 +742,7 @@ const App: React.FC = () => {
     }
 
     // 2. Call the Edge Function to delete the user and associated data
-    const edgeFunctionUrl = `${SUPABASE_URL}/functions/v1/delete-user-data`;
+    const edgeFunctionUrl = `https://ogwjtlkemsqmpvcikrtd.supabase.co/functions/v1/delete-user-data`;
 
     try {
         const response = await fetch(edgeFunctionUrl, {
@@ -1539,8 +1455,6 @@ const App: React.FC = () => {
                 onAddAppointment={handleAddAppointment}
                 onUpdateAppointment={handleUpdateAppointment}
                 onDeleteAppointment={handleDeleteAppointment}
-                googleCalendarConnected={googleCalendarConnected}
-                userId={user.id}
             />;
           case 'cnpj': return <CNPJPage cnpj={cnpj} fiscalData={fiscalData} onUpdateFiscalData={setFiscalData} />;
           case 'tools': return <ToolsPage user={user} />;
@@ -1582,9 +1496,6 @@ const App: React.FC = () => {
               onExportData={handleExportData}
               onDeleteAccount={handleDeleteAccount}
               onChangePassword={handleChangePassword}
-              googleCalendarConnected={googleCalendarConnected}
-              onConnectGoogleCalendar={handleConnectGoogleCalendar}
-              onDisconnectGoogleCalendar={handleDisconnectGoogleCalendar}
             />;
           default: return null;
       }
