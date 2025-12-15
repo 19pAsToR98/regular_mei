@@ -1577,6 +1577,8 @@ const App: React.FC = () => {
               expenseCats={expenseCats}
               onClose={handleCloseExternalModal}
               onUpdateTransaction={handleUpdateTransaction}
+              onDeleteTransaction={handleDeleteTransaction}
+              onNavigateToCashflow={() => setActiveTab('cashflow')}
           />
       )}
     </div>
