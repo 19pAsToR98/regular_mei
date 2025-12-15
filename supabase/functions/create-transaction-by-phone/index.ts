@@ -57,7 +57,8 @@ serve(async (req) => {
             date,
             status,
             is_recurring,
-            installments
+            installments,
+            external_api: true, // <-- Set to TRUE for API insertions
         })
         .select()
         .single();

@@ -255,6 +255,7 @@ export interface Transaction {
       total: number;
   };
   isRecurring?: boolean;
+  externalApi?: boolean; // NEW: True if added via external API
 }
 
 // --- CALENDAR TYPES ---

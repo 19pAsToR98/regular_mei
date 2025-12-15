@@ -23,7 +23,8 @@ import OnboardingPage from './components/OnboardingPage';
 import IntroWalkthrough from './components/IntroWalkthrough';
 import FinancialScore from './components/FinancialScore';
 import MobileDashboard from './components/MobileDashboard';
-import InstallPrompt from './components/InstallPrompt'; // Importando o novo componente
+import InstallPrompt from './components/InstallPrompt';
+import ExternalTransactionModal from './components/ExternalTransactionModal'; // Importando o novo modal
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -82,6 +83,28 @@ const App: React.FC = () => {
   // --- USER MANAGEMENT STATE (Used for Admin view) ---
   const [allUsers, setAllUsers] = useState<User[]>([]); 
 
+  // --- CASH FLOW & APPOINTMENT STATE ---
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [externalTransactions, setExternalTransactions] = useState<Transaction[]>([]); // NEW STATE
+
+  // --- CATEGORY STATE (Now includes default + user custom) ---
+  const [revenueCats, setRevenueCats] = useState<Category[]>(defaultRevenueCats);
+  const [expenseCats, setExpenseCats] = useState<Category[]>(defaultExpenseCats);
+
+  // --- MAINTENANCE STATE ---
+  const [maintenance, setMaintenance] = useState<MaintenanceConfig>({
+    global: false,
+    dashboard: false,
+    cashflow: false,
+    invoices: false,
+    calendar: false,
+    cnpj: false,
+    tools: false,
+    news: false,
+    offers: false
+  });
+  
   // --- CONNECTION STATE (ADMIN) ---
   const [connectionConfig, setConnectionConfig] = useState<ConnectionConfig>({
     cnpjApi: {
@@ -117,27 +140,6 @@ const App: React.FC = () => {
     ai: {
       enabled: true
     }
-  });
-
-  // --- CASH FLOW & APPOINTMENT STATE ---
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-
-  // --- CATEGORY STATE (Now includes default + user custom) ---
-  const [revenueCats, setRevenueCats] = useState<Category[]>(defaultRevenueCats);
-  const [expenseCats, setExpenseCats] = useState<Category[]>(defaultExpenseCats);
-
-  // --- MAINTENANCE STATE ---
-  const [maintenance, setMaintenance] = useState<MaintenanceConfig>({
-    global: false,
-    dashboard: false,
-    cashflow: false,
-    invoices: false,
-    calendar: false,
-    cnpj: false,
-    tools: false,
-    news: false,
-    offers: false
   });
 
   // --- DATA FETCHING FUNCTIONS ---
@@ -218,16 +220,23 @@ const App: React.FC = () => {
         console.error('Error fetching transactions:', error);
         return [];
     }
-    // Map Supabase data to local Transaction type (assuming Supabase columns match)
-    return data.map(t => ({
+    
+    const allTransactions = data.map(t => ({
         ...t,
-        id: t.id, // Assuming ID is number/bigint
+        id: t.id,
         amount: parseFloat(t.amount as any),
         expectedAmount: t.expected_amount ? parseFloat(t.expected_amount as any) : undefined,
         isRecurring: t.is_recurring,
         installments: t.installments,
-        // Ensure date is in YYYY-MM-DD format if needed
+        externalApi: t.external_api || false, // Ensure externalApi is mapped
     })) as Transaction[];
+    
+    // Separate transactions added externally that haven't been reviewed yet
+    const external = allTransactions.filter(t => t.externalApi);
+    const internal = allTransactions.filter(t => !t.externalApi);
+    
+    setExternalTransactions(external);
+    return internal;
   };
 
   const loadAppointments = async (userId: string) => {
@@ -1051,7 +1060,7 @@ const App: React.FC = () => {
     loadNotifications(user.id); // Reload notifications to update vote counts and userVoted status
   };
 
-  // --- CASHFLOW HANDLERS (Needs to be updated for Supabase) ---
+  // --- CASHFLOW HANDLERS ---
   const handleAddTransaction = async (t: Transaction | Transaction[]) => {
     if (!user) return;
     
@@ -1069,6 +1078,7 @@ const App: React.FC = () => {
         status: tr.status,
         installments: tr.installments,
         is_recurring: tr.isRecurring,
+        external_api: tr.externalApi || false, // Ensure internal additions are FALSE
     }));
 
     const { data, error } = await supabase
@@ -1088,6 +1098,7 @@ const App: React.FC = () => {
         ...t,
         amount: parseFloat(t.amount as any),
         expectedAmount: t.expected_amount ? parseFloat(t.expected_amount as any) : undefined,
+        externalApi: t.external_api || false,
     }));
     setTransactions(prev => [...newTransactions, ...prev]);
   };
@@ -1106,6 +1117,7 @@ const App: React.FC = () => {
         status: t.status,
         installments: t.installments,
         is_recurring: t.isRecurring,
+        external_api: t.externalApi || false, // Preserve or set to false if updated internally
     };
 
     const { error } = await supabase
@@ -1121,8 +1133,11 @@ const App: React.FC = () => {
     }
     
     showSuccess('Transação atualizada com sucesso!');
+    
     // Update local state directly
     setTransactions(prev => prev.map(tr => tr.id === t.id ? t : tr));
+    // Also update external transactions list if the updated transaction was there
+    setExternalTransactions(prev => prev.map(tr => tr.id === t.id ? t : tr));
   };
 
   const handleDeleteTransaction = async (id: number) => {
@@ -1143,6 +1158,34 @@ const App: React.FC = () => {
     showSuccess('Transação excluída.');
     // Update local state directly
     setTransactions(prev => prev.filter(tr => tr.id !== id));
+    setExternalTransactions(prev => prev.filter(tr => tr.id !== id));
+  };
+
+  // --- EXTERNAL TRANSACTION MODAL HANDLER ---
+  const handleCloseExternalModal = async () => {
+      if (!user || externalTransactions.length === 0) {
+          setExternalTransactions([]);
+          return;
+      }
+      
+      const idsToMarkAsInternal = externalTransactions.map(t => t.id);
+      
+      // Mark all currently displayed external transactions as internal (reviewed)
+      const { error } = await supabase
+          .from('transactions')
+          .update({ external_api: false })
+          .in('id', idsToMarkAsInternal)
+          .eq('user_id', user.id);
+
+      if (error) {
+          console.error('Error marking external transactions as internal:', error);
+          showError('Erro ao marcar transações como revisadas.');
+          // We still clear the modal locally to avoid blocking the user
+      }
+      
+      // Move transactions from external list to main list
+      setTransactions(prev => [...externalTransactions.map(t => ({...t, externalApi: false})), ...prev]);
+      setExternalTransactions([]);
   };
 
   // --- APPOINTMENT HANDLERS (Needs to be updated for Supabase) ---
@@ -1524,7 +1567,18 @@ const App: React.FC = () => {
           {showIntro && <IntroWalkthrough onFinish={() => setShowIntro(false)} />}
         </main>
       </div>
-      <InstallPrompt /> {/* Adicionando o prompt de instalação aqui */}
+      <InstallPrompt />
+      
+      {/* External Transaction Modal */}
+      {externalTransactions.length > 0 && (
+          <ExternalTransactionModal
+              transactions={externalTransactions}
+              revenueCats={revenueCats}
+              expenseCats={expenseCats}
+              onClose={handleCloseExternalModal}
+              onUpdateTransaction={handleUpdateTransaction}
+          />
+      )}
     </div>
   );
 };
