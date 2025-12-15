@@ -36,16 +36,6 @@ const ExternalTransactionModal: React.FC<ExternalTransactionModalProps> = ({
       });
   };
 
-  const handleEditClick = (t: Transaction) => {
-      // In a real app, this would open the edit modal for this specific transaction.
-      // Here, we navigate to the cashflow page and inform the user.
-      onClose();
-      onNavigateToCashflow();
-      // Note: The CashFlowPage component would need logic to automatically open the edit modal 
-      // if a transaction ID is passed via state/URL, but for this scope, navigation is sufficient.
-      showError(`Transação "${t.description}" movida para edição na página Fluxo de Caixa.`);
-  };
-
   const handleDeleteClick = (t: Transaction) => {
       if (window.confirm(`Tem certeza que deseja excluir o lançamento "${t.description}"?`)) {
           onDeleteTransaction(t.id);
@@ -113,13 +103,7 @@ const ExternalTransactionModal: React.FC<ExternalTransactionModalProps> = ({
                             </button>
 
                             <div className="flex gap-2">
-                                <button 
-                                    onClick={() => handleEditClick(t)}
-                                    className="p-2 text-slate-400 hover:text-primary bg-slate-50 dark:bg-slate-700 rounded-lg"
-                                    title="Editar no Fluxo de Caixa"
-                                >
-                                    <span className="material-icons text-lg">edit</span>
-                                </button>
+                                {/* Removed Edit Button */}
                                 <button 
                                     onClick={() => handleDeleteClick(t)}
                                     className="p-2 text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-slate-700 rounded-lg"
