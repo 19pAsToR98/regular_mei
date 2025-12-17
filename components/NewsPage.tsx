@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { NewsItem } from '../types';
+import { NewsItem, User } from '../types';
+import { showSuccess, showError } from '../utils/toastUtils';
 
 interface NewsPageProps {
   news: NewsItem[];
   readingId: number | null;
   onSelectNews: (id: number | null) => void;
+  onToggleReaction: (newsId: number, userHasReacted: boolean) => void;
+  user: User | null;
 }
 
 const categories = ['Todas', 'Legislação', 'Finanças', 'Gestão', 'Marketing', 'Benefícios', 'Tecnologia'];
 
-const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) => {
+const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews, onToggleReaction, user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
 
@@ -26,16 +29,39 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
 
   // Logic to view a single article
   if (readingId) {
-    const article = filteredNews.find(n => n.id === readingId);
+    const article = news.find(n => n.id === readingId);
     if (!article) {
-        const fullArticle = news.find(n => n.id === readingId);
-        if (!fullArticle) return <div>Artigo não encontrado.</div>;
+        return <div>Artigo não encontrado.</div>;
     }
 
-    // Find index for navigation
+    // Find index for navigation (using filtered list for next/prev)
     const currentIndex = filteredNews.findIndex(n => n.id === readingId);
     const prevArticle = currentIndex > 0 ? filteredNews[currentIndex - 1] : null;
     const nextArticle = currentIndex < filteredNews.length - 1 ? filteredNews[currentIndex + 1] : null;
+
+    const handleShare = async () => {
+        const shareData = {
+            title: article.title,
+            text: article.excerpt,
+            url: window.location.origin + `?page=news&id=${article.id}`, // Example URL structure
+        };
+
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+                showSuccess('Notícia compartilhada com sucesso!');
+            } catch (err) {
+                if ((err as Error).name !== 'AbortError') {
+                    console.error('Error sharing:', err);
+                    showError('Falha ao compartilhar. Tente copiar o link.');
+                }
+            }
+        } else {
+            // Fallback: Copy link to clipboard
+            navigator.clipboard.writeText(shareData.url);
+            showSuccess('Link copiado para a área de transferência!');
+        }
+    };
 
     return (
       <div className="max-w-4xl mx-auto bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -70,7 +96,36 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
              dangerouslySetInnerHTML={{ __html: article?.content || '' }}
            />
 
-           <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
+           {/* Reactions and Share Section */}
+           <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
+              
+              {/* Reactions */}
+              <button
+                  onClick={() => onToggleReaction(article.id, article.userHasReacted)}
+                  disabled={!user}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full transition-colors border font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                      article.userHasReacted 
+                      ? 'bg-red-500 text-white border-red-500 hover:bg-red-600' 
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+              >
+                  <span className="material-icons text-lg">
+                      {article.userHasReacted ? 'favorite' : 'favorite_border'}
+                  </span>
+                  {article.reactionCount} {article.reactionCount === 1 ? 'Curtida' : 'Curtidas'}
+              </button>
+
+              {/* Share Button */}
+              <button 
+                  onClick={handleShare}
+                  className="text-slate-500 hover:text-primary transition-colors flex items-center gap-2 font-medium"
+              >
+                 <span className="material-icons">share</span> Compartilhar
+              </button>
+           </div>
+
+           {/* Navigation Footer */}
+           <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
               
               {/* Previous Article Button */}
               {prevArticle ? (
@@ -83,11 +138,6 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
               ) : (
                   <div className="w-32"></div> // Spacer
               )}
-
-              {/* Share Button */}
-              <button className="text-slate-500 hover:text-primary transition-colors flex items-center gap-2">
-                 <span className="material-icons">share</span> Compartilhar
-              </button>
               
               {/* Next Article Button */}
               {nextArticle ? (
@@ -192,11 +242,17 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
                 {item.excerpt}
               </p>
 
-              <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
                 <button className="text-primary font-semibold text-sm flex items-center gap-2 group/btn hover:gap-3 transition-all">
                   Ler artigo completo 
                   <span className="material-icons text-sm group-hover/btn:translate-x-1 transition-transform">arrow_forward</span>
                 </button>
+                
+                {/* Reaction Count in List View */}
+                <div className="flex items-center gap-1 text-xs font-bold text-slate-500 dark:text-slate-400">
+                    <span className="material-icons text-sm text-red-500">favorite</span>
+                    {item.reactionCount}
+                </div>
               </div>
             </div>
           </div>
