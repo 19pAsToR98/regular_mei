@@ -24,7 +24,7 @@ import IntroWalkthrough from './components/IntroWalkthrough';
 import FinancialScore from './components/FinancialScore';
 import MobileDashboard from './components/MobileDashboard';
 import InstallPrompt from './components/InstallPrompt';
-import ExternalTransactionModal from './components/ExternalTransactionModal'; // Importando o novo modal
+import ExternalTransactionModal from './components/ExternalTransactionModal';
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -86,7 +86,7 @@ const App: React.FC = () => {
   // --- CASH FLOW & APPOINTMENT STATE ---
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [externalTransactions, setExternalTransactions] = useState<Transaction[]>([]); // NEW STATE
+  const [externalTransactions, setExternalTransactions] = useState<Transaction[]>([]);
 
   // --- CATEGORY STATE (Now includes default + user custom) ---
   const [revenueCats, setRevenueCats] = useState<Category[]>(defaultRevenueCats);
@@ -1135,9 +1135,9 @@ const App: React.FC = () => {
     showSuccess('Transação atualizada com sucesso!');
     
     // Update local state directly
-    setTransactions(prev => prev.map(tr => tr.id === t.id ? t : tr));
+    setTransactions(prev => prev.map(tr => tr.id === t.id ? tr : tr));
     // Also update external transactions list if the updated transaction was there
-    setExternalTransactions(prev => prev.map(tr => tr.id === t.id ? t : tr));
+    setExternalTransactions(prev => prev.map(tr => tr.id === t.id ? tr : tr));
   };
 
   const handleDeleteTransaction = async (id: number) => {
@@ -1547,9 +1547,13 @@ const App: React.FC = () => {
   // Main App Structure
   return (
     <div className="flex h-screen bg-background-light dark:bg-background-dark overflow-hidden relative">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} userRole={user?.role} />
+      {user && (
+        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} userRole={user?.role} />
+      )}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header activeTab={activeTab} onMenuClick={() => setIsSidebarOpen(true)} notifications={notifications} onMarkAsRead={handleMarkAsRead} onVote={handleVote} user={user} onLogout={handleLogout} onNavigateToProfile={() => setActiveTab('settings')} />
+        {user && (
+            <Header activeTab={activeTab} onMenuClick={() => setIsSidebarOpen(true)} notifications={notifications} onMarkAsRead={handleMarkAsRead} onVote={handleVote} user={user} onLogout={handleLogout} onNavigateToProfile={() => setActiveTab('settings')} />
+        )}
         <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth relative">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Conditional rendering for global maintenance */}

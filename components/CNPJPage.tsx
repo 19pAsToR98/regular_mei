@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CNPJResponse, DasItem, DasnItem, Mei360Response, FiscalData } from '../types';
+import { CNPJResponse, DasItem, DasnItem, Mei360Response, FiscalData, ServiceCTA } from '../types';
 
 interface CNPJPageProps {
   cnpj?: string;
@@ -7,18 +7,11 @@ interface CNPJPageProps {
   onUpdateFiscalData: (data: FiscalData) => void;
 }
 
-interface ServiceCTA {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  colorClass: string;
-}
-
+// Redefining servicesData locally for CNPJPage to function independently
 const servicesData: ServiceCTA[] = [
   {
     id: 'declaracao',
-    title: 'Declaração Anual',
+    title: 'Declaração Anual (DASN)',
     description: 'Envio rápido e seguro da sua DASN-SIMEI, garantindo conformidade e evitando multas.',
     icon: 'event_note',
     colorClass: 'text-blue-500 bg-blue-100 dark:bg-blue-900/30'
