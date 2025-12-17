@@ -28,11 +28,8 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
   if (readingId) {
     const article = filteredNews.find(n => n.id === readingId);
     if (!article) {
-        // If the article is not in the filtered list (e.g., user navigated directly), find it in the full list
         const fullArticle = news.find(n => n.id === readingId);
         if (!fullArticle) return <div>Artigo não encontrado.</div>;
-        // If found but not filtered (e.g., draft), we still show it but without navigation
-        // For simplicity, we assume if readingId is set, we show the article.
     }
 
     // Find index for navigation
@@ -70,7 +67,7 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
            
            <div 
              className="prose prose-slate dark:prose-invert max-w-none prose-a:text-primary prose-headings:text-slate-800 dark:prose-headings:text-white"
-             dangerouslySetInnerHTML={{ __html: article?.content }}
+             dangerouslySetInnerHTML={{ __html: article?.content || '' }}
            />
 
            <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">

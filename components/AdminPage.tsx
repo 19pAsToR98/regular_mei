@@ -1627,7 +1627,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                       </p>
                       <div 
                          className="prose prose-slate dark:prose-invert max-w-none prose-a:text-primary prose-headings:text-slate-800 dark:prose-headings:text-white"
-                         dangerouslySetInnerHTML={{ __html: newsForm.content }}
+                         dangerouslySetInnerHTML={{ __html: newsForm.content || '' }}
                       />
                   </div>
               </div>
