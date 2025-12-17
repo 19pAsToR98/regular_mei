@@ -1501,29 +1501,21 @@ const App: React.FC = () => {
                           <AIAnalysis enabled={connectionConfig.ai.enabled} />
                       </div>
                   )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    {dashboardStats.map((stat, index) => (
+                      <StatCard key={index} data={stat as StatData} />
+                    ))}
+                  </div>
                   
-                  {/* Row 1: Stats (4 cards, 2 cols each, total 8 cols) and Reminders (4 cols) */}
                   <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 xl:col-span-8 grid grid-cols-4 gap-6">
-                        {dashboardStats.map((stat, index) => (
-                            <div key={index} className="col-span-4 sm:col-span-2">
-                                <StatCard data={stat as StatData} />
-                            </div>
-                        ))}
+                    <div className="col-span-12 xl:col-span-8 h-full">
+                      <RevenueChart transactions={transactions} />
                     </div>
                     <div className="col-span-12 xl:col-span-4 h-full">
                         <Reminders transactions={transactions} appointments={appointments} fiscalData={fiscalData} onNavigate={setActiveTab} />
                     </div>
                   </div>
 
-                  {/* Row 2: Revenue Chart (12 cols) */}
-                  <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 h-full">
-                      <RevenueChart transactions={transactions} />
-                    </div>
-                  </div>
-
-                  {/* Row 3: Financial Score (6 cols) and Thermometer (6 cols) */}
                   <div className="grid grid-cols-12 gap-6">
                     <div className="col-span-12 xl:col-span-6 h-full">
                         <FinancialScore transactions={transactions} />
