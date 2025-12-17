@@ -80,7 +80,7 @@ export interface MaintenanceConfig {
 
 export interface ApiFieldMapping {
   key: string;        // Internal app key (e.g., 'razaoSocial')
-  jsonPath: string;   // Path in API response (e.e., 'estabelecimento.nome_fantasia')
+  jsonPath: string;   // Path in API response (e.g., 'estabelecimento.nome_fantasia')
   label: string;      // Display label (e.g., 'Nome Fantasia')
   visible: boolean;   // Whether to show this field to the user
 }
@@ -182,14 +182,6 @@ export interface User {
 }
 
 // --- FISCAL API TYPES ---
-
-export interface ServiceCTA {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  colorClass: string;
-}
 
 export interface DasItem {
   ano: string;
