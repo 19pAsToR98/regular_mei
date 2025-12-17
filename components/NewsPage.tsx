@@ -43,7 +43,12 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
     return (
       <div className="max-w-4xl mx-auto bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="relative h-64 md:h-80 w-full">
-           <img src={article?.imageUrl} alt={article?.title} className="w-full h-full object-cover" />
+           <img 
+             src={article?.imageUrl} 
+             alt={article?.title} 
+             className="w-full h-full object-cover" 
+             onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/800x400?text=Imagem+Inválida')}
+           />
            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
            <button 
              onClick={() => onSelectNews(null)}
@@ -68,8 +73,9 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
              {article?.excerpt}
            </p>
            
+           {/* Improved Prose classes for better readability */}
            <div 
-             className="prose prose-slate dark:prose-invert max-w-none prose-a:text-primary prose-headings:text-slate-800 dark:prose-headings:text-white"
+             className="prose prose-lg prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-li:leading-relaxed prose-a:text-primary prose-headings:text-slate-800 dark:prose-headings:text-white prose-blockquote:border-l-primary prose-blockquote:text-slate-600 dark:prose-blockquote:text-slate-300"
              dangerouslySetInnerHTML={{ __html: article?.content.replace(/\n/g, '<br />') }}
            />
 
@@ -87,8 +93,21 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
                   <div className="w-32"></div> // Spacer
               )}
 
-              {/* Share Button */}
-              <button className="text-slate-500 hover:text-primary transition-colors flex items-center gap-2">
+              {/* Share Button (Using native share API if available) */}
+              <button 
+                onClick={() => {
+                    if (navigator.share) {
+                        navigator.share({
+                            title: article?.title,
+                            text: article?.excerpt,
+                            url: window.location.href, // Share current URL
+                        }).catch((error) => console.log('Error sharing', error));
+                    } else {
+                        alert('A função de compartilhamento nativo não está disponível neste navegador.');
+                    }
+                }}
+                className="text-slate-500 hover:text-primary transition-colors flex items-center gap-2"
+              >
                  <span className="material-icons">share</span> Compartilhar
               </button>
               
@@ -167,6 +186,7 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
                 src={item.imageUrl} 
                 alt={item.title}
                 className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
+                onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/800x400?text=Imagem+Inválida')}
               />
               <div className="absolute top-4 left-4">
                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-sm">
