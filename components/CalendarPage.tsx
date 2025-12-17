@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Transaction, Appointment, Category } from '../types';
 
@@ -268,18 +267,37 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
 
   const renderDots = (dayEvents: CalendarEvent[], dayHolidays: Holiday[]) => {
     if (dayEvents.length === 0 && dayHolidays.length === 0) return null;
+    
+    const typesPresent = new Set<string>();
+    
+    // Add event types
+    dayEvents.forEach(e => typesPresent.add(e.type));
+    
+    // Add holiday type
+    if (dayHolidays.length > 0) {
+        typesPresent.add('feriado');
+    }
+
+    const dots: { type: string, colorClass: string, title: string }[] = [];
+
+    if (typesPresent.has('feriado')) {
+        dots.push({ type: 'feriado', colorClass: 'bg-indigo-400', title: 'Feriado' });
+    }
+    if (typesPresent.has('receita')) {
+        dots.push({ type: 'receita', colorClass: 'bg-green-500', title: 'Receita' });
+    }
+    if (typesPresent.has('despesa')) {
+        dots.push({ type: 'despesa', colorClass: 'bg-red-500', title: 'Despesa' });
+    }
+    if (typesPresent.has('compromisso')) {
+        dots.push({ type: 'compromisso', colorClass: 'bg-blue-500', title: 'Compromisso' });
+    }
+
     return (
       <div className="flex gap-1.5 mt-1.5 justify-center flex-wrap px-1">
-        {dayHolidays.map((h, idx) => (
-             <div key={`h-${idx}`} className="w-3 h-3 rounded-full bg-indigo-400 ring-2 ring-white dark:ring-slate-900" title={`Feriado: ${h.title}`}></div>
+        {dots.map((dot, idx) => (
+             <div key={dot.type} className={`w-3 h-3 rounded-full ${dot.colorClass} ring-2 ring-white dark:ring-slate-900`} title={dot.title}></div>
         ))}
-        {dayEvents.slice(0, 4).map((ev, idx) => {
-          let colorClass = 'bg-blue-500';
-          if (ev.type === 'receita') colorClass = 'bg-green-500';
-          if (ev.type === 'despesa') colorClass = 'bg-red-500';
-          return <div key={idx} className={`w-3 h-3 rounded-full ${colorClass} ring-2 ring-white dark:ring-slate-900`} title={ev.title}></div>;
-        })}
-        {dayEvents.length > 4 && <span className="text-[10px] font-bold text-slate-400">+</span>}
       </div>
     );
   };
