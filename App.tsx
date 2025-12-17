@@ -297,37 +297,25 @@ const App: React.FC = () => {
       setExpenseCats(combinedExpense);
   };
 
-  const loadNewsAndOffers = async (userId?: string) => {
+  const loadNewsAndOffers = async () => {
     // News (Publicly readable via RLS)
     const { data: newsData, error: newsError } = await supabase
         .from('news')
-        .select(`
-            *,
-            reaction_count:news_reactions(count),
-            user_reaction:news_reactions!inner(user_id)
-        `)
+        .select('*')
         .order('date', { ascending: false });
     
     if (!newsError) {
-        const mappedNews: NewsItem[] = newsData.map(n => {
-            const reactionCount = (n.reaction_count?.[0]?.count as number) || 0;
-            // Check if the user_reaction array contains an entry for the current user
-            const userHasReacted = userId ? (n.user_reaction as any[]).some(r => r.user_id === userId) : false;
-
-            return {
-                id: n.id,
-                category: n.category,
-                title: n.title,
-                excerpt: n.excerpt,
-                content: n.content,
-                date: n.date,
-                imageUrl: n.image_url,
-                readTime: n.read_time,
-                status: n.status as 'published' | 'draft',
-                reactionCount: reactionCount,
-                userHasReacted: userHasReacted,
-            } as NewsItem;
-        });
+        const mappedNews: NewsItem[] = newsData.map(n => ({
+            id: n.id,
+            category: n.category,
+            title: n.title,
+            excerpt: n.excerpt,
+            content: n.content,
+            date: n.date,
+            imageUrl: n.image_url,
+            readTime: n.read_time,
+            status: n.status as 'published' | 'draft',
+        }));
         setNews(mappedNews);
     } else {
         console.error('Error fetching news:', newsError);
@@ -445,7 +433,7 @@ const App: React.FC = () => {
           loadTransactions(userId),
           loadAppointments(userId),
           loadUserCategories(userId), // Load user-specific categories
-          loadNewsAndOffers(userId), // Pass userId to load reaction status
+          loadNewsAndOffers(),
           loadNotifications(userId) // Pass userId to load interactions
       ];
 
@@ -843,7 +831,7 @@ const App: React.FC = () => {
     }
     
     showSuccess('Oferta adicionada!');
-    loadNewsAndOffers(user?.id);
+    loadNewsAndOffers();
   };
 
   const handleUpdateOffer = async (updatedOffer: Offer) => {
@@ -874,7 +862,7 @@ const App: React.FC = () => {
     }
     
     showSuccess('Oferta atualizada!');
-    loadNewsAndOffers(user?.id);
+    loadNewsAndOffers();
   };
 
   const handleDeleteOffer = async (id: number) => {
@@ -890,7 +878,7 @@ const App: React.FC = () => {
     }
     
     showSuccess('Oferta excluída.');
-    loadNewsAndOffers(user?.id);
+    loadNewsAndOffers();
   };
 
   // --- NEWS HANDLERS ---
@@ -922,7 +910,7 @@ const App: React.FC = () => {
     }
     
     showSuccess('Notícia publicada!');
-    loadNewsAndOffers(user?.id); // Reload news list
+    loadNewsAndOffers(); // Reload news list
   };
 
   const handleUpdateNews = async (updatedItem: NewsItem) => {
@@ -949,7 +937,7 @@ const App: React.FC = () => {
     }
     
     showSuccess('Notícia atualizada!');
-    loadNewsAndOffers(user?.id); // Reload news list
+    loadNewsAndOffers(); // Reload news list
   };
 
   const handleDeleteNewsClick = async (id: number) => {
@@ -965,45 +953,7 @@ const App: React.FC = () => {
     }
     
     showSuccess('Notícia excluída.');
-    loadNewsAndOffers(user?.id); // Reload news list
-  };
-  
-  const handleToggleReaction = async (newsId: number, userHasReacted: boolean) => {
-      if (!user) {
-          showWarning('Você precisa estar logado para reagir a uma notícia.');
-          return;
-      }
-      
-      if (userHasReacted) {
-          // Unlike
-          const { error } = await supabase
-              .from('news_reactions')
-              .delete()
-              .eq('user_id', user.id)
-              .eq('news_id', newsId);
-          
-          if (error) {
-              console.error('Error unliking news:', error);
-              showError('Erro ao remover reação.');
-              return;
-          }
-          showSuccess('Reação removida.');
-      } else {
-          // Like
-          const { error } = await supabase
-              .from('news_reactions')
-              .insert({ user_id: user.id, news_id: newsId });
-
-          if (error) {
-              console.error('Error liking news:', error);
-              showError('Erro ao adicionar reação.');
-              return;
-          }
-          showSuccess('Reação adicionada!');
-      }
-      
-      // Optimistic update (or full reload for accuracy)
-      loadNewsAndOffers(user.id);
+    loadNewsAndOffers(); // Reload news list
   };
 
   // --- NOTIFICATION HANDLERS ---
@@ -1466,7 +1416,7 @@ const App: React.FC = () => {
                   </button>
               </header>
               <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8">
-                  <NewsPage news={news} readingId={readingNewsId} onSelectNews={setReadingNewsId} onToggleReaction={handleToggleReaction} user={user} />
+                  <NewsPage news={news} readingId={readingNewsId} onSelectNews={setReadingNewsId} />
               </main>
               <footer className="mt-8 text-center text-sm text-slate-400 pb-8">
                 <p>&copy; {new Date().getFullYear()} Regular MEI. Todos os direitos reservados.</p>
@@ -1615,7 +1565,7 @@ const App: React.FC = () => {
             />;
           case 'cnpj': return <CNPJPage cnpj={cnpj} fiscalData={fiscalData} onUpdateFiscalData={setFiscalData} />;
           case 'tools': return <ToolsPage user={user} />;
-          case 'news': return <NewsPage news={news} readingId={readingNewsId} onSelectNews={(id) => setReadingNewsId(id)} onToggleReaction={handleToggleReaction} user={user} />;
+          case 'news': return <NewsPage news={news} readingId={readingNewsId} onSelectNews={(id) => setReadingNewsId(id)} />;
           case 'offers': return <OffersPage offers={offers} />;
           case 'admin':
             return <AdminPage 
