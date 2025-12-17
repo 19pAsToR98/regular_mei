@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import Link from '@tiptap/extension-link';
+import Heading from '@tiptap/extension-heading';
 
 interface NewsEditorProps {
   value: string;
@@ -16,6 +18,25 @@ const MenuBar: React.FC<{ editor: Editor | null }> = ({ editor }) => {
     `p-2 rounded transition-colors ${
       isActive ? 'bg-primary text-white' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'
     }`;
+    
+  const setLink = useCallback(() => {
+    const previousUrl = editor.getAttributes('link').href;
+    const url = window.prompt('URL', previousUrl);
+
+    // cancelled
+    if (url === null) {
+      return;
+    }
+
+    // empty
+    if (url === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
+    }
+
+    // update link
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  }, [editor]);
 
   return (
     <div className="flex flex-wrap gap-1 p-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-t-lg">
@@ -37,6 +58,26 @@ const MenuBar: React.FC<{ editor: Editor | null }> = ({ editor }) => {
       >
         <span className="material-icons text-lg">format_italic</span>
       </button>
+      
+      {/* Headings */}
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+        className={buttonClass(editor.isActive('heading', { level: 2 }))}
+        title="Título (H2)"
+      >
+        <span className="material-icons text-lg">title</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+        className={buttonClass(editor.isActive('heading', { level: 3 }))}
+        title="Subtítulo (H3)"
+      >
+        <span className="material-icons text-lg">format_size</span>
+      </button>
+
+      {/* Lists & Blockquote */}
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -61,6 +102,27 @@ const MenuBar: React.FC<{ editor: Editor | null }> = ({ editor }) => {
       >
         <span className="material-icons text-lg">format_quote</span>
       </button>
+      
+      {/* Link */}
+      <button
+        type="button"
+        onClick={setLink}
+        className={buttonClass(editor.isActive('link'))}
+        title="Adicionar Link"
+      >
+        <span className="material-icons text-lg">link</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().unsetLink().run()}
+        disabled={!editor.isActive('link')}
+        className={buttonClass(false)}
+        title="Remover Link"
+      >
+        <span className="material-icons text-lg">link_off</span>
+      </button>
+
+      {/* Hard Break */}
       <button
         type="button"
         onClick={() => editor.chain().focus().setHardBreak().run()}
@@ -77,16 +139,22 @@ const NewsEditor: React.FC<NewsEditorProps> = ({ value, onChange }) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        // Keep only basic formatting elements
+        // Re-enable Heading here, but configure it below
         heading: false,
         codeBlock: false,
         horizontalRule: false,
         hardBreak: true,
       }),
+      Heading.configure({
+        levels: [2, 3], // Only allow H2 and H3 for news articles
+      }),
+      Link.configure({
+        openOnClick: true,
+        autolink: true,
+      }),
     ],
     content: value,
     onUpdate: ({ editor }) => {
-      // TipTap returns HTML content
       onChange(editor.getHTML());
     },
     editorProps: {

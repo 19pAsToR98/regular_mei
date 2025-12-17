@@ -12,6 +12,8 @@
     "@google/genai": "^1.30.0",
     "@supabase/supabase-js": "^2.87.1",
     "@tiptap/core": "^3.13.0",
+    "@tiptap/extension-heading": "^3.13.0",
+    "@tiptap/extension-link": "^3.13.0",
     "@tiptap/react": "^3.13.0",
     "@tiptap/starter-kit": "^3.13.0",
     "lucide-react": "^0.556.0",
