@@ -57,6 +57,35 @@ const getTodayDateString = () => {
     return new Date().toISOString().split('T')[0];
 };
 
+// --- CONTENT NORMALIZATION FUNCTION ---
+const normalizeContent = (content: string): string => {
+    if (!content) return '';
+
+    // 1. Trim whitespace
+    let normalized = content.trim();
+
+    // 2. Check if content already starts with a block tag (h1, h2, p, ul, ol, blockquote)
+    const startsWithBlockTag = /^\s*<(h[1-6]|p|ul|ol|blockquote)/i.test(normalized);
+
+    if (!startsWithBlockTag) {
+        // If it doesn't start with a block tag, treat newlines as paragraph breaks
+        
+        // Replace triple/quadruple newlines with double newlines for consistency
+        normalized = normalized.replace(/\n{3,}/g, '\n\n');
+
+        // Replace double newlines with closing/opening paragraph tags
+        normalized = normalized.replace(/\n\n/g, '</p><p>');
+
+        // Replace single newlines with <br> (line break)
+        normalized = normalized.replace(/\n/g, '<br>');
+
+        // Wrap the whole thing in <p> tags
+        normalized = `<p>${normalized}</p>`;
+    }
+    
+    return normalized;
+};
+
 const AdminPage: React.FC<AdminPageProps> = ({ 
     offers, onAddOffer, onUpdateOffer, onDeleteOffer,
     news, onAddNews, onUpdateNews, onDeleteNews,
@@ -295,11 +324,12 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
     // Use the date from the form, or today's date if not set (should be set by initial state)
     const finalDate = newsForm.date || getTodayDateString();
+    const finalContent = normalizeContent(newsForm.content); // Normalize content before saving
     
     if (editingNewsId) {
-        onUpdateNews({ id: editingNewsId, ...newsForm, date: finalDate });
+        onUpdateNews({ id: editingNewsId, ...newsForm, date: finalDate, content: finalContent });
     } else {
-        onAddNews({ id: Date.now(), ...newsForm, date: finalDate });
+        onAddNews({ id: Date.now(), ...newsForm, date: finalDate, content: finalContent });
     }
     setIsSubmitting(false);
     handleCancelNewsEdit();
@@ -319,6 +349,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
         }, 10);
     }
   };
+  
+  // Prepare content for preview (using the normalization function)
+  const previewContent = useMemo(() => normalizeContent(newsForm.content), [newsForm.content]);
 
   // --- OFFERS HANDLERS ---
   const handleEditOfferClick = (e: React.MouseEvent, offer: Offer) => {
@@ -1627,7 +1660,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                       </p>
                       <div 
                          className="prose prose-slate dark:prose-invert max-w-none prose-a:text-primary prose-headings:text-slate-800 dark:prose-headings:text-white"
-                         dangerouslySetInnerHTML={{ __html: newsForm.content || '' }}
+                         dangerouslySetInnerHTML={{ __html: previewContent }}
                       />
                   </div>
               </div>
