@@ -264,16 +264,16 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
   }, [fiscalData, transactions, appointments]);
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col h-full w-full shadow-sm">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Lembretes & Pendências</h3>
-        <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-1 rounded-full">{reminders.length}</span>
+    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col h-full w-full shadow-sm">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-base font-bold text-slate-800 dark:text-white">Lembretes & Pendências</h3>
+        <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full">{reminders.length}</span>
       </div>
       
-      <div className="space-y-4 flex-grow overflow-y-auto max-h-[300px] pr-1 custom-scrollbar">
+      <div className="space-y-2 flex-grow overflow-y-auto max-h-[300px] pr-1 custom-scrollbar">
         {reminders.length === 0 ? (
-            <div className="text-center py-8 text-slate-400">
-                <span className="material-icons text-4xl mb-2 opacity-30">check_circle</span>
+            <div className="text-center py-6 text-slate-400">
+                <span className="material-icons text-3xl mb-2 opacity-30">check_circle</span>
                 <p className="text-sm">Tudo em dia! Sem pendências próximas.</p>
             </div>
         ) : (
@@ -281,18 +281,18 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
             <div 
                 key={reminder.id} 
                 onClick={() => reminder.actionTab && onNavigate(reminder.actionTab)}
-                className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-slate-700 group"
+                className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-slate-700 group"
             >
-                <div className={`p-2.5 rounded-xl ${reminder.bgClass} flex-shrink-0 mt-0.5`}>
-                <span className={`material-icons text-xl ${reminder.iconColorClass}`}>
+                <div className={`p-1.5 rounded-lg ${reminder.bgClass} flex-shrink-0 mt-0.5`}>
+                <span className={`material-icons text-lg ${reminder.iconColorClass}`}>
                     {reminder.icon}
                 </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-800 dark:text-white text-sm leading-snug truncate">{reminder.title}</p>
+                    <p className="font-semibold text-slate-800 dark:text-white text-sm leading-snug truncate">{reminder.title}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{reminder.subtitle}</p>
                     {reminder.actionLabel && (
-                        <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wide text-primary bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded border border-blue-100 dark:border-blue-900/30">
+                        <span className="inline-block mt-1 text-[9px] font-bold uppercase tracking-wide text-primary bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-900/30">
                             {reminder.actionLabel}
                         </span>
                     )}
@@ -305,10 +305,10 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
         )}
       </div>
       
-      <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+      <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-center">
         <button 
             onClick={() => onNavigate('calendar')}
-            className="text-sm font-bold text-primary hover:text-blue-600 hover:underline transition-all"
+            className="text-xs font-bold text-primary hover:text-blue-600 hover:underline transition-all uppercase tracking-wide"
         >
             Ver Agenda Completa
         </button>
