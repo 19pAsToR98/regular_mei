@@ -61,29 +61,34 @@ const getTodayDateString = () => {
 const normalizeContent = (content: string): string => {
     if (!content) return '';
 
-    // 1. Trim whitespace
     let normalized = content.trim();
 
-    // 2. Check if content already starts with a block tag (h1, h2, p, ul, ol, blockquote)
-    const startsWithBlockTag = /^\s*<(h[1-6]|p|ul|ol|blockquote)/i.test(normalized);
+    // 1. Remove any existing <p> tags to prevent double wrapping if the user manually added them
+    normalized = normalized.replace(/<\/?p>/gi, '');
 
-    if (!startsWithBlockTag) {
-        // If it doesn't start with a block tag, treat newlines as paragraph breaks
-        
-        // Replace triple/quadruple newlines with double newlines for consistency
-        normalized = normalized.replace(/\n{3,}/g, '\n\n');
+    // 2. Split by double newline (which indicates a new paragraph)
+    const paragraphs = normalized.split(/\n\n+/);
 
-        // Replace double newlines with closing/opening paragraph tags
-        normalized = normalized.replace(/\n\n/g, '</p><p>');
+    // 3. Process each paragraph
+    const htmlContent = paragraphs.map(p => {
+        let block = p.trim();
+        if (!block) return '';
 
-        // Replace single newlines with <br> (line break)
-        normalized = normalized.replace(/\n/g, '<br>');
+        // If the block starts with a known block tag (h1-h6, ul, ol, blockquote), don't wrap it in <p>
+        const startsWithBlockTag = /^\s*<(h[1-6]|ul|ol|blockquote)/i.test(block);
 
-        // Wrap the whole thing in <p> tags
-        normalized = `<p>${normalized}</p>`;
-    }
-    
-    return normalized;
+        if (startsWithBlockTag) {
+            // Replace single newlines within this block with <br> (for lists/quotes)
+            block = block.replace(/\n/g, '<br>');
+            return block;
+        } else {
+            // For plain text blocks, replace single newlines with <br> and wrap in <p>
+            block = block.replace(/\n/g, '<br>');
+            return `<p>${block}</p>`;
+        }
+    }).join('');
+
+    return htmlContent;
 };
 
 const AdminPage: React.FC<AdminPageProps> = ({ 
