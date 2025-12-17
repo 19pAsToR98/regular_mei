@@ -66,7 +66,7 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
            </p>
            
            <div 
-             className="prose prose-slate dark:prose-invert max-w-none prose-a:text-primary prose-headings:text-slate-800 dark:prose-headings:text-white"
+             className="prose prose-lg prose-slate dark:prose-invert max-w-none prose-a:text-primary prose-headings:text-slate-800 dark:prose-headings:text-white"
              dangerouslySetInnerHTML={{ __html: article?.content || '' }}
            />
 
