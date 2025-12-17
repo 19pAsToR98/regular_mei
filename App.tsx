@@ -221,14 +221,19 @@ const App: React.FC = () => {
         return [];
     }
     
-    const allTransactions = data.map(t => ({
-        ...t,
+    const allTransactions = data.map((t: any) => ({
         id: t.id,
+        description: t.description,
+        category: t.category,
+        type: t.type as 'receita' | 'despesa',
         amount: parseFloat(t.amount as any),
         expectedAmount: t.expected_amount ? parseFloat(t.expected_amount as any) : undefined,
-        isRecurring: t.is_recurring,
+        date: t.date,
+        time: t.time,
+        status: t.status as 'pago' | 'pendente',
         installments: t.installments,
-        externalApi: t.external_api || false, // Ensure externalApi is mapped
+        isRecurring: t.is_recurring,
+        externalApi: t.external_api || false,
     })) as Transaction[];
     
     // Separate transactions added externally that haven't been reviewed yet
@@ -1094,12 +1099,20 @@ const App: React.FC = () => {
     
     showSuccess('Transação(ões) adicionada(s) com sucesso!');
     // Update local state with new data returned from insert
-    const newTransactions = (data as Transaction[]).map(t => ({
-        ...t,
+    const newTransactions = (data as any[]).map(t => ({
+        id: t.id,
+        description: t.description,
+        category: t.category,
+        type: t.type as 'receita' | 'despesa',
         amount: parseFloat(t.amount as any),
         expectedAmount: t.expected_amount ? parseFloat(t.expected_amount as any) : undefined,
+        date: t.date,
+        time: t.time,
+        status: t.status as 'pago' | 'pendente',
+        installments: t.installments,
+        isRecurring: t.is_recurring,
         externalApi: t.external_api || false,
-    }));
+    })) as Transaction[];
     setTransactions(prev => [...newTransactions, ...prev]);
   };
 
@@ -1134,10 +1147,10 @@ const App: React.FC = () => {
     
     showSuccess('Transação atualizada com sucesso!');
     
-    // Update local state directly
-    setTransactions(prev => prev.map(tr => tr.id === t.id ? tr : tr));
+    // Update local state directly (using the updated object 't')
+    setTransactions(prev => prev.map(tr => tr.id === t.id ? t : tr));
     // Also update external transactions list if the updated transaction was there
-    setExternalTransactions(prev => prev.map(tr => tr.id === t.id ? tr : tr));
+    setExternalTransactions(prev => prev.map(tr => tr.id === t.id ? t : tr));
   };
 
   const handleDeleteTransaction = async (id: number) => {
@@ -1207,7 +1220,7 @@ const App: React.FC = () => {
         .select();
 
     if (error) {
-        console.error('Error adding appointment:', error);
+        console.error('Error adding compromisso:', error);
         showError('Erro ao adicionar compromisso.');
         return;
     }
@@ -1233,7 +1246,7 @@ const App: React.FC = () => {
         .eq('user_id', user.id);
 
     if (error) {
-        console.error('Error updating appointment:', error);
+        console.error('Error updating compromisso:', error);
         showError('Erro ao atualizar compromisso.');
         return;
     }
@@ -1251,7 +1264,7 @@ const App: React.FC = () => {
         .eq('user_id', user.id);
 
     if (error) {
-        console.error('Error deleting appointment:', error);
+        console.error('Error deleting compromisso:', error);
         showError('Erro ao excluir compromisso.');
         return;
     }
