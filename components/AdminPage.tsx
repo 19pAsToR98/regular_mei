@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Offer, NewsItem, MaintenanceConfig, AppNotification, PollOption, ConnectionConfig, ApiFieldMapping, User } from '../types';
 import ApiDocsPage from './ApiDocsPage'; // Importando o novo componente
+import NewsEditor from './NewsEditor'; // Importando o novo editor
 
 interface AdminPageProps {
   offers: Offer[];
@@ -57,39 +58,7 @@ const getTodayDateString = () => {
     return new Date().toISOString().split('T')[0];
 };
 
-// --- CONTENT NORMALIZATION FUNCTION ---
-const normalizeContent = (content: string): string => {
-    if (!content) return '';
-
-    let normalized = content.trim();
-
-    // 1. Remove any existing <p> tags to prevent double wrapping if the user manually added them
-    normalized = normalized.replace(/<\/?p>/gi, '');
-
-    // 2. Split by double newline (which indicates a new paragraph)
-    const paragraphs = normalized.split(/\n\n+/);
-
-    // 3. Process each paragraph
-    const htmlContent = paragraphs.map(p => {
-        let block = p.trim();
-        if (!block) return '';
-
-        // If the block starts with a known block tag (h1-h6, ul, ol, blockquote), don't wrap it in <p>
-        const startsWithBlockTag = /^\s*<(h[1-6]|ul|ol|blockquote)/i.test(block);
-
-        if (startsWithBlockTag) {
-            // Replace single newlines within this block with <br> (for lists/quotes)
-            block = block.replace(/\n/g, '<br>');
-            return block;
-        } else {
-            // For plain text blocks, replace single newlines with <br> and wrap in <p>
-            block = block.replace(/\n/g, '<br>');
-            return `<p>${block}</p>`;
-        }
-    }).join('');
-
-    return htmlContent;
-};
+// REMOVED: normalizeContent is no longer needed as Quill outputs clean HTML
 
 const AdminPage: React.FC<AdminPageProps> = ({ 
     offers, onAddOffer, onUpdateOffer, onDeleteOffer,
@@ -123,7 +92,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
   const [editingNewsId, setEditingNewsId] = useState<number | null>(null);
   const [showNewsPreview, setShowNewsPreview] = useState(false);
   
-  const contentInputRef = useRef<HTMLTextAreaElement>(null);
+  // Removed contentInputRef as it's no longer needed for Quill
   
   // News Pagination
   const [newsPage, setNewsPage] = useState(1);
@@ -329,7 +298,8 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
     // Use the date from the form, or today's date if not set (should be set by initial state)
     const finalDate = newsForm.date || getTodayDateString();
-    const finalContent = normalizeContent(newsForm.content); // Normalize content before saving
+    // Quill outputs clean HTML, no need for manual normalization
+    const finalContent = newsForm.content; 
     
     if (editingNewsId) {
         onUpdateNews({ id: editingNewsId, ...newsForm, date: finalDate, content: finalContent });
@@ -340,23 +310,10 @@ const AdminPage: React.FC<AdminPageProps> = ({
     handleCancelNewsEdit();
   };
 
-  const handleFormat = (tagStart: string, tagEnd: string) => {
-    if (contentInputRef.current) {
-        const start = contentInputRef.current.selectionStart;
-        const end = contentInputRef.current.selectionEnd;
-        const text = newsForm.content;
-        const newText = text.substring(0, start) + tagStart + text.substring(start, end) + tagEnd + text.substring(end);
-        setNewsForm({ ...newsForm, content: newText });
-        
-        setTimeout(() => {
-            contentInputRef.current?.focus();
-            contentInputRef.current?.setSelectionRange(start + tagStart.length, end + tagStart.length);
-        }, 10);
-    }
-  };
-  
-  // Prepare content for preview (using the normalization function)
-  const previewContent = useMemo(() => normalizeContent(newsForm.content), [newsForm.content]);
+  // Removed handleFormat as Quill handles formatting
+
+  // Prepare content for preview (Quill output is already HTML)
+  const previewContent = useMemo(() => newsForm.content, [newsForm.content]);
 
   // --- OFFERS HANDLERS ---
   const handleEditOfferClick = (e: React.MouseEvent, offer: Offer) => {
@@ -992,36 +949,14 @@ const AdminPage: React.FC<AdminPageProps> = ({
                    <textarea rows={2} required value={newsForm.excerpt} onChange={e => setNewsForm({...newsForm, excerpt: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" placeholder="Breve descrição que aparece no card..."></textarea>
                 </div>
                 
-                {/* Enhanced Content Editor */}
+                {/* Enhanced Content Editor (Quill) */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Conteúdo do Artigo (HTML suportado)</label>
-                  <div className="border border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-800">
-                      {/* Editor Toolbar */}
-                      <div className="flex flex-wrap gap-1 p-2 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-                          <button type="button" onClick={() => handleFormat('<strong>', '</strong>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 font-bold" title="Negrito">B</button>
-                          <button type="button" onClick={() => handleFormat('<em>', '</em>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 italic" title="Itálico">I</button>
-                          <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center"></div>
-                          <button type="button" onClick={() => handleFormat('<h2>', '</h2>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 font-bold text-sm" title="Título H2">H2</button>
-                          <button type="button" onClick={() => handleFormat('<h3>', '</h3>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 font-bold text-xs" title="Título H3">H3</button>
-                          <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center"></div>
-                          <button type="button" onClick={() => handleFormat('<p>', '</p>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Parágrafo"><span className="material-icons text-sm">segment</span></button>
-                          <button type="button" onClick={() => handleFormat('<ul>\n<li>', '</li>\n</ul>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Lista com marcadores"><span className="material-icons text-sm">format_list_bulleted</span></button>
-                          <button type="button" onClick={() => handleFormat('<ol>\n<li>', '</li>\n</ol>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Lista numerada"><span className="material-icons text-sm">format_list_numbered</span></button>
-                          <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center"></div>
-                          <button type="button" onClick={() => handleFormat('<a href="#" target="_blank">', '</a>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Link"><span className="material-icons text-sm">link</span></button>
-                          <button type="button" onClick={() => handleFormat('<blockquote>', '</blockquote>')} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title="Citação"><span className="material-icons text-sm">format_quote</span></button>
-                      </div>
-                      <textarea 
-                        ref={contentInputRef}
-                        rows={10} 
-                        required 
-                        value={newsForm.content} 
-                        onChange={e => setNewsForm({...newsForm, content: e.target.value})} 
-                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none font-mono text-sm" 
-                        placeholder="Escreva seu artigo aqui. Use a barra acima para formatar..."
-                      ></textarea>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">Dica: Selecione o texto e clique nos botões acima para formatar.</p>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Conteúdo do Artigo</label>
+                  <NewsEditor 
+                    value={newsForm.content} 
+                    onChange={(content) => setNewsForm({...newsForm, content: content})}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Use o editor acima para formatar o conteúdo.</p>
                 </div>
 
                 <div>
