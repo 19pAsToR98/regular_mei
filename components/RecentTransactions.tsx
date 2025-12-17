@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Transaction } from '../types';
 
@@ -10,7 +9,18 @@ interface RecentTransactionsProps {
 const RecentTransactions: React.FC<RecentTransactionsProps> = ({ transactions, onNavigate }) => {
   // Sort by date desc and take top 5
   const recent = [...transactions]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+
+        // Primary sort: Date descending
+        if (dateA !== dateB) {
+            return dateB - dateA;
+        }
+        
+        // Secondary sort: ID descending (assuming higher ID means newer creation time)
+        return b.id - a.id;
+    })
     .slice(0, 5);
 
   const formatDate = (dateStr: string) => {
