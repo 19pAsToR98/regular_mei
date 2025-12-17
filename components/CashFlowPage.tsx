@@ -1,7 +1,7 @@
-
 import React, { useState, useMemo } from 'react';
 import { Transaction, Category } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import RecurrenceDeleteModal from './RecurrenceDeleteModal'; // Importando o novo modal
 
 interface CashFlowPageProps {
   transactions: Transaction[];
@@ -10,13 +10,14 @@ interface CashFlowPageProps {
   onAddTransaction: (t: Transaction | Transaction[]) => void;
   onUpdateTransaction: (t: Transaction) => void;
   onDeleteTransaction: (id: number) => void;
+  onDeleteTransactionSeries: (t: Transaction) => void; // Nova prop para exclusão de série
 }
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
 
 const CashFlowPage: React.FC<CashFlowPageProps> = ({ 
   transactions, revenueCats, expenseCats,
-  onAddTransaction, onUpdateTransaction, onDeleteTransaction 
+  onAddTransaction, onUpdateTransaction, onDeleteTransaction, onDeleteTransactionSeries
 }) => {
   // --- STATE ---
   const [filterType, setFilterType] = useState<'all' | 'receita' | 'despesa'>('all');
@@ -27,6 +28,9 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  
+  // Recurrence Delete State
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   
   // Form State (Simplified: No expectedAmount)
   const [formData, setFormData] = useState({
@@ -190,6 +194,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
             amount: amountValue,
             date: formData.date,
             status: formData.status as 'pago' | 'pendente',
+            // Preserve recurrence data from original transaction
             installments: transactions.find(t => t.id === editingId)?.installments,
             isRecurring: transactions.find(t => t.id === editingId)?.isRecurring
         };
@@ -238,10 +243,28 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
     setIsModalOpen(false);
   };
 
-  const handleDeleteClick = (id: number) => {
-    if (window.confirm('Tem certeza que deseja excluir esta transação?')) {
-        onDeleteTransaction(id);
+  const handleDeleteClick = (t: Transaction) => {
+    // Check if it's a recurring or installment transaction
+    if (t.isRecurring || t.installments) {
+        setTransactionToDelete(t);
+    } else {
+        // Standard single deletion
+        if (window.confirm('Tem certeza que deseja excluir esta transação?')) {
+            onDeleteTransaction(t.id);
+        }
     }
+  };
+  
+  const handleRecurrenceDelete = (deleteType: 'single' | 'series') => {
+      if (!transactionToDelete) return;
+
+      if (deleteType === 'single') {
+          onDeleteTransaction(transactionToDelete.id);
+      } else {
+          // This calls the new handler in App.tsx to delete all related transactions
+          onDeleteTransactionSeries(transactionToDelete);
+      }
+      setTransactionToDelete(null);
   };
 
   const handleQuickStatusToggle = (t: Transaction) => {
@@ -656,7 +679,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                                         <button onClick={() => handleDuplicateTransaction(t)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 rounded" title="Duplicar">
                                             <span className="material-icons text-lg">content_copy</span>
                                         </button>
-                                        <button onClick={() => handleDeleteClick(t.id)} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 rounded" title="Excluir">
+                                        <button onClick={() => handleDeleteClick(t)} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 rounded" title="Excluir">
                                             <span className="material-icons text-lg">delete</span>
                                         </button>
                                         </div>
@@ -734,7 +757,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                                         <button onClick={() => handleDuplicateTransaction(t)} className="p-2 text-slate-400 hover:text-blue-500 bg-slate-50 dark:bg-slate-800 rounded-lg">
                                             <span className="material-icons text-lg">content_copy</span>
                                         </button>
-                                        <button onClick={() => handleDeleteClick(t.id)} className="p-2 text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                                        <button onClick={() => handleDeleteClick(t)} className="p-2 text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-slate-800 rounded-lg">
                                             <span className="material-icons text-lg">delete</span>
                                         </button>
                                     </div>
@@ -1020,6 +1043,16 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                   </form>
               </div>
           </div>
+      )}
+      
+      {/* Recurrence Delete Modal */}
+      {transactionToDelete && (
+          <RecurrenceDeleteModal
+              transaction={transactionToDelete}
+              onClose={() => setTransactionToDelete(null)}
+              onDeleteSingle={() => handleRecurrenceDelete('single')}
+              onDeleteSeries={() => handleRecurrenceDelete('series')}
+          />
       )}
     </div>
   );

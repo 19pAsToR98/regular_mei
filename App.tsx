@@ -1173,6 +1173,54 @@ const App: React.FC = () => {
     setTransactions(prev => prev.filter(tr => tr.id !== id));
     setExternalTransactions(prev => prev.filter(tr => tr.id !== id));
   };
+  
+  const handleDeleteTransactionSeries = async (t: Transaction) => {
+      if (!user) return;
+      
+      const loadingToastId = showLoading('Excluindo série de lançamentos...');
+
+      let query = supabase
+          .from('transactions')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('description', t.description)
+          .eq('category', t.category)
+          .eq('type', t.type);
+
+      // For recurring transactions, delete all future entries
+      if (t.isRecurring) {
+          // Delete all entries with the same description/category/type that are PENDING
+          query = query.eq('is_recurring', true).eq('status', 'pendente');
+      } 
+      // For installment transactions, delete all entries in the series
+      else if (t.installments) {
+          // Delete all entries with the same description/category/type regardless of status
+          // NOTE: This assumes the user wants to delete the entire installment series, including paid ones.
+          // If we only wanted to delete future ones, we'd need a unique series ID.
+          // For simplicity, we delete all matching the core fields.
+          query = query.not('installments', 'is', null);
+      } else {
+          // Should not happen if called correctly, but fallback to single delete
+          dismissToast(loadingToastId);
+          handleDeleteTransaction(t.id);
+          return;
+      }
+
+      const { error } = await query;
+
+      dismissToast(loadingToastId);
+
+      if (error) {
+          console.error('Error deleting transaction series:', error);
+          showError('Erro ao excluir a série de transações.');
+          return;
+      }
+      
+      showSuccess('Série de transações excluída com sucesso!');
+      
+      // Reload transactions to reflect changes
+      loadTransactions(user.id).then(setTransactions);
+  };
 
   // --- EXTERNAL TRANSACTION MODAL HANDLER ---
   const handleCloseExternalModal = async () => {
@@ -1497,6 +1545,7 @@ const App: React.FC = () => {
                 onAddTransaction={handleAddTransaction}
                 onUpdateTransaction={handleUpdateTransaction}
                 onDeleteTransaction={handleDeleteTransaction}
+                onDeleteTransactionSeries={handleDeleteTransactionSeries}
             />;
           case 'invoices': return <InvoicesPage />;
           case 'calendar': 
