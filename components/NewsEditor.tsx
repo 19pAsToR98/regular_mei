@@ -1,20 +1,112 @@
 import React from 'react';
+import { useEditor, EditorContent, Editor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
 
 interface NewsEditorProps {
   value: string;
   onChange: (content: string) => void;
 }
 
-const NewsEditor: React.FC<NewsEditorProps> = ({ value, onChange }) => {
+const MenuBar: React.FC<{ editor: Editor | null }> = ({ editor }) => {
+  if (!editor) {
+    return null;
+  }
+
+  const buttonClass = (isActive: boolean) => 
+    `p-2 rounded transition-colors ${
+      isActive ? 'bg-primary text-white' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'
+    }`;
+
   return (
-    <div className="w-full">
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={10}
-        className="w-full p-4 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none resize-y"
-        placeholder="Escreva o conteúdo do artigo aqui. Você pode usar HTML básico se necessário."
-      />
+    <div className="flex flex-wrap gap-1 p-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-t-lg">
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleBold().run()}
+        disabled={!editor.can().chain().focus().toggleBold().run()}
+        className={buttonClass(editor.isActive('bold'))}
+        title="Negrito"
+      >
+        <span className="material-icons text-lg">format_bold</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleItalic().run()}
+        disabled={!editor.can().chain().focus().toggleItalic().run()}
+        className={buttonClass(editor.isActive('italic'))}
+        title="Itálico"
+      >
+        <span className="material-icons text-lg">format_italic</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleBulletList().run()}
+        className={buttonClass(editor.isActive('bulletList'))}
+        title="Lista"
+      >
+        <span className="material-icons text-lg">format_list_bulleted</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        className={buttonClass(editor.isActive('orderedList'))}
+        title="Lista Numerada"
+      >
+        <span className="material-icons text-lg">format_list_numbered</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleBlockquote().run()}
+        className={buttonClass(editor.isActive('blockquote'))}
+        title="Citação"
+      >
+        <span className="material-icons text-lg">format_quote</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().setHardBreak().run()}
+        className={buttonClass(false)}
+        title="Quebra de Linha"
+      >
+        <span className="material-icons text-lg">wrap_text</span>
+      </button>
+    </div>
+  );
+};
+
+const NewsEditor: React.FC<NewsEditorProps> = ({ value, onChange }) => {
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        // Keep only basic formatting elements
+        heading: false,
+        codeBlock: false,
+        horizontalRule: false,
+        hardBreak: true,
+      }),
+    ],
+    content: value,
+    onUpdate: ({ editor }) => {
+      // TipTap returns HTML content
+      onChange(editor.getHTML());
+    },
+    editorProps: {
+        attributes: {
+            class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[200px] p-4',
+        },
+    },
+  });
+
+  // Sync external value changes (e.g., when editing a different news item)
+  React.useEffect(() => {
+    if (editor && editor.getHTML() !== value) {
+        editor.commands.setContent(value, false);
+    }
+  }, [value, editor]);
+
+  return (
+    <div className="w-full border border-slate-300 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-slate-900">
+      <MenuBar editor={editor} />
+      <EditorContent editor={editor} />
     </div>
   );
 };
