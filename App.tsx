@@ -1147,7 +1147,7 @@ const App: React.FC = () => {
     
     showSuccess('Transação atualizada com sucesso!');
     
-    // Update local state directly (using the updated object 't')
+    // Update local state immutably
     setTransactions(prev => prev.map(tr => tr.id === t.id ? t : tr));
     // Also update external transactions list if the updated transaction was there
     setExternalTransactions(prev => prev.map(tr => tr.id === t.id ? t : tr));
@@ -1496,16 +1496,18 @@ const App: React.FC = () => {
 
                 {/* --- DESKTOP LAYOUT --- */}
                 <div className="hidden md:block space-y-6">
-                  {connectionConfig.ai.enabled && (
-                      <div className="grid grid-cols-12">
-                          <AIAnalysis enabled={connectionConfig.ai.enabled} />
-                      </div>
-                  )}
+                  {/* STAT CARDS MOVED HERE */}
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     {dashboardStats.map((stat, index) => (
                       <StatCard key={index} data={stat as StatData} />
                     ))}
                   </div>
+                  
+                  {connectionConfig.ai.enabled && (
+                      <div className="grid grid-cols-12">
+                          <AIAnalysis enabled={connectionConfig.ai.enabled} />
+                      </div>
+                  )}
                   
                   <div className="grid grid-cols-12 gap-6">
                     <div className="col-span-12 xl:col-span-8 h-full">
