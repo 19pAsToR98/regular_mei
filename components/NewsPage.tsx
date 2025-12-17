@@ -70,7 +70,7 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
            
            <div 
              className="prose prose-slate dark:prose-invert max-w-none prose-a:text-primary prose-headings:text-slate-800 dark:prose-headings:text-white"
-             dangerouslySetInnerHTML={{ __html: article?.content.replace(/\n/g, '<br />') }}
+             dangerouslySetInnerHTML={{ __html: article?.content }}
            />
 
            <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">

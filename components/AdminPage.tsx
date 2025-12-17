@@ -52,6 +52,11 @@ const tailwindColors = [
   { name: 'Pink', class: 'bg-pink-500', text: 'text-pink-500' },
 ];
 
+// Helper to get today's date in YYYY-MM-DD format
+const getTodayDateString = () => {
+    return new Date().toISOString().split('T')[0];
+};
+
 const AdminPage: React.FC<AdminPageProps> = ({ 
     offers, onAddOffer, onUpdateOffer, onDeleteOffer,
     news, onAddNews, onUpdateNews, onDeleteNews,
@@ -78,7 +83,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
   // --- NEWS STATE ---
   const initialNewsForm: Omit<NewsItem, 'id'> = {
-    title: '', category: 'Legislação', excerpt: '', content: '', imageUrl: '', readTime: '', date: '', status: 'draft'
+    title: '', category: 'Legislação', excerpt: '', content: '', imageUrl: '', readTime: '', date: getTodayDateString(), status: 'draft'
   };
   const [newsForm, setNewsForm] = useState(initialNewsForm);
   const [editingNewsId, setEditingNewsId] = useState<number | null>(null);
@@ -241,6 +246,13 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
   // --- NEWS LOGIC & HANDLERS ---
   
+  // Reset news form when editing is cancelled
+  useEffect(() => {
+      if (!editingNewsId) {
+          setNewsForm(initialNewsForm);
+      }
+  }, [editingNewsId]);
+
   // Paginated News List
   const paginatedNews = useMemo(() => {
       // Sort news by date descending first
@@ -281,12 +293,13 @@ const AdminPage: React.FC<AdminPageProps> = ({
     setIsSubmitting(true);
     await new Promise(r => setTimeout(r, 1000));
 
-    const dateStr = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+    // Use the date from the form, or today's date if not set (should be set by initial state)
+    const finalDate = newsForm.date || getTodayDateString();
     
     if (editingNewsId) {
-        onUpdateNews({ id: editingNewsId, ...newsForm, date: newsForm.date || dateStr });
+        onUpdateNews({ id: editingNewsId, ...newsForm, date: finalDate });
     } else {
-        onAddNews({ id: Date.now(), ...newsForm, date: dateStr });
+        onAddNews({ id: Date.now(), ...newsForm, date: finalDate });
     }
     setIsSubmitting(false);
     handleCancelNewsEdit();
@@ -980,6 +993,10 @@ const AdminPage: React.FC<AdminPageProps> = ({
                      <option value="published">Publicado</option>
                    </select>
                 </div>
+                <div>
+                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Data de Publicação</label>
+                   <input type="date" value={newsForm.date} onChange={e => setNewsForm({...newsForm, date: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" />
+                </div>
               </div>
               <div className="flex justify-end pt-2 gap-2">
                 <button type="button" onClick={() => setShowNewsPreview(true)} className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
@@ -1022,7 +1039,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
               )}
             </div>
             
-            {/* Pagination Controls */}
+            {/* Pagination Footer */}
             {totalNewsPages > 1 && (
                 <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
                     <span className="text-xs text-slate-500 dark:text-slate-400">
@@ -1580,6 +1597,38 @@ const AdminPage: React.FC<AdminPageProps> = ({
                               </div>
                           </div>
                       )}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* NEWS PREVIEW MODAL */}
+      {showNewsPreview && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+              <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden border border-slate-200 dark:border-slate-800 max-h-[90vh] flex flex-col">
+                  <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
+                      <h3 className="font-bold text-lg text-slate-800 dark:text-white">Pré-visualização: {newsForm.title}</h3>
+                      <button onClick={() => setShowNewsPreview(false)} className="text-slate-400 hover:text-slate-600">
+                          <span className="material-icons">close</span>
+                      </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-6 md:p-10">
+                      <div className="relative h-48 w-full mb-6 rounded-lg overflow-hidden">
+                          <img src={newsForm.imageUrl} alt="Capa" className="w-full h-full object-cover" />
+                          <div className="absolute top-4 left-4">
+                             <span className="text-xs font-bold uppercase tracking-wider text-slate-800 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-sm">
+                                {newsForm.category}
+                              </span>
+                          </div>
+                      </div>
+                      <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-4">{newsForm.title}</h1>
+                      <p className="text-lg text-slate-600 dark:text-slate-300 font-medium mb-6 leading-relaxed border-l-4 border-primary pl-4 italic">
+                         {newsForm.excerpt}
+                      </p>
+                      <div 
+                         className="prose prose-slate dark:prose-invert max-w-none prose-a:text-primary prose-headings:text-slate-800 dark:prose-headings:text-white"
+                         dangerouslySetInnerHTML={{ __html: newsForm.content }}
+                      />
                   </div>
               </div>
           </div>
