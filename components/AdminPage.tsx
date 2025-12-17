@@ -577,59 +577,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
       </div>
   );
 
-  // --- NEWS PREVIEW MODAL COMPONENT ---
-  const NewsPreviewModal = () => {
-      const article = {
-          title: newsForm.title || 'Título da Notícia',
-          category: newsForm.category || 'Geral',
-          excerpt: newsForm.excerpt || 'Pré-visualização do resumo do artigo.',
-          content: newsForm.content || '<p>O conteúdo do artigo aparecerá aqui. Use a formatação HTML para quebras de linha e estilos.</p>',
-          imageUrl: newsForm.imageUrl || 'https://via.placeholder.com/800x400?text=Imagem+de+Capa',
-          date: new Date().toLocaleDateString('pt-BR'),
-          readTime: newsForm.readTime || '3 min leitura'
-      };
-
-      return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-              <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
-                  <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
-                      <h3 className="font-bold text-lg text-slate-800 dark:text-white">
-                          Pré-visualização do Artigo
-                      </h3>
-                      <button onClick={() => setShowNewsPreview(false)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                          <span className="material-icons">close</span>
-                      </button>
-                  </div>
-                  
-                  <div className="flex-1 overflow-y-auto p-6 md:p-10">
-                      <div className="max-w-3xl mx-auto">
-                          {/* Header */}
-                          <div className="relative h-48 w-full mb-6 rounded-lg overflow-hidden">
-                              <img src={article.imageUrl} alt="Capa" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/800x400?text=Imagem+Inválida')} />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-                              <div className="absolute bottom-4 left-4 text-white">
-                                  <span className="inline-block px-3 py-1 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-md mb-1">
-                                      {article.category}
-                                  </span>
-                                  <h1 className="text-2xl font-bold leading-tight">{article.title}</h1>
-                              </div>
-                          </div>
-                          
-                          <p className="text-lg text-slate-600 dark:text-slate-300 font-medium mb-6 leading-relaxed border-l-4 border-primary pl-4 italic">
-                            {article.excerpt}
-                          </p>
-
-                          <div 
-                            className="prose prose-slate dark:prose-invert max-w-none prose-a:text-primary prose-headings:text-slate-800 dark:prose-headings:text-white"
-                            dangerouslySetInnerHTML={{ __html: article.content.replace(/\n/g, '<br />') }}
-                          />
-                      </div>
-                  </div>
-              </div>
-          </div>
-      );
-  };
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-8 max-w-6xl mx-auto">
       
@@ -988,18 +935,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">URL da Imagem de Capa</label>
                   <input type="text" placeholder="https://..." value={newsForm.imageUrl} onChange={e => setNewsForm({...newsForm, imageUrl: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" />
-                  
-                  {/* Image Preview */}
-                  {newsForm.imageUrl && (
-                      <div className="mt-3 w-full h-32 bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 flex items-center justify-center">
-                          <img 
-                              src={newsForm.imageUrl} 
-                              alt="Pré-visualização da Capa" 
-                              className="w-full h-full object-cover"
-                              onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/800x400?text=Imagem+Inválida')}
-                          />
-                      </div>
-                  )}
                 </div>
                 <div className="md:col-span-2">
                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Resumo (Excerpt)</label>
@@ -1245,7 +1180,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                 rows={notifForm.type === 'poll' ? 2 : 4} 
                                 value={notifForm.text} 
                                 onChange={e => setNotifForm({...notifForm, text: e.target.value})} 
-                                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" 
+                                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50" 
                                 placeholder={notifForm.type === 'poll' ? "Ex: Qual funcionalidade você quer ver primeiro?" : "Escreva o conteúdo da notificação..."}
                             />
                         </div>
@@ -1329,10 +1264,10 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                     <span className="text-xs font-bold uppercase text-slate-400">{n.type === 'poll' ? 'Enquete' : 'Aviso'}</span>
                                 </div>
                                 <div className="flex gap-2">
-                                  <button onClick={(e) => { e.stopPropagation(); handleEditNotifClick(n); }} className="p-1 text-slate-300 hover:text-primary">
+                                  <button onClick={(e) => { e.stopPropagation(); handleEditNotifClick(n); }} className="text-slate-300 hover:text-primary">
                                     <span className="material-icons text-sm">edit</span>
                                   </button>
-                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteNotifClick(n.id); }} className="p-1 text-slate-300 hover:text-red-500">
+                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteNotifClick(n.id); }} className="text-slate-300 hover:text-red-500">
                                       <span className="material-icons text-sm">close</span>
                                   </button>
                                 </div>
@@ -1649,9 +1584,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
               </div>
           </div>
       )}
-      
-      {/* News Preview Modal */}
-      {showNewsPreview && <NewsPreviewModal />}
 
     </div>
   );
