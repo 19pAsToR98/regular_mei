@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
 import { NewsItem } from '../types';
-import { showSuccess, showError, showWarning } from '../utils/toastUtils';
 
 interface NewsPageProps {
   news: NewsItem[];
   readingId: number | null;
   onSelectNews: (id: number | null) => void;
-  onToggleReaction: (newsId: number, userReacted: boolean) => void;
 }
 
 const categories = ['Todas', 'Legislação', 'Finanças', 'Gestão', 'Marketing', 'Benefícios', 'Tecnologia'];
 
-const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews, onToggleReaction }) => {
+const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
 
@@ -25,30 +23,6 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews, onTo
     
     return matchesSearch && matchesCategory;
   }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Ensure consistent sorting
-
-  const handleShare = (article: NewsItem) => {
-    if (navigator.share) {
-      // Use the current URL as the share URL (assuming the app handles routing)
-      const shareUrl = `${window.location.origin}?page=news&id=${article.id}`;
-      
-      navigator.share({
-        title: article.title,
-        text: article.excerpt,
-        url: shareUrl,
-      })
-      .then(() => showSuccess('Notícia compartilhada com sucesso!'))
-      .catch((error) => {
-        if (error.name !== 'AbortError') {
-            showError('Falha ao compartilhar.');
-            console.error('Sharing failed:', error);
-        }
-      });
-    } else {
-      // Fallback for browsers that don't support navigator.share
-      navigator.clipboard.writeText(`${article.title}: ${window.location.origin}?page=news&id=${article.id}`);
-      showWarning('Link copiado para a área de transferência!');
-    }
-  };
 
   // Logic to view a single article
   if (readingId) {
@@ -96,36 +70,6 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews, onTo
              dangerouslySetInnerHTML={{ __html: article?.content || '' }}
            />
 
-           {/* Reaction and Share Bar */}
-           {article && (
-               <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                   <button 
-                       onClick={() => onToggleReaction(article.id, article.userReacted || false)}
-                       className={`flex items-center gap-2 px-4 py-2 rounded-full transition-colors border ${
-                           article.userReacted 
-                           ? 'bg-red-500 text-white border-red-500 hover:bg-red-600' 
-                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border-slate-300 dark:border-slate-700'
-                       }`}
-                   >
-                       <span className="material-icons text-lg">
-                           {article.userReacted ? 'favorite' : 'favorite_border'}
-                       </span>
-                       <span className="font-bold text-sm">
-                           {article.reactionCount || 0} {article.reactionCount === 1 ? 'Curtida' : 'Curtidas'}
-                       </span>
-                   </button>
-                   
-                   <div className="flex items-center gap-4">
-                       <button 
-                           onClick={() => handleShare(article)}
-                           className="text-slate-500 hover:text-primary transition-colors flex items-center gap-2"
-                       >
-                          <span className="material-icons">share</span> Compartilhar
-                       </button>
-                   </div>
-               </div>
-           )}
-
            <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
               
               {/* Previous Article Button */}
@@ -139,6 +83,11 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews, onTo
               ) : (
                   <div className="w-32"></div> // Spacer
               )}
+
+              {/* Share Button */}
+              <button className="text-slate-500 hover:text-primary transition-colors flex items-center gap-2">
+                 <span className="material-icons">share</span> Compartilhar
+              </button>
               
               {/* Next Article Button */}
               {nextArticle ? (
@@ -243,17 +192,11 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews, onTo
                 {item.excerpt}
               </p>
 
-              <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button className="text-primary font-semibold text-sm flex items-center gap-2 group/btn hover:gap-3 transition-all">
                   Ler artigo completo 
                   <span className="material-icons text-sm group-hover/btn:translate-x-1 transition-transform">arrow_forward</span>
                 </button>
-                
-                {/* Reaction Count in List View */}
-                <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
-                    <span className="material-icons text-sm text-red-500 mr-1">favorite</span>
-                    {item.reactionCount || 0}
-                </div>
               </div>
             </div>
           </div>

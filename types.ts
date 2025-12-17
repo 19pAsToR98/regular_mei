@@ -64,8 +64,6 @@ export interface NewsItem {
   imageUrl: string;
   readTime: string;
   status: 'published' | 'draft';
-  reactionCount?: number; // NEW: Total number of reactions
-  userReacted?: boolean; // NEW: Whether the current user has reacted
 }
 
 export interface MaintenanceConfig {
