@@ -256,7 +256,8 @@ const NewsEditor: React.FC<NewsEditorProps> = ({ value, onChange }) => {
       if (isHtmlView) {
           // Switching back to visual editor: update TipTap content from textarea
           editor?.commands.setContent(htmlContent);
-          onChange(htmlContent);
+          // IMPORTANT: Call onChange here to ensure the parent state is updated with the final HTML
+          onChange(htmlContent); 
       } else {
           // Switching to HTML view: get current HTML from TipTap
           setHtmlContent(editor?.getHTML() || '');
@@ -267,6 +268,7 @@ const NewsEditor: React.FC<NewsEditorProps> = ({ value, onChange }) => {
   // Handle manual HTML input change
   const handleHtmlChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setHtmlContent(e.target.value);
+      // IMPORTANT: Call onChange immediately when raw HTML changes
       onChange(e.target.value);
   };
 
