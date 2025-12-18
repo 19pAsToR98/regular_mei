@@ -17,20 +17,26 @@ const NewsEditor: React.FC<NewsEditorProps> = ({ value, onChange }) => {
       height: 400,
       theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
       buttons: [
+        'source', '|',
+        'undo', 'redo', '|',
+        'bold', 'italic', 'underline', 'strikethrough', '|',
+        'ul', 'ol', 'indent', 'outdent', '|',
+        'fontsize', 'paragraph', 'align', 'lineHeight', '|',
+        'table', 'link', 'image', 'video', 'hr', '|',
+        'superscript', 'subscript', 'cut', 'copy', 'paste', '|',
+        'fullsize', 'print', 'about'
+      ],
+      buttonsMD: [
+        'source', '|',
+        'undo', 'redo', '|',
         'bold', 'italic', 'underline', '|',
         'ul', 'ol', '|',
         'fontsize', 'paragraph', 'align', '|',
-        'link', 'image', 'video', 'hr', '|',
-        'source', 'fullsize'
-      ],
-      buttonsMD: [
-        'bold', 'italic', 'underline', '|',
-        'ul', 'ol', '|',
-        'link', 'image', 'video', '|',
-        'source'
+        'table', 'link', 'image', 'video', '|',
+        'fullsize'
       ],
       buttonsSM: [
-        'bold', 'italic', '|',
+        'bold', 'italic', 'underline', '|',
         'ul', 'ol', '|',
         'link', 'image', '|',
         'source'
