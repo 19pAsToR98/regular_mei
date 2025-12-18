@@ -424,7 +424,6 @@ const App: React.FC = () => {
             pollVotes: pollVotes,
             active: n.active,
             expiresAt: n.expires_at,
-            // FIX: Use interaction data for read status and voted option
             read: interaction?.is_read || false,
             userVotedOptionId: interaction?.voted_option_id || undefined
         } as AppNotification;
@@ -985,7 +984,8 @@ const App: React.FC = () => {
       const payload = {
           text: item.text,
           type: item.type,
-          poll_options: item.pollOptions,
+          // FIX: Ensure poll_options is null if not a poll
+          poll_options: item.type === 'poll' ? item.pollOptions : null,
           expires_at: item.expiresAt,
           active: true,
       };
@@ -1008,7 +1008,8 @@ const App: React.FC = () => {
       const payload = {
           text: item.text,
           type: item.type,
-          poll_options: item.pollOptions,
+          // FIX: Ensure poll_options is null if not a poll
+          poll_options: item.type === 'poll' ? item.pollOptions : null,
           expires_at: item.expiresAt,
           active: item.active,
       };
