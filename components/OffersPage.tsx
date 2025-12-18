@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState } from 'react';
 import { Offer } from '../types';
 
 interface OffersPageProps {
@@ -7,63 +8,16 @@ interface OffersPageProps {
 
 const categories = ['Todas', 'Finanças', 'Software', 'Educação', 'Saúde', 'Equipamentos', 'Serviços'];
 
-// Helper function to calculate days remaining
-const getDaysRemaining = (dateStr: string | null | undefined): number | null => {
-    if (!dateStr) return null;
-    const expiry = new Date(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    expiry.setHours(0, 0, 0, 0);
-    
-    const diffTime = expiry.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    return diffDays >= 0 ? diffDays : -1; // -1 for expired
-};
-
 const OffersPage: React.FC<OffersPageProps> = ({ offers }) => {
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
-  // Filter out expired offers and sort by featured/exclusive/expiry date
-  const filteredOffers = useMemo(() => {
-      const now = new Date().getTime();
-      
-      return offers
-          .filter(offer => {
-              // Filter by category
-              const matchesCategory = selectedCategory === 'Todas' || offer.category === selectedCategory;
-              
-              // Filter out expired offers based on expiryDate
-              if (offer.expiryDate) {
-                  const expiryTime = new Date(offer.expiryDate).getTime();
-                  if (expiryTime < now) return false;
-              }
-              
-              return matchesCategory;
-          })
-          .sort((a, b) => {
-              // Sort by Featured (highest priority)
-              if (a.isFeatured && !b.isFeatured) return -1;
-              if (!a.isFeatured && b.isFeatured) return 1;
-              
-              // Sort by Exclusive (secondary priority)
-              if (a.isExclusive && !b.isExclusive) return -1;
-              if (!a.isExclusive && b.isExclusive) return 1;
-              
-              // Sort by Expiry Date (closest first)
-              if (a.expiryDate && b.expiryDate) {
-                  return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
-              }
-              if (a.expiryDate) return -1;
-              if (b.expiryDate) return 1;
-              
-              return 0;
-          });
-  }, [offers, selectedCategory]);
+  const filteredOffers = offers.filter(offer => 
+    selectedCategory === 'Todas' || offer.category === selectedCategory
+  );
 
   // Find featured offer (prioritize explicit 'isFeatured', otherwise take the first exclusive one)
-  const featuredOffer = filteredOffers.find(o => o.isFeatured) || filteredOffers.find(o => o.isExclusive);
+  const featuredOffer = offers.find(o => o.isFeatured) || offers.find(o => o.isExclusive);
 
   const handleCopy = (code: string, id: number) => {
     navigator.clipboard.writeText(code);
@@ -125,11 +79,8 @@ const OffersPage: React.FC<OffersPageProps> = ({ offers }) => {
 
       {/* Offers Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredOffers.map((offer) => {
-            const daysRemaining = getDaysRemaining(offer.expiryDate);
-            
-            return (
-            <div key={offer.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow flex flex-col overflow-hidden relative group">
+        {filteredOffers.map((offer) => (
+          <div key={offer.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow flex flex-col overflow-hidden relative group">
             
             {/* Exclusive Ribbon */}
             {offer.isExclusive && (
@@ -166,14 +117,7 @@ const OffersPage: React.FC<OffersPageProps> = ({ offers }) => {
 
               <div className="flex items-center justify-between gap-3">
                 <div className="text-xs text-slate-400 font-medium">
-                  {daysRemaining !== null && daysRemaining >= 0 && daysRemaining <= 7 ? (
-                      <span className="text-red-500 font-bold flex items-center gap-1">
-                          <span className="material-icons text-sm">schedule</span>
-                          Expira em {daysRemaining} dia{daysRemaining !== 1 ? 's' : ''}
-                      </span>
-                  ) : (
-                      offer.expiryText
-                  )}
+                  {offer.expiry}
                 </div>
                 
                 {offer.code ? (
@@ -203,7 +147,7 @@ const OffersPage: React.FC<OffersPageProps> = ({ offers }) => {
               </div>
             </div>
           </div>
-        );})}
+        ))}
       </div>
     </div>
   );

@@ -98,9 +98,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
   const initialOfferForm: Omit<Offer, 'id'> = {
     partnerName: '', partnerColor: 'bg-blue-500', partnerIcon: 'store', discount: '',
     title: '', description: '', category: 'Finanças', code: '', link: '',
-    expiryText: 'Por tempo indeterminado', // Updated default
-    expiryDate: '', // New field
-    isExclusive: false, isFeatured: false
+    expiry: '', isExclusive: false, isFeatured: false
   };
   const [offerForm, setOfferForm] = useState(initialOfferForm);
   const [editingOfferId, setEditingOfferId] = useState<number | null>(null);
@@ -322,9 +320,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
     setOfferForm({
         partnerName: offer.partnerName, partnerColor: offer.partnerColor, partnerIcon: offer.partnerIcon,
         discount: offer.discount, title: offer.title, description: offer.description, category: offer.category,
-        code: offer.code || '', link: offer.link || '', 
-        expiryText: offer.expiryText, // Use new field
-        expiryDate: offer.expiryDate || '', // Use new field
+        code: offer.code || '', link: offer.link || '', expiry: offer.expiry,
         isExclusive: offer.isExclusive || false, isFeatured: offer.isFeatured || false
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -340,12 +336,10 @@ const AdminPage: React.FC<AdminPageProps> = ({
     setIsSubmitting(true);
     await new Promise(r => setTimeout(r, 1000));
 
-    const expiryDateValue = offerForm.expiryDate || null;
-
     if (editingOfferId) {
-        onUpdateOffer({ id: editingOfferId, ...offerForm, expiryDate: expiryDateValue });
+        onUpdateOffer({ id: editingOfferId, ...offerForm });
     } else {
-        onAddOffer({ id: Date.now(), ...offerForm, expiryDate: expiryDateValue });
+        onAddOffer({ id: Date.now(), ...offerForm });
     }
     setIsSubmitting(false);
     handleCancelOfferEdit();
@@ -1083,20 +1077,8 @@ const AdminPage: React.FC<AdminPageProps> = ({
                  <div className="md:col-span-2"><label className="text-sm block mb-1">Título</label><input type="text" required value={offerForm.title} onChange={e => setOfferForm({...offerForm, title: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
                  <div className="md:col-span-2"><label className="text-sm block mb-1">Descrição</label><textarea required rows={2} value={offerForm.description} onChange={e => setOfferForm({...offerForm, description: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
                  <div className="md:col-span-1"><label className="text-sm block mb-1">Cupom</label><input type="text" value={offerForm.code} onChange={e => setOfferForm({...offerForm, code: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
+                 <div className="md:col-span-1"><label className="text-sm block mb-1">Validade</label><input type="text" required value={offerForm.expiry} onChange={e => setOfferForm({...offerForm, expiry: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
                  <div className="md:col-span-1"><label className="text-sm block mb-1">Link</label><input type="text" value={offerForm.link} onChange={e => setOfferForm({...offerForm, link: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
-                 
-                 {/* New Expiry Fields */}
-                 <div className="md:col-span-1">
-                    <label className="text-sm block mb-1">Data de Expiração (Opcional)</label>
-                    <input type="date" value={offerForm.expiryDate || ''} onChange={e => setOfferForm({...offerForm, expiryDate: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" />
-                    <p className="text-xs text-slate-500 mt-1">Define a data limite para a oferta.</p>
-                 </div>
-                 <div className="md:col-span-1">
-                    <label className="text-sm block mb-1">Texto de Validade</label>
-                    <input type="text" required value={offerForm.expiryText} onChange={e => setOfferForm({...offerForm, expiryText: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" />
-                    <p className="text-xs text-slate-500 mt-1">Ex: "Por tempo limitado" ou "Até 31/12".</p>
-                 </div>
-                 
                  <div className="md:col-span-1"><label className="text-sm block mb-1">Categoria</label><select value={offerForm.category} onChange={e => setOfferForm({...offerForm, category: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800"><option>Finanças</option><option>Software</option><option>Serviços</option><option>Educação</option></select></div>
                  <div className="md:col-span-2 flex gap-4">
                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={offerForm.isExclusive} onChange={e => setOfferForm({...offerForm, isExclusive: e.target.checked})} /> Exclusivo</label>
@@ -1474,6 +1456,47 @@ const AdminPage: React.FC<AdminPageProps> = ({
                       </button>
                   </div>
               </form>
+          </div>
+      )}
+
+      {/* --- CONTENT: MAINTENANCE --- */}
+      {activeTab === 'maintenance' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white">Controle de Manutenção</h3>
+              <p className="text-slate-500 dark:text-slate-400">Ative o modo de manutenção para desabilitar temporariamente partes da aplicação ou o sistema inteiro.</p>
+
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                  <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
+                      <h4 className="text-lg font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+                          <span className="material-icons">warning</span> Manutenção Global
+                      </h4>
+                      <button 
+                          onClick={() => toggleMaintenance('global')}
+                          className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${maintenance.global ? 'bg-red-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+                      >
+                          <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${maintenance.global ? 'translate-x-7' : 'translate-x-1'}`} />
+                      </button>
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Se ativado, todos os usuários (exceto Admin) verão a tela de manutenção global.</p>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                  <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Manutenção por Módulo</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {Object.entries(maintenance).filter(([key]) => key !== 'global').map(([key, value]) => (
+                          <div key={key} className="flex justify-between items-center p-3 border border-slate-100 dark:border-slate-800 rounded-lg">
+                              <span className="text-sm font-medium text-slate-700 dark:text-slate-300 capitalize">{key}</span>
+                              <button 
+                                  onClick={() => toggleMaintenance(key as keyof MaintenanceConfig)}
+                                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${value ? 'bg-yellow-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                              >
+                                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${value ? 'translate-x-6' : 'translate-x-1'}`} />
+                              </button>
+                          </div>
+                      ))}
+                  </div>
+              </div>
           </div>
       )}
 

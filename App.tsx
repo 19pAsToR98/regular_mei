@@ -345,8 +345,7 @@ const App: React.FC = () => {
             category: o.category,
             code: o.code,
             link: o.link,
-            expiryText: o.expiry_text, // Mapped new field
-            expiryDate: o.expiry_date, // Mapped new field
+            expiry: o.expiry,
             isExclusive: o.is_exclusive,
             isFeatured: o.is_featured,
         }));
@@ -839,8 +838,7 @@ const App: React.FC = () => {
         category: newOffer.category,
         code: newOffer.code,
         link: newOffer.link,
-        expiry_text: newOffer.expiryText, // Updated field
-        expiry_date: newOffer.expiryDate, // Updated field
+        expiry: newOffer.expiry,
         is_exclusive: newOffer.isExclusive,
         is_featured: newOffer.isFeatured,
     };
@@ -870,8 +868,7 @@ const App: React.FC = () => {
         category: updatedOffer.category,
         code: updatedOffer.code,
         link: updatedOffer.link,
-        expiry_text: updatedOffer.expiryText, // Updated field
-        expiry_date: updatedOffer.expiryDate, // Updated field
+        expiry: updatedOffer.expiry,
         is_exclusive: updatedOffer.isExclusive,
         is_featured: updatedOffer.isFeatured,
     };
