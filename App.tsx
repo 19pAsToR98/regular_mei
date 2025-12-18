@@ -841,7 +841,7 @@ const App: React.FC = () => {
         category: newOffer.category,
         code: newOffer.code,
         link: newOffer.link,
-        expiry: expiryValue,
+        expiry_text: expiryValue, // CORRECTED COLUMN NAME
         is_exclusive: newOffer.isExclusive,
         is_featured: newOffer.isFeatured,
     };
@@ -876,7 +876,7 @@ const App: React.FC = () => {
         category: updatedOffer.category,
         code: updatedOffer.code,
         link: updatedOffer.link,
-        expiry: expiryValue,
+        expiry_text: expiryValue, // CORRECTED COLUMN NAME
         is_exclusive: updatedOffer.isExclusive,
         is_featured: updatedOffer.isFeatured,
     };
@@ -1027,7 +1027,7 @@ const App: React.FC = () => {
           text: item.text,
           type: item.type,
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          expires_at: expiresAtValue, 
+          expires_at: expiresAtAtValue, 
           active: item.active,
       };
       
