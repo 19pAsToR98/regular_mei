@@ -599,7 +599,7 @@ const App: React.FC = () => {
       const currentUser = userRef.current; 
       const isUserAlreadyLoaded = currentUser && currentUser.id === session?.user?.id;
 
-      if (event === 'SIGNED_IN' && session?.user) {
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) { // <-- MODIFIED HERE
         // If the user is already loaded, this is likely a session refresh on focus. Skip full reload.
         if (!isUserAlreadyLoaded) {
             loadUserProfile(session.user);
