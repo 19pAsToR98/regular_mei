@@ -78,37 +78,6 @@ export interface MaintenanceConfig {
   offers: boolean;
 }
 
-export interface ApiFieldMapping {
-  key: string;        // Internal app key (e.g., 'razaoSocial')
-  jsonPath: string;   // Path in API response (e.g., 'estabelecimento.nome_fantasia')
-  label: string;      // Display label (e.g., 'Nome Fantasia')
-  visible: boolean;   // Whether to show this field to the user
-}
-
-export interface ConnectionConfig {
-  cnpjApi: {
-    baseUrl: string;
-    token?: string;
-    mappings: ApiFieldMapping[];
-  };
-  diagnosticApi: {
-    webhookUrl: string;
-    headerKey?: string;
-    mappings: ApiFieldMapping[];
-  };
-  smtp: {
-    host: string;
-    port: number;
-    user: string;
-    pass: string;
-    secure: boolean;
-    fromEmail: string;
-  };
-  ai: {
-    enabled: boolean;
-  };
-}
-
 export interface PollOption {
   id: number;
   text: string;

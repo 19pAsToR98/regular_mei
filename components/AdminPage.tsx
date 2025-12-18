@@ -1,7 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { Offer, NewsItem, MaintenanceConfig, AppNotification, PollOption, ConnectionConfig, ApiFieldMapping, User } from '../types';
-import ApiDocsPage from './ApiDocsPage'; // Importando o novo componente
-import NewsEditor from './NewsEditor'; // Importando o novo editor
+import { Offer, NewsItem, MaintenanceConfig, AppNotification, PollOption, User } from '../types';
+import NewsEditor from './NewsEditor';
 
 interface AdminPageProps {
   offers: Offer[];
@@ -21,9 +20,6 @@ interface AdminPageProps {
 
   maintenance: MaintenanceConfig;
   onUpdateMaintenance: (config: MaintenanceConfig) => void;
-
-  connectionConfig: ConnectionConfig;
-  onUpdateConnectionConfig: (config: ConnectionConfig) => void;
 
   users: User[];
   onAddUser: (user: User) => void;
@@ -63,10 +59,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
     news, onAddNews, onUpdateNews, onDeleteNews,
     notifications, onAddNotification, onUpdateNotification, onDeleteNotification,
     maintenance, onUpdateMaintenance,
-    connectionConfig, onUpdateConnectionConfig,
     users, onAddUser, onUpdateUser, onDeleteUser
 }) => {
-  const [activeTab, setActiveTab] = useState<'users' | 'news' | 'offers' | 'notifications' | 'maintenance' | 'connections' | 'api_docs'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'news' | 'offers' | 'notifications' | 'maintenance'>('users');
   const [isSubmitting, setIsSubmitting] = useState(false); // Global loading state for admin actions
 
   // --- USERS STATE ---
@@ -116,15 +111,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
   const [notifForm, setNotifForm] = useState(initialNotifForm);
   const [editingNotifId, setEditingNotifId] = useState<number | null>(null);
   const [viewingResultsPoll, setViewingResultsPoll] = useState<AppNotification | null>(null);
-
-  // --- CONNECTIONS FORM STATE ---
-  const [localConnConfig, setLocalConnConfig] = useState<ConnectionConfig>(connectionConfig);
-  const [testModalOpen, setTestModalOpen] = useState(false);
-  const [testType, setTestType] = useState<'cnpj' | 'diagnostic'>('cnpj');
-  const [testCnpj, setTestCnpj] = useState('');
-  const [testLoading, setTestLoading] = useState(false);
-  const [testResponse, setTestResponse] = useState<string | null>(null);
-  const [testParsedData, setTestParsedData] = useState<any | null>(null);
 
   // --- UTILS ---
   const isNotificationExpired = (n: AppNotification) => {
@@ -452,137 +438,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
     onUpdateMaintenance({ ...maintenance, [key]: !maintenance[key] });
   };
 
-  // --- CONNECTION HANDLERS ---
-  const handleSaveConnection = async (e: React.FormEvent) => {
-      e.preventDefault();
-      setIsSubmitting(true);
-      await new Promise(r => setTimeout(r, 1000));
-      onUpdateConnectionConfig(localConnConfig);
-      setIsSubmitting(false);
-      alert('Configurações de conexão salvas com sucesso!');
-  };
-
-  // Helper to extract nested values
-  const getNestedValue = (obj: any, path: string) => {
-      return path.split('.').reduce((acc, part) => acc && acc[part], obj);
-  };
-
-  const handleTestConnection = async () => {
-      if (!testCnpj) {
-          alert('Por favor, insira um CNPJ para teste.');
-          return;
-      }
-      
-      setTestLoading(true);
-      setTestResponse(null);
-      setTestParsedData(null);
-      
-      try {
-          const cleanCnpj = testCnpj.replace(/[^\d]/g, '');
-          let url = '';
-          let options: RequestInit = {};
-
-          if (testType === 'cnpj') {
-              url = `https://corsproxy.io/?${encodeURIComponent(localConnConfig.cnpjApi.baseUrl + cleanCnpj)}`;
-          } else {
-              // Diagnostic API logic
-              const webhookUrl = localConnConfig.diagnosticApi.webhookUrl;
-              const urlWithParams = `${webhookUrl}?cnpj=${cleanCnpj}`;
-              url = `https://corsproxy.io/?${encodeURIComponent(urlWithParams)}`;
-              options = {
-                  method: 'POST',
-                  headers: {
-                      'Content-Type': 'application/json',
-                      [localConnConfig.diagnosticApi.headerKey || 'cnpj']: cleanCnpj
-                  },
-                  body: JSON.stringify({ cnpj: cleanCnpj })
-              };
-          }
-
-          const response = await fetch(url, options);
-          const rawText = await response.text();
-          let json;
-          try {
-              json = JSON.parse(rawText);
-          } catch {
-              json = { error: "Could not parse JSON", raw: rawText };
-          }
-
-          setTestResponse(JSON.stringify(json, null, 2));
-
-          // Parse based on mappings
-          const mappings = testType === 'cnpj' ? localConnConfig.cnpjApi.mappings : localConnConfig.diagnosticApi.mappings;
-          
-          let dataToMap = json;
-          if (Array.isArray(json) && json.length > 0) dataToMap = json[0];
-          if (dataToMap?.resultado) dataToMap = dataToMap.resultado;
-
-          const parsed: Record<string, any> = {};
-          mappings.forEach(m => {
-              if (m.visible) {
-                  let val = getNestedValue(dataToMap, m.jsonPath);
-                  if (typeof val === 'object') val = JSON.stringify(val);
-                  parsed[m.label] = val !== undefined ? val : 'N/A';
-              }
-          });
-          setTestParsedData(parsed);
-
-      } catch (error: any) {
-          setTestResponse(`Error: ${error.message}`);
-      } finally {
-          setTestLoading(false);
-      }
-  };
-
-  const handleUpdateMapping = (apiType: 'cnpj' | 'diagnostic', index: number, field: keyof ApiFieldMapping, value: any) => {
-      const newConfig = { ...localConnConfig };
-      const mappings = apiType === 'cnpj' ? newConfig.cnpjApi.mappings : newConfig.diagnosticApi.mappings;
-      mappings[index] = { ...mappings[index], [field]: value };
-      setLocalConnConfig(newConfig);
-  };
-
-  const MappingEditor = ({ mappings, apiType }: { mappings: ApiFieldMapping[], apiType: 'cnpj' | 'diagnostic' }) => (
-      <div className="mt-4 border rounded-lg overflow-hidden border-slate-200 dark:border-slate-700">
-          <div className="bg-slate-50 dark:bg-slate-800 p-3 text-xs font-bold text-slate-500 uppercase flex gap-4">
-              <div className="flex-1">Campo do Sistema</div>
-              <div className="flex-1">Caminho JSON (Path)</div>
-              <div className="flex-1">Rótulo de Exibição</div>
-              <div className="w-16 text-center">Visível</div>
-          </div>
-          <div className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900 max-h-60 overflow-y-auto">
-              {mappings.map((m, idx) => (
-                  <div key={m.key} className="p-3 flex gap-4 items-center">
-                      <div className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-300">{m.key}</div>
-                      <div className="flex-1">
-                          <input 
-                              type="text" 
-                              value={m.jsonPath} 
-                              onChange={(e) => handleUpdateMapping(apiType, idx, 'jsonPath', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-200 dark:border-slate-700 rounded text-sm bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-                          />
-                      </div>
-                      <div className="flex-1">
-                          <input 
-                              type="text" 
-                              value={m.label} 
-                              onChange={(e) => handleUpdateMapping(apiType, idx, 'label', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-200 dark:border-slate-700 rounded text-sm bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-                          />
-                      </div>
-                      <div className="w-16 flex justify-center">
-                          <input 
-                              type="checkbox" 
-                              checked={m.visible} 
-                              onChange={(e) => handleUpdateMapping(apiType, idx, 'visible', e.target.checked)}
-                              className="rounded text-primary focus:ring-primary"
-                          />
-                      </div>
-                  </div>
-              ))}
-          </div>
-      </div>
-  );
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-8 max-w-6xl mx-auto">
       
@@ -600,23 +455,10 @@ const AdminPage: React.FC<AdminPageProps> = ({
         <button onClick={() => setActiveTab('notifications')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'notifications' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
           Notificações
         </button>
-        <button onClick={() => setActiveTab('connections')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'connections' ? 'bg-white dark:bg-slate-700 text-blue-500 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
-          Conexões
-        </button>
-        <button onClick={() => setActiveTab('api_docs')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'api_docs' ? 'bg-white dark:bg-slate-700 text-indigo-500 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
-          Documentação API
-        </button>
         <button onClick={() => setActiveTab('maintenance')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'maintenance' ? 'bg-white dark:bg-slate-700 text-red-500 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
           Manutenção
         </button>
       </div>
-
-      {/* --- CONTENT: API DOCS --- */}
-      {activeTab === 'api_docs' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4">
-              <ApiDocsPage />
-          </div>
-      )}
 
       {/* --- CONTENT: USERS --- */}
       {activeTab === 'users' && (
@@ -1336,126 +1178,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
                       </div>
                   </div>
               </div>
-          </div>
-      )}
-
-      {/* --- CONTENT: CONNECTIONS --- */}
-      {activeTab === 'connections' && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white">Configuração de Conexões (APIs)</h3>
-              <form onSubmit={handleSaveConnection} className="space-y-6">
-                  
-                  {/* CNPJ API */}
-                  <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                      <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                          <span className="material-icons text-blue-500">business</span> API de Dados Cadastrais (CNPJ)
-                      </h4>
-                      <div className="space-y-4">
-                          <div>
-                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Base URL</label>
-                              <input 
-                                  type="text" 
-                                  value={localConnConfig.cnpjApi.baseUrl} 
-                                  onChange={e => setLocalConnConfig({...localConnConfig, cnpjApi: {...localConnConfig.cnpjApi, baseUrl: e.target.value}})}
-                                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm"
-                              />
-                          </div>
-                          <div>
-                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Token (Opcional)</label>
-                              <input 
-                                  type="text" 
-                                  value={localConnConfig.cnpjApi.token || ''} 
-                                  onChange={e => setLocalConnConfig({...localConnConfig, cnpjApi: {...localConnConfig.cnpjApi, token: e.target.value}})}
-                                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm"
-                              />
-                          </div>
-                          <h5 className="text-sm font-bold text-slate-700 dark:text-slate-300 mt-4">Mapeamento de Campos</h5>
-                          <MappingEditor mappings={localConnConfig.cnpjApi.mappings} apiType="cnpj" />
-                          <button type="button" onClick={() => { setTestType('cnpj'); setTestModalOpen(true); }} className="mt-4 text-sm font-medium text-primary hover:underline flex items-center gap-1">
-                              <span className="material-icons text-sm">science</span> Testar Conexão
-                          </button>
-                      </div>
-                  </div>
-
-                  {/* Diagnostic API */}
-                  <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                      <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                          <span className="material-icons text-purple-500">analytics</span> API de Diagnóstico Fiscal (Webhook)
-                      </h4>
-                      <div className="space-y-4">
-                          <div>
-                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Webhook URL</label>
-                              <input 
-                                  type="text" 
-                                  value={localConnConfig.diagnosticApi.webhookUrl} 
-                                  onChange={e => setLocalConnConfig({...localConnConfig, diagnosticApi: {...localConnConfig.diagnosticApi, webhookUrl: e.target.value}})}
-                                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm"
-                              />
-                          </div>
-                          <div>
-                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Header Key para CNPJ (Opcional)</label>
-                              <input 
-                                  type="text" 
-                                  value={localConnConfig.diagnosticApi.headerKey || ''} 
-                                  onChange={e => setLocalConnConfig({...localConnConfig, diagnosticApi: {...localConnConfig.diagnosticApi, headerKey: e.target.value}})}
-                                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm"
-                              />
-                          </div>
-                          <h5 className="text-sm font-bold text-slate-700 dark:text-slate-300 mt-4">Mapeamento de Campos</h5>
-                          <MappingEditor mappings={localConnConfig.diagnosticApi.mappings} apiType="diagnostic" />
-                          <button type="button" onClick={() => { setTestType('diagnostic'); setTestModalOpen(true); }} className="mt-4 text-sm font-medium text-primary hover:underline flex items-center gap-1">
-                              <span className="material-icons text-sm">science</span> Testar Conexão
-                          </button>
-                      </div>
-                  </div>
-
-                  {/* SMTP Config */}
-                  <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                      <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                          <span className="material-icons text-emerald-500">mail</span> Configuração de E-mail (SMTP)
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
-                          <div><label className="block text-sm mb-1">Host</label><input type="text" value={localConnConfig.smtp.host} onChange={e => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, host: e.target.value}})} className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm" /></div>
-                          <div><label className="block text-sm mb-1">Porta</label><input type="number" value={localConnConfig.smtp.port} onChange={e => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, port: parseInt(e.target.value)}})} className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm" /></div>
-                          <div><label className="block text-sm mb-1">Usuário</label><input type="text" value={localConnConfig.smtp.user} onChange={e => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, user: e.target.value}})} className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm" /></div>
-                          <div><label className="block text-sm mb-1">Senha</label><input type="password" value={localConnConfig.smtp.pass} onChange={e => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, pass: e.target.value}})} className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm" /></div>
-                          <div className="col-span-2 flex items-center gap-4">
-                              <label className="flex items-center gap-2 text-sm">
-                                  <input type="checkbox" checked={localConnConfig.smtp.secure} onChange={e => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, secure: e.target.checked}})} className="rounded text-primary focus:ring-primary" />
-                                  Conexão Segura (SSL/TLS)
-                              </label>
-                          </div>
-                          <div className="col-span-2"><label className="block text-sm mb-1">E-mail Remetente</label><input type="email" value={localConnConfig.smtp.fromEmail} onChange={e => setLocalConnConfig({...localConnConfig, smtp: {...localConnConfig.smtp, fromEmail: e.target.value}})} className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm" /></div>
-                      </div>
-                  </div>
-
-                  {/* AI Config */}
-                  <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                      <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                          <span className="material-icons text-indigo-500">auto_awesome</span> Configuração de IA (Gemini)
-                      </h4>
-                      <label className="flex items-center gap-3 text-sm font-medium">
-                          <input 
-                              type="checkbox" 
-                              checked={localConnConfig.ai.enabled} 
-                              onChange={e => setLocalConnConfig({...localConnConfig, ai: {...localConnConfig.ai, enabled: e.target.checked}})}
-                              className="rounded text-primary focus:ring-primary"
-                          />
-                          Habilitar Análise Financeira Inteligente
-                      </label>
-                      <p className="text-xs text-slate-500 mt-2">A chave de API deve ser configurada no arquivo `.env.local`.</p>
-                  </div>
-
-                  <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
-                      <button 
-                          type="submit" 
-                          disabled={isSubmitting}
-                          className="bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
-                      >
-                          {isSubmitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'Salvar Configurações'}
-                      </button>
-                  </div>
-              </form>
           </div>
       )}
 

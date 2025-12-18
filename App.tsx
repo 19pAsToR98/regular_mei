@@ -24,8 +24,7 @@ import IntroWalkthrough from './components/IntroWalkthrough';
 import FinancialScore from './components/FinancialScore';
 import MobileDashboard from './components/MobileDashboard';
 import InstallPrompt from './components/InstallPrompt';
-import ExternalTransactionModal from './components/ExternalTransactionModal';
-import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
+import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
 
@@ -92,7 +91,7 @@ const App: React.FC = () => {
   // --- CASH FLOW & APPOINTMENT STATE ---
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [externalTransactions, setExternalTransactions] = useState<Transaction[]>([]);
+  // Removed externalTransactions state
 
   // --- CATEGORY STATE (Now includes default + user custom) ---
   const [revenueCats, setRevenueCats] = useState<Category[]>(defaultRevenueCats);
@@ -111,42 +110,9 @@ const App: React.FC = () => {
     offers: false
   });
   
-  // --- CONNECTION STATE (ADMIN) ---
-  const [connectionConfig, setConnectionConfig] = useState<ConnectionConfig>({
-    cnpjApi: {
-      baseUrl: 'https://publica.cnpj.ws/cnpj/',
-      token: '',
-      mappings: [
-        { key: 'razaoSocial', jsonPath: 'razao_social', label: 'Razão Social', visible: true },
-        { key: 'nomeFantasia', jsonPath: 'estabelecimento.nome_fantasia', label: 'Nome Fantasia', visible: true },
-        { key: 'situacao', jsonPath: 'estabelecimento.situacao_cadastral', label: 'Situação Cadastral', visible: true },
-        { key: 'dataAbertura', jsonPath: 'estabelecimento.data_inicio_atividade', label: 'Data de Abertura', visible: true },
-        { key: 'cnae', jsonPath: 'estabelecimento.atividade_principal.descricao', label: 'Atividade Principal', visible: true },
-        { key: 'naturezaJuridica', jsonPath: 'natureza_juridica.descricao', label: 'Natureza Jurídica', visible: true },
-        { key: 'logradouro', jsonPath: 'estabelecimento.logradouro', label: 'Endereço', visible: true }
-      ]
-    },
-    diagnosticApi: {
-      webhookUrl: 'https://n8nwebhook.portalmei360.com/webhook/f0f542f0-c91a-4a61-817d-636af20a7024',
-      headerKey: 'cnpj',
-      mappings: [
-        { key: 'dasList', jsonPath: 'dAS.anos', label: 'Lista de Guias DAS', visible: true },
-        { key: 'dasnList', jsonPath: 'dASN.anos', label: 'Lista de Declarações (DASN)', visible: true },
-        { key: 'totalDebt', jsonPath: 'total_divida', label: 'Dívida Total (Calculada)', visible: true }
-      ]
-    },
-    smtp: {
-      host: 'smtp.example.com',
-      port: 587,
-      user: 'admin@regularmei.com',
-      pass: '',
-      secure: true,
-      fromEmail: 'noreply@regularmei.com'
-    },
-    ai: {
-      enabled: true
-    }
-  });
+  // --- AI CONFIG STATE (Simplified from ConnectionConfig) ---
+  const [aiEnabled, setAiEnabled] = useState(true);
+
 
   // --- DATA FETCHING FUNCTIONS ---
 
@@ -165,6 +131,10 @@ const App: React.FC = () => {
       
       if (data && data.maintenance_config) {
           setMaintenance(data.maintenance_config as MaintenanceConfig);
+          // Also load AI config from maintenance config if available
+          if (data.maintenance_config.ai && typeof data.maintenance_config.ai.enabled === 'boolean') {
+              setAiEnabled(data.maintenance_config.ai.enabled);
+          }
       }
   };
 
@@ -174,9 +144,12 @@ const App: React.FC = () => {
           return;
       }
       
+      // Preserve AI state if not explicitly passed in config (AdminPage only passes maintenance keys)
+      const configToSave = { ...config, ai: { enabled: aiEnabled } };
+
       const { error } = await supabase
           .from('app_config')
-          .update({ maintenance_config: config })
+          .update({ maintenance_config: configToSave })
           .eq('id', 1);
 
       if (error) {
@@ -187,6 +160,13 @@ const App: React.FC = () => {
       
       setMaintenance(config);
       showSuccess('Configuração de manutenção atualizada!');
+  };
+  
+  // Handler for AI toggle (used in AdminPage)
+  const handleUpdateAiConfig = (enabled: boolean) => {
+      setAiEnabled(enabled);
+      // Note: This should ideally update the DB config as well, but for simplicity, we update local state here.
+      // The full maintenance config update handles the DB write.
   };
 
   const loadAllUsers = async () => {
@@ -242,12 +222,8 @@ const App: React.FC = () => {
         externalApi: t.external_api || false,
     })) as Transaction[];
     
-    // Separate transactions added externally that haven't been reviewed yet
-    const external = allTransactions.filter(t => t.externalApi);
-    const internal = allTransactions.filter(t => !t.externalApi);
-    
-    setExternalTransactions(external);
-    return internal;
+    // Removed separation of external transactions
+    return allTransactions;
   };
 
   const loadAppointments = async (userId: string) => {
@@ -1027,7 +1003,7 @@ const App: React.FC = () => {
           text: item.text,
           type: item.type,
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          expires_at: expiresAtAtValue, 
+          expires_at: expiresAtValue, 
           active: item.active,
       };
       
@@ -1195,8 +1171,6 @@ const App: React.FC = () => {
     
     // Update local state immutably
     setTransactions(prev => prev.map(tr => tr.id === t.id ? t : tr));
-    // Also update external transactions list if the updated transaction was there
-    setExternalTransactions(prev => prev.map(tr => tr.id === t.id ? t : tr));
   };
 
   const handleDeleteTransaction = async (id: number) => {
@@ -1217,7 +1191,6 @@ const App: React.FC = () => {
     showSuccess('Transação excluída.');
     // Update local state directly
     setTransactions(prev => prev.filter(tr => tr.id !== id));
-    setExternalTransactions(prev => prev.filter(tr => tr.id !== id));
   };
   
   const handleDeleteTransactionSeries = async (t: Transaction) => {
@@ -1266,33 +1239,6 @@ const App: React.FC = () => {
       
       // Reload transactions to reflect changes
       loadTransactions(user.id).then(setTransactions);
-  };
-
-  // --- EXTERNAL TRANSACTION MODAL HANDLER ---
-  const handleCloseExternalModal = async () => {
-      if (!user || externalTransactions.length === 0) {
-          setExternalTransactions([]);
-          return;
-      }
-      
-      const idsToMarkAsInternal = externalTransactions.map(t => t.id);
-      
-      // Mark all currently displayed external transactions as internal (reviewed)
-      const { error } = await supabase
-          .from('transactions')
-          .update({ external_api: false })
-          .in('id', idsToMarkAsInternal)
-          .eq('user_id', user.id);
-
-      if (error) {
-          console.error('Error marking external transactions as internal:', error);
-          showError('Erro ao marcar transações como revisadas.');
-          // We still clear the modal locally to avoid blocking the user
-      }
-      
-      // Move transactions from external list to main list
-      setTransactions(prev => [...externalTransactions.map(t => ({...t, externalApi: false})), ...prev]);
-      setExternalTransactions([]);
   };
 
   // --- APPOINTMENT HANDLERS (Needs to be updated for Supabase) ---
@@ -1515,9 +1461,9 @@ const App: React.FC = () => {
                 <>
                 {/* --- MOBILE LAYOUT --- */}
                 <div className="md:hidden">
-                   {connectionConfig.ai.enabled && (
+                   {aiEnabled && (
                        <div className="grid grid-cols-12 mb-6">
-                           <AIAnalysis enabled={connectionConfig.ai.enabled} />
+                           <AIAnalysis enabled={aiEnabled} />
                        </div>
                    )}
                    <MobileDashboard 
@@ -1549,9 +1495,9 @@ const App: React.FC = () => {
                     ))}
                   </div>
                   
-                  {connectionConfig.ai.enabled && (
+                  {aiEnabled && (
                       <div className="grid grid-cols-12">
-                          <AIAnalysis enabled={connectionConfig.ai.enabled} />
+                          <AIAnalysis enabled={aiEnabled} />
                       </div>
                   )}
                   
@@ -1629,8 +1575,6 @@ const App: React.FC = () => {
                 onDeleteNotification={handleDeleteNotification}
                 maintenance={maintenance}
                 onUpdateMaintenance={handleUpdateMaintenance}
-                connectionConfig={connectionConfig}
-                onUpdateConnectionConfig={setConnectionConfig}
                 users={allUsers}
                 onAddUser={handleAddUser}
                 onUpdateUser={handleUpdateUser}
@@ -1683,18 +1627,7 @@ const App: React.FC = () => {
       </div>
       <InstallPrompt />
       
-      {/* External Transaction Modal */}
-      {externalTransactions.length > 0 && (
-          <ExternalTransactionModal
-              transactions={externalTransactions}
-              revenueCats={revenueCats}
-              expenseCats={expenseCats}
-              onClose={handleCloseExternalModal}
-              onUpdateTransaction={handleUpdateTransaction}
-              onDeleteTransaction={handleDeleteTransaction}
-              onNavigateToCashflow={() => setActiveTab('cashflow')}
-          />
-      )}
+      {/* Removed External Transaction Modal */}
     </div>
   );
 };
