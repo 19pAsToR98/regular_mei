@@ -12,19 +12,19 @@ import { HeadingNode, QuoteNode } from '@lexical/rich-text';
 import { ListItemNode, ListNode } from '@lexical/list';
 import { LinkNode, AutoLinkNode } from '@lexical/link';
 import { ImageNode } from './lexical/ImageNode.tsx';
-import { INSERT_IMAGE_COMMAND } from './lexical/ImagePlugin';
-import { INSERT_YOUTUBE_COMMAND } from './lexical/YouTubePlugin';
+import { INSERT_IMAGE_COMMAND } from './lexical/ImagePlugin.tsx';
+import { INSERT_YOUTUBE_COMMAND } from './lexical/YouTubePlugin.tsx';
 import { $getRoot, $getSelection, $isRangeSelection, FORMAT_TEXT_COMMAND, COMMAND_PRIORITY_CRITICAL, FORMAT_ELEMENT_COMMAND, $createParagraphNode, $createTextNode, $isRootOrShadowRoot, EditorState } from 'lexical';
 import { $wrapNodes } from '@lexical/selection';
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from '@lexical/list';
 import { TOGGLE_LINK_COMMAND } from '@lexical/link';
 import { $createHeadingNode, $createQuoteNode } from '@lexical/rich-text';
-import { YouTubeNode } from './lexical/YouTubeNode';
-import { YouTubePlugin } from './lexical/YouTubePlugin';
-import { ImagePlugin } from './lexical/ImagePlugin';
-import { HtmlExportPlugin } from './lexical/HtmlExportPlugin';
-import { HtmlImportPlugin } from './lexical/HtmlImportPlugin';
-import { AutoLinkPlugin } from './lexical/AutoLinkPlugin';
+import { YouTubeNode } from './lexical/YouTubeNode.tsx';
+import { YouTubePlugin } from './lexical/YouTubePlugin.tsx';
+import { ImagePlugin } from './lexical/ImagePlugin.tsx';
+import { HtmlExportPlugin } from './lexical/HtmlExportPlugin.tsx';
+import { HtmlImportPlugin } from './lexical/HtmlImportPlugin.tsx';
+import { AutoLinkPlugin } from './lexical/AutoLinkPlugin.tsx';
 // import { CodeHighlightNode, CodeNode } from '@lexical/code'; // REMOVED
 // import { CodeHighlightPlugin } from '@lexical/react/LexicalCodeHighlightPlugin'; // REMOVED
 
