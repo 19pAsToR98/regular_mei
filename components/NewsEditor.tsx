@@ -238,7 +238,8 @@ const NewsEditor: React.FC<NewsEditorProps> = ({ value, onChange }) => {
     },
     editorProps: {
         attributes: {
-            class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[200px] p-4',
+            // Alterado de prose-sm para prose-lg para consistência
+            class: 'prose prose-lg dark:prose-invert max-w-none focus:outline-none min-h-[200px] p-4',
         },
     },
   });
