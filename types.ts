@@ -49,7 +49,8 @@ export interface Offer {
   category: string;
   code?: string;
   link?: string;
-  expiry: string;
+  expiryText: string; // Renamed from expiry
+  expiryDate?: string | null; // New field for structured date (YYYY-MM-DD)
   isExclusive?: boolean;
   isFeatured?: boolean;
 }
