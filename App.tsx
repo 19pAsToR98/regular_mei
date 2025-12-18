@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import StatCard from './components/StatCard';
@@ -53,6 +53,12 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [isPublicView, setIsPublicView] = useState(false);
+
+  // Ref to hold the current user state to avoid stale closures in the auth listener
+  const userRef = useRef(user);
+  useEffect(() => {
+      userRef.current = user;
+  }, [user]);
 
   // Initialize activeTab from localStorage or default to 'dashboard'
   const [activeTab, setActiveTabState] = useState(() => {
@@ -427,7 +433,6 @@ const App: React.FC = () => {
   };
 
   const loadAllUserData = async (userId: string, userRole: 'admin' | 'user') => {
-      setLoadingAuth(true);
       
       const promises = [
           loadTransactions(userId),
@@ -449,6 +454,13 @@ const App: React.FC = () => {
   };
 
   const loadUserProfile = async (supabaseUser: any) => {
+    // Optimization: Check if the user is already fully loaded and set up based on the ref
+    // This prevents re-running the heavy load on simple session refresh (tab focus)
+    if (userRef.current && userRef.current.id === supabaseUser.id && userRef.current.isSetupComplete) {
+        setLoadingAuth(false);
+        return;
+    }
+    
     setLoadingAuth(true);
     
     const { data: profileData, error: profileError } = await supabase
@@ -460,14 +472,15 @@ const App: React.FC = () => {
     if (profileError) {
         console.error('Error fetching profile:', profileError);
         // Fallback to basic user data if profile fetch fails
-        setUser({
+        const appUser: User = {
             id: supabaseUser.id,
             name: supabaseUser.email || 'Usuário',
             email: supabaseUser.email,
             isSetupComplete: false,
             role: 'user',
             status: 'active'
-        });
+        };
+        setUser(appUser);
         setLoadingAuth(false);
         return;
     }
@@ -494,49 +507,6 @@ const App: React.FC = () => {
         setLoadingAuth(false);
     }
   };
-
-  // --- AUTH MONITORING ---
-  useEffect(() => {
-    // 0. Check for public route access before anything else
-    if (typeof window !== 'undefined') {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('page') === 'news') {
-            setIsPublicView(true);
-            setLoadingAuth(false);
-            // Ensure public data is loaded
-            loadNewsAndOffers();
-            return; // Stop further auth processing if public view is active
-        }
-    }
-
-    // Load maintenance config first, as it affects rendering
-    loadMaintenanceConfig();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        loadUserProfile(session.user);
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setLoadingAuth(false);
-        // Clear persisted tab on sign out
-        localStorage.removeItem('activeTab');
-        setActiveTabState('dashboard');
-      } else if (event === 'INITIAL_SESSION' && session?.user) {
-        loadUserProfile(session.user);
-      } else if (event === 'INITIAL_SESSION' && !session) {
-        setLoadingAuth(false);
-      }
-    });
-
-    // Load public data (News/Offers) even if not logged in
-    loadNewsAndOffers();
-    loadNotifications(); // Load public notifications (without user context)
-
-    // Cleanup listener
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
 
   // --- CALCULATE DASHBOARD STATS (Remains the same) ---
   const dashboardStats = useMemo(() => {
@@ -606,6 +576,59 @@ const App: React.FC = () => {
       }
     ];
   }, [transactions]);
+
+  // --- AUTH MONITORING ---
+  useEffect(() => {
+    // 0. Check for public route access before anything else
+    if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('page') === 'news') {
+            setIsPublicView(true);
+            setLoadingAuth(false);
+            // Ensure public data is loaded
+            loadNewsAndOffers();
+            return () => {}; // Return empty cleanup function
+        }
+    }
+
+    // Load maintenance config first, as it affects rendering
+    loadMaintenanceConfig();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      // Access current user state via ref
+      const currentUser = userRef.current; 
+      const isUserAlreadyLoaded = currentUser && currentUser.id === session?.user?.id;
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        // If the user is already loaded, this is likely a session refresh on focus. Skip full reload.
+        if (!isUserAlreadyLoaded) {
+            loadUserProfile(session.user);
+        } else {
+            // Ensure loading spinner is off if we skipped the load
+            setLoadingAuth(false);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setLoadingAuth(false);
+        // Clear persisted tab on sign out
+        localStorage.removeItem('activeTab');
+        setActiveTabState('dashboard');
+      } else if (event === 'INITIAL_SESSION' && session?.user) {
+        loadUserProfile(session.user);
+      } else if (event === 'INITIAL_SESSION' && !session) {
+        setLoadingAuth(false);
+      }
+    });
+
+    // Load public data (News/Offers) even if not logged in
+    loadNewsAndOffers();
+    loadNotifications(); // Load public notifications (without user context)
+
+    // Cleanup listener
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []); // Dependency array remains empty
 
   // --- AUTH HANDLERS ---
   const handleLogin = (userData: User) => {
