@@ -356,7 +356,7 @@ const App: React.FC = () => {
   };
 
   const loadNotifications = async (userId?: string) => {
-    // 1. Fetch all active notifications
+    // 1. Fetch all notifications (Admin needs to see all, active or inactive)
     const { data: notifData, error: notifError } = await supabase
         .from('notifications')
         .select(`
@@ -365,7 +365,7 @@ const App: React.FC = () => {
                 user_id, voted_option_id, voted_at
             )
         `)
-        .eq('active', true)
+        // REMOVED .eq('active', true) to fetch all notifications for Admin management
         .order('created_at', { ascending: false });
     
     if (notifError) {
@@ -428,16 +428,6 @@ const App: React.FC = () => {
                 read: interaction?.is_read || false,
                 userVotedOptionId: interaction?.voted_option_id || undefined
             } as AppNotification;
-        })
-        .filter(n => {
-            // Filter out expired notifications for non-admin users
-            if (userId && userInteractions[n.id]?.is_read) return true; // Keep read notifications
-            if (n.expiresAt) {
-                const expiryDate = new Date(n.expiresAt);
-                const now = new Date();
-                return now < expiryDate;
-            }
-            return true;
         });
 
     setNotifications(processedNotifications);
