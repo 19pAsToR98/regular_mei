@@ -424,6 +424,7 @@ const App: React.FC = () => {
             pollVotes: pollVotes,
             active: n.active,
             expiresAt: n.expires_at,
+            // FIX: Use interaction data for read status and voted option
             read: interaction?.is_read || false,
             userVotedOptionId: interaction?.voted_option_id || undefined
         } as AppNotification;
@@ -599,7 +600,7 @@ const App: React.FC = () => {
       const currentUser = userRef.current; 
       const isUserAlreadyLoaded = currentUser && currentUser.id === session?.user?.id;
 
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) { // <-- MODIFIED HERE
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
         // If the user is already loaded, this is likely a session refresh on focus. Skip full reload.
         if (!isUserAlreadyLoaded) {
             loadUserProfile(session.user);
@@ -1085,7 +1086,8 @@ const App: React.FC = () => {
     }
     
     showSuccess('Voto registrado com sucesso!');
-    loadNotifications(user.id); // Reload notifications to update vote counts and userVoted status
+    // FIX: Reload notifications to update vote counts and userVoted status
+    loadNotifications(user.id); 
   };
 
   // --- CASHFLOW HANDLERS ---
