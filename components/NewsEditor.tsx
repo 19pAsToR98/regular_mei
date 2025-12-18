@@ -4,7 +4,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Heading from '@tiptap/extension-heading';
 import Image from '@tiptap/extension-image';
-import TextAlign from '@tiptap/extension-align'; // Corrected import name for Tiptap v2
+import TextAlign from '@tiptap/extension-text-align'; // Corrigido: Usando o nome correto do pacote
 import Youtube from '@tiptap/extension-youtube';
 import TextStyle from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
