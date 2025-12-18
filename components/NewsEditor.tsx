@@ -4,11 +4,11 @@ import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Heading from '@tiptap/extension-heading';
 import Image from '@tiptap/extension-image';
-import TextAlign from '@tiptap/extension-text-align'; // Corrigido: Usando o nome correto do pacote
+import TextAlign from '@tiptap/extension-text-align';
 import Youtube from '@tiptap/extension-youtube';
-import TextStyle from '@tiptap/extension-text-style';
-import Color from '@tiptap/extension-color';
-import Highlight from '@tiptap/extension-highlight';
+import TextStyle from '@tiptap/extension-text-style'; // Mantendo a importação padrão, mas verificando o uso
+import Color from '@tiptap/extension-color'; // Mantendo a importação padrão
+import Highlight from '@tiptap/extension-highlight'; // Mantendo a importação padrão
 
 interface NewsEditorProps {
   value: string;
