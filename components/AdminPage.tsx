@@ -126,6 +126,12 @@ const AdminPage: React.FC<AdminPageProps> = ({
   const [testResponse, setTestResponse] = useState<string | null>(null);
   const [testParsedData, setTestParsedData] = useState<any | null>(null);
 
+  // --- UTILS ---
+  const isNotificationExpired = (n: AppNotification) => {
+      if (!n.expiresAt) return false;
+      return new Date(n.expiresAt) < new Date();
+  };
+
   // --- USERS LOGIC & HANDLERS ---
   
   // Reset pagination when filter changes
@@ -245,12 +251,10 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
   // --- NEWS LOGIC & HANDLERS ---
   
-  // Reset news form when editing is cancelled
+  // Reset pagination when filter changes
   useEffect(() => {
-      if (!editingNewsId) {
-          setNewsForm(initialNewsForm);
-      }
-  }, [editingNewsId]);
+      setNewsPage(1);
+  }, [news]);
 
   // Paginated News List
   const paginatedNews = useMemo(() => {
@@ -1229,15 +1233,18 @@ const AdminPage: React.FC<AdminPageProps> = ({
              
              {/* ... Notifications List ... */}
              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm h-fit">
-                <h3 className="font-bold text-slate-800 dark:text-white mb-4">Ativas</h3>
+                <h3 className="font-bold text-slate-800 dark:text-white mb-4">Todas as Notificações</h3>
                 <div className="space-y-4">
                     {notifications.length === 0 ? <p className="text-slate-400 text-sm text-center py-4">Nenhuma notificação.</p> : null}
-                    {notifications.map(n => (
+                    {notifications.map(n => {
+                        const isExpired = isNotificationExpired(n);
+                        
+                        return (
                         <div key={n.id} onClick={() => handleEditNotifClick(n)} className={`p-4 rounded-lg border border-l-4 cursor-pointer hover:bg-slate-50 transition-colors ${
                             n.type === 'info' ? 'border-l-blue-500' :
                             n.type === 'warning' ? 'border-l-yellow-500' :
                             n.type === 'success' ? 'border-l-green-500' : 'border-l-purple-500 bg-purple-50/50'
-                        }`}>
+                        } ${isExpired ? 'opacity-50 grayscale' : ''}`}>
                             <div className="flex justify-between items-start mb-1">
                                 <div className="flex items-center gap-2">
                                     <span className={`material-icons text-sm ${
@@ -1248,6 +1255,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                         {n.type === 'poll' ? 'poll' : n.type === 'warning' ? 'warning' : n.type === 'success' ? 'check_circle' : 'info'}
                                     </span>
                                     <span className="text-xs font-bold uppercase text-slate-400">{n.type === 'poll' ? 'Enquete' : 'Aviso'}</span>
+                                    {isExpired && <span className="text-xs font-bold uppercase text-red-500 ml-2">EXPIRADA</span>}
                                 </div>
                                 <div className="flex gap-2">
                                   <button onClick={(e) => { e.stopPropagation(); handleEditNotifClick(n); }} className="text-slate-300 hover:text-primary">
@@ -1278,7 +1286,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
                             <p className="text-[10px] text-slate-400 text-right mt-1">{n.date}</p>
                         </div>
-                    ))}
+                    );})}
                 </div>
              </div>
         </div>
@@ -1448,130 +1456,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
                       </button>
                   </div>
               </form>
-          </div>
-      )}
-
-      {/* --- CONTENT: MAINTENANCE --- */}
-      {activeTab === 'maintenance' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white">Controle de Manutenção</h3>
-              <p className="text-slate-500 dark:text-slate-400">Ative o modo de manutenção para desabilitar temporariamente partes da aplicação ou o sistema inteiro.</p>
-
-              <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-                  <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
-                      <h4 className="text-lg font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
-                          <span className="material-icons">warning</span> Manutenção Global
-                      </h4>
-                      <button 
-                          onClick={() => toggleMaintenance('global')}
-                          className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${maintenance.global ? 'bg-red-600' : 'bg-slate-300 dark:bg-slate-700'}`}
-                      >
-                          <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${maintenance.global ? 'translate-x-7' : 'translate-x-1'}`} />
-                      </button>
-                  </div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Se ativado, todos os usuários (exceto Admin) verão a tela de manutenção global.</p>
-              </div>
-
-              <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-                  <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Manutenção por Módulo</h4>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {Object.entries(maintenance).filter(([key]) => key !== 'global').map(([key, value]) => (
-                          <div key={key} className="flex justify-between items-center p-3 border border-slate-100 dark:border-slate-800 rounded-lg">
-                              <span className="text-sm font-medium text-slate-700 dark:text-slate-300 capitalize">{key}</span>
-                              <button 
-                                  onClick={() => toggleMaintenance(key as keyof MaintenanceConfig)}
-                                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${value ? 'bg-yellow-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-                              >
-                                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${value ? 'translate-x-6' : 'translate-x-1'}`} />
-                              </button>
-                          </div>
-                      ))}
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* CONNECTION TEST MODAL - Update button status only */}
-      {testModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-              <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
-                  {/* Modal Header */}
-                  <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
-                      <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-                          <span className="material-icons text-primary">science</span>
-                          Teste de Conexão
-                      </h3>
-                      <button onClick={() => setTestModalOpen(false)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                          <span className="material-icons">close</span>
-                      </button>
-                  </div>
-                  
-                  <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                      
-                      {/* Input Section */}
-                      <div className="flex gap-4 items-end">
-                          <div className="flex-1">
-                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">CNPJ para teste</label>
-                              <input 
-                                  type="text" 
-                                  value={testCnpj}
-                                  onChange={(e) => setTestCnpj(e.target.value)}
-                                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50"
-                                  placeholder="00.000.000/0000-00"
-                              />
-                          </div>
-                          <button 
-                              onClick={handleTestConnection}
-                              disabled={testLoading}
-                              className="px-6 py-2 bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2 h-10"
-                          >
-                              {testLoading ? <span className="material-icons animate-spin text-sm">refresh</span> : <span className="material-icons text-sm">play_arrow</span>}
-                              Executar
-                          </button>
-                      </div>
-
-                      {/* ... Results Section ... */}
-                      {testResponse && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-bottom-4">
-                              <div className="flex flex-col h-96">
-                                  <div className="flex justify-between items-center mb-2">
-                                      <span className="text-xs font-bold uppercase text-slate-500">Resposta Bruta (JSON)</span>
-                                      <span className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-500">Raw Output</span>
-                                  </div>
-                                  <div className="flex-1 bg-slate-900 rounded-lg p-4 overflow-auto border border-slate-700">
-                                      <pre className="text-green-400 font-mono text-xs whitespace-pre-wrap">{testResponse}</pre>
-                                  </div>
-                              </div>
-
-                              <div className="flex flex-col h-96">
-                                  <div className="flex justify-between items-center mb-2">
-                                      <span className="text-xs font-bold uppercase text-slate-500">Exibição para Usuário (Mapeado)</span>
-                                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold">Preview</span>
-                                  </div>
-                                  <div className="flex-1 bg-white dark:bg-slate-800 rounded-lg p-4 overflow-auto border border-slate-200 dark:border-slate-700">
-                                      {testParsedData ? (
-                                          <div className="space-y-3">
-                                              {Object.entries(testParsedData).map(([key, value]) => (
-                                                  <div key={key} className="border-b border-slate-100 dark:border-slate-700 pb-2 last:border-0">
-                                                      <span className="block text-xs font-bold text-slate-400 uppercase mb-1">{key}</span>
-                                                      <span className="block text-sm font-medium text-slate-800 dark:text-white break-words">
-                                                          {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                                                      </span>
-                                                  </div>
-                                              ))}
-                                          </div>
-                                      ) : (
-                                          <div className="text-center text-slate-400 mt-10">
-                                              Nenhum dado mapeado encontrado. Verifique os caminhos JSON.
-                                          </div>
-                                      )}
-                                  </div>
-                              </div>
-                          </div>
-                      )}
-                  </div>
-              </div>
           </div>
       )}
 
