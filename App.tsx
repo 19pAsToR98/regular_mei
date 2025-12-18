@@ -455,7 +455,6 @@ const App: React.FC = () => {
 
   const loadUserProfile = async (supabaseUser: any) => {
     // Optimization: Check if the user is already fully loaded and set up based on the ref
-    // This prevents re-running the heavy load on simple session refresh (tab focus)
     if (userRef.current && userRef.current.id === supabaseUser.id && userRef.current.isSetupComplete) {
         setLoadingAuth(false);
         return;
@@ -985,10 +984,11 @@ const App: React.FC = () => {
           text: item.text,
           type: item.type,
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          // FIX: Ensure expires_at is null if undefined/empty
           expires_at: item.expiresAt || null, 
           active: true,
       };
+      
+      console.log('Payload de Inserção de Notificação:', payload);
 
       const { error } = await supabase
           .from('notifications')
@@ -996,7 +996,8 @@ const App: React.FC = () => {
 
       if (error) {
           console.error('Error adding notification:', error);
-          showError('Erro ao publicar notificação.');
+          console.error('Detalhes do Erro:', error.message, error.details);
+          showError('Erro ao publicar notificação. Verifique o console para detalhes.');
           return;
       }
       
@@ -1009,10 +1010,11 @@ const App: React.FC = () => {
           text: item.text,
           type: item.type,
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          // FIX: Ensure expires_at is null if undefined/empty
           expires_at: item.expiresAt || null, 
           active: item.active,
       };
+      
+      console.log('Payload de Atualização de Notificação:', payload);
 
       const { error } = await supabase
           .from('notifications')
@@ -1021,7 +1023,8 @@ const App: React.FC = () => {
 
       if (error) {
           console.error('Error updating notification:', error);
-          showError('Erro ao atualizar notificação.');
+          console.error('Detalhes do Erro:', error.message, error.details);
+          showError('Erro ao atualizar notificação. Verifique o console para detalhes.');
           return;
       }
       
