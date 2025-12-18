@@ -984,9 +984,9 @@ const App: React.FC = () => {
       const payload = {
           text: item.text,
           type: item.type,
-          // FIX: Ensure poll_options is null if not a poll
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          expires_at: item.expiresAt,
+          // FIX: Ensure expires_at is null if undefined/empty
+          expires_at: item.expiresAt || null, 
           active: true,
       };
 
@@ -1008,9 +1008,9 @@ const App: React.FC = () => {
       const payload = {
           text: item.text,
           type: item.type,
-          // FIX: Ensure poll_options is null if not a poll
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          expires_at: item.expiresAt,
+          // FIX: Ensure expires_at is null if undefined/empty
+          expires_at: item.expiresAt || null, 
           active: item.active,
       };
 
