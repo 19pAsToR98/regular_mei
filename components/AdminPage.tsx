@@ -1,6 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Offer, NewsItem, MaintenanceConfig, AppNotification, PollOption, ConnectionConfig, ApiFieldMapping, User } from '../types';
-import ApiDocsPage from './ApiDocsPage'; // Importando o novo componente
 import NewsEditor from './NewsEditor'; // Importando o novo editor
 
 interface AdminPageProps {
@@ -66,7 +65,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
     connectionConfig, onUpdateConnectionConfig,
     users, onAddUser, onUpdateUser, onDeleteUser
 }) => {
-  const [activeTab, setActiveTab] = useState<'users' | 'news' | 'offers' | 'notifications' | 'maintenance' | 'connections' | 'api_docs'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'news' | 'offers' | 'notifications' | 'maintenance' | 'connections'>('users');
   const [isSubmitting, setIsSubmitting] = useState(false); // Global loading state for admin actions
 
   // --- USERS STATE ---
@@ -603,20 +602,10 @@ const AdminPage: React.FC<AdminPageProps> = ({
         <button onClick={() => setActiveTab('connections')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'connections' ? 'bg-white dark:bg-slate-700 text-blue-500 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
           Conexões
         </button>
-        <button onClick={() => setActiveTab('api_docs')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'api_docs' ? 'bg-white dark:bg-slate-700 text-indigo-500 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
-          Documentação API
-        </button>
         <button onClick={() => setActiveTab('maintenance')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'maintenance' ? 'bg-white dark:bg-slate-700 text-red-500 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
           Manutenção
         </button>
       </div>
-
-      {/* --- CONTENT: API DOCS --- */}
-      {activeTab === 'api_docs' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4">
-              <ApiDocsPage />
-          </div>
-      )}
 
       {/* --- CONTENT: USERS --- */}
       {activeTab === 'users' && (
@@ -947,7 +936,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                    <textarea rows={2} required value={newsForm.excerpt} onChange={e => setNewsForm({...newsForm, excerpt: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" placeholder="Breve descrição que aparece no card..."></textarea>
                 </div>
                 
-                {/* Enhanced Content Editor (Quill) */}
+                {/* Enhanced Content Editor (Jodit) */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Conteúdo do Artigo</label>
                   <NewsEditor 
