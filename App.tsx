@@ -828,6 +828,9 @@ const App: React.FC = () => {
 
   // --- OFFERS HANDLERS ---
   const handleAddOffer = async (newOffer: Offer) => {
+    // Ensure expiry is null if empty string
+    const expiryValue = newOffer.expiry && newOffer.expiry.trim() !== '' ? newOffer.expiry : null;
+
     const payload = {
         partner_name: newOffer.partnerName,
         partner_color: newOffer.partnerColor,
@@ -838,7 +841,7 @@ const App: React.FC = () => {
         category: newOffer.category,
         code: newOffer.code,
         link: newOffer.link,
-        expiry: newOffer.expiry,
+        expiry: expiryValue,
         is_exclusive: newOffer.isExclusive,
         is_featured: newOffer.isFeatured,
     };
@@ -858,6 +861,9 @@ const App: React.FC = () => {
   };
 
   const handleUpdateOffer = async (updatedOffer: Offer) => {
+    // Ensure expiry is null if empty string
+    const expiryValue = updatedOffer.expiry && updatedOffer.expiry.trim() !== '' ? updatedOffer.expiry : null;
+
     const payload = {
         partner_name: updatedOffer.partnerName,
         partner_color: updatedOffer.partnerColor,
@@ -868,7 +874,7 @@ const App: React.FC = () => {
         category: updatedOffer.category,
         code: updatedOffer.code,
         link: updatedOffer.link,
-        expiry: updatedOffer.expiry,
+        expiry: expiryValue,
         is_exclusive: updatedOffer.isExclusive,
         is_featured: updatedOffer.isFeatured,
     };
