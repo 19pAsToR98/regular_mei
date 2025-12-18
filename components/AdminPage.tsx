@@ -1397,6 +1397,34 @@ const AdminPage: React.FC<AdminPageProps> = ({
                           </button>
                       </div>
                   </div>
+                  
+                  {/* WhatsApp API */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                          <span className="material-icons text-green-500">whatsapp</span> API de Mensagens (WhatsApp)
+                      </h4>
+                      <div className="space-y-4">
+                          <div>
+                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">URL de Envio de Texto</label>
+                              <input 
+                                  type="text" 
+                                  value={localConnConfig.whatsappApi.sendTextUrl} 
+                                  onChange={e => setLocalConnConfig({...localConnConfig, whatsappApi: {...localConnConfig.whatsappApi, sendTextUrl: e.target.value}})}
+                                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm"
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Token de Autenticação</label>
+                              <input 
+                                  type="text" 
+                                  value={localConnConfig.whatsappApi.token} 
+                                  onChange={e => setLocalConnConfig({...localConnConfig, whatsappApi: {...localConnConfig.whatsappApi, token: e.target.value}})}
+                                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm"
+                              />
+                          </div>
+                          <p className="text-xs text-slate-500 mt-2">Este token é usado no header `token` para autenticar o envio de mensagens.</p>
+                      </div>
+                  </div>
 
                   {/* SMTP Config */}
                   <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">

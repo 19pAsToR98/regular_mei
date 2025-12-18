@@ -135,6 +135,10 @@ const App: React.FC = () => {
         { key: 'totalDebt', jsonPath: 'total_divida', label: 'Dívida Total (Calculada)', visible: true }
       ]
     },
+    whatsappApi: { // NEW: WhatsApp API Configuration
+        sendTextUrl: 'https://regularmei.uazapi.com/send/text',
+        token: 'b201c8c5-08fb-4d7e-adef-f9d4113922b5',
+    },
     smtp: {
       host: 'smtp.example.com',
       port: 587,
@@ -1027,7 +1031,7 @@ const App: React.FC = () => {
           text: item.text,
           type: item.type,
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          expires_at: expiresAtAtValue, 
+          expires_at: expiresAtValue, 
           active: item.active,
       };
       

@@ -96,6 +96,10 @@ export interface ConnectionConfig {
     headerKey?: string;
     mappings: ApiFieldMapping[];
   };
+  whatsappApi: { // NEW: WhatsApp API Configuration
+    sendTextUrl: string;
+    token: string;
+  };
   smtp: {
     host: string;
     port: number;
