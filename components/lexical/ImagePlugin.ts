@@ -1,5 +1,5 @@
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { $createImageNode, ImageNode, ImagePayload } from './ImageNode';
+import { $createImageNode, ImageNode, ImagePayload } from './ImageNode.tsx';
 import { COMMAND_PRIORITY_EDITOR, createCommand, LexicalCommand } from 'lexical';
 import { useEffect } from 'react';
 

@@ -11,7 +11,7 @@ import { TabIndentationPlugin } from '@lexical/react/LexicalTabIndentationPlugin
 import { HeadingNode, QuoteNode } from '@lexical/rich-text';
 import { ListItemNode, ListNode } from '@lexical/list';
 import { LinkNode, AutoLinkNode } from '@lexical/link';
-import { ImageNode } from './lexical/ImageNode';
+import { ImageNode } from './lexical/ImageNode.tsx';
 import { INSERT_IMAGE_COMMAND } from './lexical/ImagePlugin';
 import { INSERT_YOUTUBE_COMMAND } from './lexical/YouTubePlugin';
 import { $getRoot, $getSelection, $isRangeSelection, FORMAT_TEXT_COMMAND, COMMAND_PRIORITY_CRITICAL, FORMAT_ELEMENT_COMMAND, $createParagraphNode, $createTextNode, $isRootOrShadowRoot, EditorState } from 'lexical';
