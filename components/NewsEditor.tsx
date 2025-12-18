@@ -25,8 +25,8 @@ import { ImagePlugin } from './lexical/ImagePlugin';
 import { HtmlExportPlugin } from './lexical/HtmlExportPlugin';
 import { HtmlImportPlugin } from './lexical/HtmlImportPlugin';
 import { AutoLinkPlugin } from './lexical/AutoLinkPlugin';
-import { CodeHighlightNode, CodeNode } from '@lexical/code';
-import { CodeHighlightPlugin } from '@lexical/react/LexicalCodeHighlightPlugin';
+// import { CodeHighlightNode, CodeNode } from '@lexical/code'; // REMOVED
+// import { CodeHighlightPlugin } from '@lexical/react/LexicalCodeHighlightPlugin'; // REMOVED
 
 interface NewsEditorProps {
   value: string;
@@ -75,8 +75,8 @@ const editorConfig = {
     AutoLinkNode,
     ImageNode,
     YouTubeNode,
-    CodeNode,
-    CodeHighlightNode,
+    // CodeNode, // REMOVED
+    // CodeHighlightNode, // REMOVED
   ],
 };
 
@@ -327,7 +327,7 @@ const LexicalEditor: React.FC<{ value: string, onChange: (content: string) => vo
                 <ListPlugin />
                 <LinkPlugin />
                 <TabIndentationPlugin />
-                <CodeHighlightPlugin />
+                {/* <CodeHighlightPlugin /> */}
                 <YouTubePlugin />
                 <ImagePlugin />
                 <AutoLinkPlugin />
