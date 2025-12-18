@@ -9,12 +9,11 @@ interface NewsPageProps {
 
 const categories = ['Todas', 'Legislação', 'Finanças', 'Gestão', 'Marketing', 'Benefícios', 'Tecnologia'];
 
-const cleanHtmlContent = (html: string): string => {
-    if (!html) return '';
-    // Regex para remover tags de parágrafo vazias, incluindo espaços em branco ou quebras de linha dentro.
-    // Isso resolve o problema de espaçamento duplo causado por <p></p> gerados pelo editor.
-    return html.replace(/<p>\s*<\/p>/g, '');
-};
+// Revertendo a função cleanHtmlContent para permitir que <p></p> sejam renderizados
+// const cleanHtmlContent = (html: string): string => {
+//     if (!html) return '';
+//     return html.replace(/<p>\s*<\/p>/g, '');
+// };
 
 const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -74,7 +73,7 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
            
            <div 
              className="prose prose-lg prose-slate dark:prose-invert max-w-none prose-a:text-primary prose-headings:text-slate-800 dark:prose-headings:text-white"
-             dangerouslySetInnerHTML={{ __html: cleanHtmlContent(article?.content || '') }}
+             dangerouslySetInnerHTML={{ __html: article?.content || '' }}
            />
 
            <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
