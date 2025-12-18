@@ -19,6 +19,8 @@
     "@tiptap/extension-youtube": "^3.13.0",
     "@tiptap/react": "^3.13.0",
     "@tiptap/starter-kit": "^3.13.0",
+    "jodit": "^4.7.9",
+    "jodit-react": "^5.2.38",
     "lucide-react": "^0.556.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

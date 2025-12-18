@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import Jodit CSS */
+@import 'jodit/build/jodit.min.css';
+
+/* Custom styles for scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Hide scrollbar for specific elements */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Tailwind utility classes for dark mode compatibility */
+.dark .jodit-container {
+  background-color: #0F172A; /* background-dark */
+  border-color: #1e293b; /* slate-800 */
+}
+
+.dark .jodit-workplace,
+.dark .jodit-toolbar-editor-collection {
+  background-color: #1e293b; /* slate-800 */
+  border-color: #334155; /* slate-700 */
+}
+
+.dark .jodit-wysiwyg {
+  color: #e2e8f0; /* slate-200 */
+}
+
+.dark .jodit-toolbar-btn {
+  color: #94a3b8; /* slate-400 */
+}
+
+.dark .jodit-toolbar-btn:hover {
+  background-color: #334155; /* slate-700 */
+}
+
+.dark .jodit-toolbar-btn.jodit-active {
+  background-color: #3B82F6; /* primary */
+  color: white;
+}
