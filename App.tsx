@@ -980,11 +980,14 @@ const App: React.FC = () => {
 
   // --- NOTIFICATION HANDLERS ---
   const handleAddNotification = async (item: AppNotification) => {
+      // Ensure empty string is converted to null for timestamp fields
+      const expiresAtValue = item.expiresAt && item.expiresAt.trim() !== '' ? item.expiresAt : null;
+      
       const payload = {
           text: item.text,
           type: item.type,
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          expires_at: item.expiresAt || null, 
+          expires_at: expiresAtValue, 
           active: true,
       };
       
@@ -1006,11 +1009,14 @@ const App: React.FC = () => {
   }
 
   const handleUpdateNotification = async (item: AppNotification) => {
+      // Ensure empty string is converted to null for timestamp fields
+      const expiresAtValue = item.expiresAt && item.expiresAt.trim() !== '' ? item.expiresAt : null;
+      
       const payload = {
           text: item.text,
           type: item.type,
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          expires_at: item.expiresAt || null, 
+          expires_at: expiresAtValue, 
           active: item.active,
       };
       
