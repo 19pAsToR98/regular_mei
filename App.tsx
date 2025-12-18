@@ -395,39 +395,50 @@ const App: React.FC = () => {
     }
 
     // 3. Process and map notifications
-    const processedNotifications: AppNotification[] = notifData.map(n => {
-        const interaction = userInteractions[n.id];
-        
-        // Process poll votes for Admin view (if needed)
-        const pollVotes: PollVote[] = (n.poll_votes || []).map((v: any) => ({
-            userId: v.user_id,
-            optionId: v.voted_option_id,
-            votedAt: v.voted_at,
-            // Note: userName/userEmail are not fetched here for simplicity/RLS reasons
-            userName: 'N/A', 
-            userEmail: 'N/A',
-            optionText: n.poll_options?.find((opt: any) => opt.id === v.voted_option_id)?.text || 'N/A'
-        }));
+    const processedNotifications: AppNotification[] = notifData
+        .map(n => {
+            const interaction = userInteractions[n.id];
+            
+            // Process poll votes for Admin view (if needed)
+            const pollVotes: PollVote[] = (n.poll_votes || []).map((v: any) => ({
+                userId: v.user_id,
+                optionId: v.voted_option_id,
+                votedAt: v.voted_at,
+                // Note: userName/userEmail are not fetched here for simplicity/RLS reasons
+                userName: 'N/A', 
+                userEmail: 'N/A',
+                optionText: n.poll_options?.find((opt: any) => opt.id === v.voted_option_id)?.text || 'N/A'
+            }));
 
-        // Update poll options with current vote counts for Admin view
-        const pollOptionsWithCounts = n.poll_options?.map((opt: any) => ({
-            ...opt,
-            votes: pollVotes.filter(v => v.optionId === opt.id).length
-        }));
+            // Update poll options with current vote counts for Admin view
+            const pollOptionsWithCounts = n.poll_options?.map((opt: any) => ({
+                ...opt,
+                votes: pollVotes.filter(v => v.optionId === opt.id).length
+            }));
 
-        return {
-            id: n.id,
-            text: n.text,
-            type: n.type as 'info' | 'warning' | 'success' | 'poll',
-            date: new Date(n.created_at).toLocaleDateString('pt-BR'),
-            pollOptions: pollOptionsWithCounts,
-            pollVotes: pollVotes,
-            active: n.active,
-            expiresAt: n.expires_at,
-            read: interaction?.is_read || false,
-            userVotedOptionId: interaction?.voted_option_id || undefined
-        } as AppNotification;
-    });
+            return {
+                id: n.id,
+                text: n.text,
+                type: n.type as 'info' | 'warning' | 'success' | 'poll',
+                date: new Date(n.created_at).toLocaleDateString('pt-BR'),
+                pollOptions: pollOptionsWithCounts,
+                pollVotes: pollVotes,
+                active: n.active,
+                expiresAt: n.expires_at,
+                read: interaction?.is_read || false,
+                userVotedOptionId: interaction?.voted_option_id || undefined
+            } as AppNotification;
+        })
+        .filter(n => {
+            // Filter out expired notifications for non-admin users
+            if (userId && userInteractions[n.id]?.is_read) return true; // Keep read notifications
+            if (n.expiresAt) {
+                const expiryDate = new Date(n.expiresAt);
+                const now = new Date();
+                return now < expiryDate;
+            }
+            return true;
+        });
 
     setNotifications(processedNotifications);
   };
@@ -980,7 +991,7 @@ const App: React.FC = () => {
 
   // --- NOTIFICATION HANDLERS ---
   const handleAddNotification = async (item: AppNotification) => {
-      // Ensure empty string is converted to null for timestamp fields
+      // FIX: Ensure empty string is converted to null for timestamp fields
       const expiresAtValue = item.expiresAt && item.expiresAt.trim() !== '' ? item.expiresAt : null;
       
       const payload = {
@@ -1009,7 +1020,7 @@ const App: React.FC = () => {
   }
 
   const handleUpdateNotification = async (item: AppNotification) => {
-      // Ensure empty string is converted to null for timestamp fields
+      // FIX: Ensure empty string is converted to null for timestamp fields
       const expiresAtValue = item.expiresAt && item.expiresAt.trim() !== '' ? item.expiresAt : null;
       
       const payload = {

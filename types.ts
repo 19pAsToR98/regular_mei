@@ -134,7 +134,7 @@ export interface AppNotification {
   active: boolean;
   read?: boolean;
   userVotedOptionId?: number; // ID of the option the user voted for
-  expiresAt?: string; // ISO Date string for poll expiration
+  expiresAt?: string | null; // ISO Date string for poll expiration (Made optional/nullable)
 }
 
 export interface CNPJResponse {

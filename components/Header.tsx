@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { AppNotification, User } from '../types';
 import PollModal from './PollModal';
@@ -26,10 +25,22 @@ const Header: React.FC<HeaderProps> = ({
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // Filter notifications to only show non-expired ones
+  const activeNotifications = useMemo(() => {
+      const now = new Date();
+      return notifications.filter(n => {
+          if (n.expiresAt) {
+              const expiryDate = new Date(n.expiresAt);
+              return now < expiryDate;
+          }
+          return true;
+      });
+  }, [notifications]);
+
+  const unreadCount = activeNotifications.filter(n => !n.read).length;
   
   // Derive the selected poll object from the current props
-  const selectedPoll = selectedPollId ? notifications.find(n => n.id === selectedPollId) : null;
+  const selectedPoll = selectedPollId ? activeNotifications.find(n => n.id === selectedPollId) : null;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -124,14 +135,14 @@ const Header: React.FC<HeaderProps> = ({
                     {unreadCount > 0 && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">{unreadCount} novas</span>}
                 </div>
                 <div className="max-h-[400px] overflow-y-auto">
-                    {notifications.length === 0 ? (
+                    {activeNotifications.length === 0 ? (
                         <div className="p-8 text-center text-slate-400">
                             <span className="material-icons text-4xl mb-2 opacity-50">notifications_off</span>
-                            <p className="text-sm">Nenhuma notificação no momento.</p>
+                            <p className="text-sm">Nenhuma notificação ativa no momento.</p>
                         </div>
                     ) : (
                         <ul>
-                            {notifications.map(n => (
+                            {activeNotifications.map(n => (
                                 <li key={n.id}>
                                     <button 
                                         onClick={() => handleNotificationClick(n)}
@@ -162,6 +173,11 @@ const Header: React.FC<HeaderProps> = ({
                                                 <span className="inline-flex items-center gap-1 text-xs text-purple-600 font-medium mt-1 hover:underline">
                                                     {n.userVotedOptionId !== undefined ? 'Ver resultados' : 'Participar agora'} 
                                                     <span className="material-icons text-[10px]">arrow_forward</span>
+                                                </span>
+                                            )}
+                                            {n.expiresAt && (
+                                                <span className="inline-block mt-1 text-[9px] font-bold uppercase tracking-wide text-red-500">
+                                                    Expira em: {new Date(n.expiresAt).toLocaleDateString('pt-BR')}
                                                 </span>
                                             )}
                                         </div>

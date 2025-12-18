@@ -58,8 +58,6 @@ const getTodayDateString = () => {
     return new Date().toISOString().split('T')[0];
 };
 
-// REMOVED: normalizeContent is no longer needed as Quill outputs clean HTML
-
 const AdminPage: React.FC<AdminPageProps> = ({ 
     offers, onAddOffer, onUpdateOffer, onDeleteOffer,
     news, onAddNews, onUpdateNews, onDeleteNews,
@@ -92,8 +90,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
   const [editingNewsId, setEditingNewsId] = useState<number | null>(null);
   const [showNewsPreview, setShowNewsPreview] = useState(false);
   
-  // Removed contentInputRef as it's no longer needed for Quill
-  
   // News Pagination
   const [newsPage, setNewsPage] = useState(1);
   const newsPerPage = 5;
@@ -113,7 +109,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
     text: string;
     type: 'info' | 'warning' | 'success' | 'poll';
     pollOptions: string[];
-    expiresAt: string;
+    expiresAt: string; // Now used for all types
   } = {
     text: '', type: 'info', pollOptions: ['Sim', 'Não'], expiresAt: ''
   };
@@ -310,8 +306,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
     handleCancelNewsEdit();
   };
 
-  // Removed handleFormat as Quill handles formatting
-
   // Prepare content for preview (Quill output is already HTML)
   const previewContent = useMemo(() => newsForm.content, [newsForm.content]);
 
@@ -378,7 +372,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
           text: item.text,
           type: item.type,
           pollOptions: item.pollOptions ? item.pollOptions.map(o => o.text) : ['Sim', 'Não'],
-          expiresAt: item.expiresAt || ''
+          expiresAt: item.expiresAt || '' // Use empty string if null
       });
   }
 
@@ -414,7 +408,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
         date: editingNotifId ? (notifications.find(n => n.id === editingNotifId)?.date || dateStr) : dateStr,
         active: true,
         pollOptions: pollData,
-        expiresAt: notifForm.expiresAt,
+        expiresAt: notifForm.expiresAt || null, // Ensure null if empty string
         // pollVotes and read status are handled by DB/interactions, not set here
     };
 
@@ -1174,20 +1168,22 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                 placeholder={notifForm.type === 'poll' ? "Ex: Qual funcionalidade você quer ver primeiro?" : "Escreva o conteúdo da notificação..."}
                             />
                         </div>
+                        
+                        {/* Expiration Date Field (for all types) */}
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Validade / Expiração (Opcional)</label>
+                            <input 
+                                type="datetime-local" 
+                                value={notifForm.expiresAt} 
+                                onChange={e => setNotifForm({...notifForm, expiresAt: e.target.value})}
+                                className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-sm"
+                            />
+                            <p className="text-xs text-slate-500 mt-1">A notificação será automaticamente ocultada após esta data/hora.</p>
+                        </div>
 
-                        {/* Poll Options Builder */}
+                        {/* Poll Options Builder (Only for poll type) */}
                         {notifForm.type === 'poll' && (
                             <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-top-2">
-                                <div className="mb-4">
-                                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Validade / Prazo</label>
-                                  <input 
-                                    type="datetime-local" 
-                                    value={notifForm.expiresAt} 
-                                    onChange={e => setNotifForm({...notifForm, expiresAt: e.target.value})}
-                                    className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-sm"
-                                  />
-                                </div>
-
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Opções de Resposta</label>
                                 <div className="space-y-2">
                                     {notifForm.pollOptions.map((opt, idx) => (
@@ -1271,9 +1267,13 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                     onClick={(e) => { e.stopPropagation(); setViewingResultsPoll(n); }}
                                     className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded hover:bg-purple-200 font-bold flex items-center gap-1"
                                   >
-                                    <span className="material-icons text-[10px]">bar_chart</span> Ver Resultados
+                                    <span className="material-icons text-sm">bar_chart</span> Ver Resultados
                                   </button>
                                 </div>
+                            )}
+                            
+                            {n.expiresAt && n.type !== 'poll' && (
+                                <p className="text-[10px] text-slate-400 mt-1">Expira em: {new Date(n.expiresAt).toLocaleString('pt-BR')}</p>
                             )}
 
                             <p className="text-[10px] text-slate-400 text-right mt-1">{n.date}</p>
@@ -1570,6 +1570,47 @@ const AdminPage: React.FC<AdminPageProps> = ({
                               </div>
                           </div>
                       )}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* --- CONTENT: MAINTENANCE --- */}
+      {activeTab === 'maintenance' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white">Controle de Manutenção</h3>
+              <p className="text-slate-500 dark:text-slate-400">Ative o modo de manutenção para desabilitar temporariamente partes da aplicação ou o sistema inteiro.</p>
+
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                  <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
+                      <h4 className="text-lg font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+                          <span className="material-icons">warning</span> Manutenção Global
+                      </h4>
+                      <button 
+                          onClick={() => toggleMaintenance('global')}
+                          className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${maintenance.global ? 'bg-red-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+                      >
+                          <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${maintenance.global ? 'translate-x-7' : 'translate-x-1'}`} />
+                      </button>
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Se ativado, todos os usuários (exceto Admin) verão a tela de manutenção global.</p>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                  <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Manutenção por Módulo</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {Object.entries(maintenance).filter(([key]) => key !== 'global').map(([key, value]) => (
+                          <div key={key} className="flex justify-between items-center p-3 border border-slate-100 dark:border-slate-800 rounded-lg">
+                              <span className="text-sm font-medium text-slate-700 dark:text-slate-300 capitalize">{key}</span>
+                              <button 
+                                  onClick={() => toggleMaintenance(key as keyof MaintenanceConfig)}
+                                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${value ? 'bg-yellow-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                              >
+                                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${value ? 'translate-x-6' : 'translate-x-1'}`} />
+                              </button>
+                          </div>
+                      ))}
                   </div>
               </div>
           </div>
