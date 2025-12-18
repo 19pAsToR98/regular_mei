@@ -9,12 +9,6 @@ interface NewsPageProps {
 
 const categories = ['Todas', 'Legislação', 'Finanças', 'Gestão', 'Marketing', 'Benefícios', 'Tecnologia'];
 
-// Revertendo a função cleanHtmlContent para permitir que <p></p> sejam renderizados
-// const cleanHtmlContent = (html: string): string => {
-//     if (!html) return '';
-//     return html.replace(/<p>\s*<\/p>/g, '');
-// };
-
 const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
@@ -71,8 +65,9 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
              {article?.excerpt}
            </p>
            
+           {/* REMOVENDO PROSE E APLICANDO ESTILOS BÁSICOS PARA MANTER O ESPAÇAMENTO DO EDITOR */}
            <div 
-             className="prose prose-lg prose-slate dark:prose-invert max-w-none prose-a:text-primary prose-headings:text-slate-800 dark:prose-headings:text-white"
+             className="text-base text-slate-700 dark:text-slate-300 leading-relaxed space-y-4"
              dangerouslySetInnerHTML={{ __html: article?.content || '' }}
            />
 
