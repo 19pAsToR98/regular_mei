@@ -119,11 +119,15 @@ const AdminPage: React.FC<AdminPageProps> = ({
   // --- CONNECTIONS FORM STATE ---
   const [localConnConfig, setLocalConnConfig] = useState<ConnectionConfig>(connectionConfig);
   const [testModalOpen, setTestModalOpen] = useState(false);
-  const [testType, setTestType] = useState<'cnpj' | 'diagnostic'>('cnpj');
+  const [testType, setTestType] = useState<'cnpj' | 'diagnostic' | 'whatsapp'>('cnpj');
   const [testCnpj, setTestCnpj] = useState('');
   const [testLoading, setTestLoading] = useState(false);
   const [testResponse, setTestResponse] = useState<string | null>(null);
   const [testParsedData, setTestParsedData] = useState<any | null>(null);
+  
+  // WhatsApp Test State
+  const [testWhatsappNumber, setTestWhatsappNumber] = useState('553199664201');
+  const [testWhatsappMessage, setTestWhatsappMessage] = useState('Olá! Teste de conexão bem-sucedido.');
 
   // --- UTILS ---
   const isNotificationExpired = (n: AppNotification) => {
@@ -467,67 +471,106 @@ const AdminPage: React.FC<AdminPageProps> = ({
   };
 
   const handleTestConnection = async () => {
-      if (!testCnpj) {
-          alert('Por favor, insira um CNPJ para teste.');
-          return;
-      }
-      
       setTestLoading(true);
       setTestResponse(null);
       setTestParsedData(null);
       
       try {
-          const cleanCnpj = testCnpj.replace(/[^\d]/g, '');
-          let url = '';
-          let options: RequestInit = {};
-
-          if (testType === 'cnpj') {
-              url = `https://corsproxy.io/?${encodeURIComponent(localConnConfig.cnpjApi.baseUrl + cleanCnpj)}`;
-          } else {
-              // Diagnostic API logic
-              const webhookUrl = localConnConfig.diagnosticApi.webhookUrl;
-              const urlWithParams = `${webhookUrl}?cnpj=${cleanCnpj}`;
-              url = `https://corsproxy.io/?${encodeURIComponent(urlWithParams)}`;
-              options = {
+          if (testType === 'whatsapp') {
+              if (!testWhatsappNumber || !testWhatsappMessage) {
+                  throw new Error('Número e mensagem são obrigatórios para o teste do WhatsApp.');
+              }
+              
+              const url = localConnConfig.whatsappApi.sendTextUrl;
+              const token = localConnConfig.whatsappApi.token;
+              
+              const response = await fetch(url, {
                   method: 'POST',
                   headers: {
                       'Content-Type': 'application/json',
-                      [localConnConfig.diagnosticApi.headerKey || 'cnpj']: cleanCnpj
+                      'Accept': 'application/json',
+                      'token': token,
                   },
-                  body: JSON.stringify({ cnpj: cleanCnpj })
-              };
-          }
-
-          const response = await fetch(url, options);
-          const rawText = await response.text();
-          let json;
-          try {
-              json = JSON.parse(rawText);
-          } catch {
-              json = { error: "Could not parse JSON", raw: rawText };
-          }
-
-          setTestResponse(JSON.stringify(json, null, 2));
-
-          // Parse based on mappings
-          const mappings = testType === 'cnpj' ? localConnConfig.cnpjApi.mappings : localConnConfig.diagnosticApi.mappings;
-          
-          let dataToMap = json;
-          if (Array.isArray(json) && json.length > 0) dataToMap = json[0];
-          if (dataToMap?.resultado) dataToMap = dataToMap.resultado;
-
-          const parsed: Record<string, any> = {};
-          mappings.forEach(m => {
-              if (m.visible) {
-                  let val = getNestedValue(dataToMap, m.jsonPath);
-                  if (typeof val === 'object') val = JSON.stringify(val);
-                  parsed[m.label] = val !== undefined ? val : 'N/A';
+                  body: JSON.stringify({
+                      number: testWhatsappNumber.replace(/[^\d]/g, ''),
+                      text: testWhatsappMessage
+                  })
+              });
+              
+              const rawText = await response.text();
+              let json;
+              try {
+                  json = JSON.parse(rawText);
+              } catch {
+                  json = { error: "Could not parse JSON", raw: rawText };
               }
-          });
-          setTestParsedData(parsed);
+              
+              setTestResponse(JSON.stringify(json, null, 2));
+              setTestParsedData({
+                  Status: response.ok ? 'Sucesso' : 'Falha',
+                  'HTTP Status': response.status,
+                  Mensagem: json.message || json.error || 'Verifique a resposta JSON.'
+              });
+              
+          } else {
+              // CNPJ or Diagnostic API logic
+              if (!testCnpj) {
+                  throw new Error('Por favor, insira um CNPJ para teste.');
+              }
+              
+              const cleanCnpj = testCnpj.replace(/[^\d]/g, '');
+              let url = '';
+              let options: RequestInit = {};
+
+              if (testType === 'cnpj') {
+                  url = `https://corsproxy.io/?${encodeURIComponent(localConnConfig.cnpjApi.baseUrl + cleanCnpj)}`;
+              } else {
+                  // Diagnostic API logic
+                  const webhookUrl = localConnConfig.diagnosticApi.webhookUrl;
+                  const urlWithParams = `${webhookUrl}?cnpj=${cleanCnpj}`;
+                  url = `https://corsproxy.io/?${encodeURIComponent(urlWithParams)}`;
+                  options = {
+                      method: 'POST',
+                      headers: {
+                          'Content-Type': 'application/json',
+                          [localConnConfig.diagnosticApi.headerKey || 'cnpj']: cleanCnpj
+                      },
+                      body: JSON.stringify({ cnpj: cleanCnpj })
+                  };
+              }
+
+              const response = await fetch(url, options);
+              const rawText = await response.text();
+              let json;
+              try {
+                  json = JSON.parse(rawText);
+              } catch {
+                  json = { error: "Could not parse JSON", raw: rawText };
+              }
+
+              setTestResponse(JSON.stringify(json, null, 2));
+
+              // Parse based on mappings
+              const mappings = testType === 'cnpj' ? localConnConfig.cnpjApi.mappings : localConnConfig.diagnosticApi.mappings;
+              
+              let dataToMap = json;
+              if (Array.isArray(json) && json.length > 0) dataToMap = json[0];
+              if (dataToMap?.resultado) dataToMap = dataToMap.resultado;
+
+              const parsed: Record<string, any> = {};
+              mappings.forEach(m => {
+                  if (m.visible) {
+                      let val = getNestedValue(dataToMap, m.jsonPath);
+                      if (typeof val === 'object') val = JSON.stringify(val);
+                      parsed[m.label] = val !== undefined ? val : 'N/A';
+                  }
+              });
+              setTestParsedData(parsed);
+          }
 
       } catch (error: any) {
           setTestResponse(`Error: ${error.message}`);
+          setTestParsedData(null);
       } finally {
           setTestLoading(false);
       }
@@ -1423,6 +1466,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
                               />
                           </div>
                           <p className="text-xs text-slate-500 mt-2">Este token é usado no header `token` para autenticar o envio de mensagens.</p>
+                          <button type="button" onClick={() => { setTestType('whatsapp'); setTestModalOpen(true); }} className="mt-4 text-sm font-medium text-primary hover:underline flex items-center gap-1">
+                              <span className="material-icons text-sm">science</span> Testar Envio
+                          </button>
                       </div>
                   </div>
 
@@ -1544,6 +1590,113 @@ const AdminPage: React.FC<AdminPageProps> = ({
                          className="prose prose-slate dark:prose-invert max-w-none prose-a:text-primary prose-headings:text-slate-800 dark:prose-headings:text-white"
                          dangerouslySetInnerHTML={{ __html: previewContent }}
                       />
+                  </div>
+              </div>
+          </div>
+      )}
+      
+      {/* API TEST MODAL */}
+      {testModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+              <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden border border-slate-200 dark:border-slate-800 max-h-[90vh] flex flex-col">
+                  <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
+                      <h3 className="font-bold text-lg text-slate-800 dark:text-white">
+                          Teste de Conexão: {testType === 'cnpj' ? 'CNPJ' : testType === 'diagnostic' ? 'Diagnóstico Fiscal' : 'WhatsApp'}
+                      </h3>
+                      <button onClick={() => setTestModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                          <span className="material-icons">close</span>
+                      </button>
+                  </div>
+                  
+                  <div className="p-6 flex-1 overflow-y-auto">
+                      
+                      {/* Test Input Form */}
+                      <div className="mb-6 p-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                          <h4 className="font-bold text-slate-800 dark:text-white mb-3">Parâmetros de Teste</h4>
+                          
+                          {testType !== 'whatsapp' && (
+                              <div>
+                                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">CNPJ</label>
+                                  <input 
+                                      type="text" 
+                                      value={testCnpj} 
+                                      onChange={e => setTestCnpj(e.target.value)}
+                                      className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-900 text-sm"
+                                      placeholder="00.000.000/0001-00"
+                                  />
+                              </div>
+                          )}
+                          
+                          {testType === 'whatsapp' && (
+                              <div className="space-y-4">
+                                  <div>
+                                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Número de Destino (Ex: 5531999999999)</label>
+                                      <input 
+                                          type="text" 
+                                          value={testWhatsappNumber} 
+                                          onChange={e => setTestWhatsappNumber(e.target.value)}
+                                          className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-900 text-sm"
+                                          placeholder="55..."
+                                      />
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Mensagem</label>
+                                      <textarea 
+                                          rows={3}
+                                          value={testWhatsappMessage} 
+                                          onChange={e => setTestWhatsappMessage(e.target.value)}
+                                          className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-900 text-sm"
+                                          placeholder="Mensagem de teste..."
+                                      />
+                                  </div>
+                              </div>
+                          )}
+
+                          <button 
+                              onClick={handleTestConnection}
+                              disabled={testLoading || (testType !== 'whatsapp' && !testCnpj)}
+                              className="mt-4 w-full bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-6 py-2 rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2"
+                          >
+                              {testLoading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : <span className="material-icons text-sm">send</span>}
+                              {testLoading ? 'Testando...' : 'Executar Teste'}
+                          </button>
+                      </div>
+
+                      {/* Test Results */}
+                      {testResponse && (
+                          <div className="mt-6 space-y-4 animate-in fade-in">
+                              <h4 className="font-bold text-slate-800 dark:text-white">Resultado da Chamada</h4>
+                              
+                              {/* Parsed Data (Only for CNPJ/Diagnostic) */}
+                              {testParsedData && testType !== 'whatsapp' && (
+                                  <div className="p-4 border border-green-200 dark:border-green-900/50 rounded-lg bg-green-50 dark:bg-green-900/20">
+                                      <h5 className="text-sm font-bold text-green-700 dark:text-green-300 mb-2">Dados Mapeados</h5>
+                                      <div className="grid grid-cols-2 gap-2 text-xs">
+                                          {Object.entries(testParsedData).map(([label, value]) => (
+                                              <div key={label} className="truncate">
+                                                  <span className="font-semibold text-slate-600 dark:text-slate-400">{label}:</span> 
+                                                  <span className="font-mono text-slate-800 dark:text-white ml-1">{value as string}</span>
+                                              </div>
+                                          ))}
+                                      </div>
+                                  </div>
+                              )}
+                              
+                              {/* WhatsApp Test Result */}
+                              {testParsedData && testType === 'whatsapp' && (
+                                  <div className={`p-4 border rounded-lg ${testParsedData.Status === 'Sucesso' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+                                      <h5 className={`text-sm font-bold mb-2 ${testParsedData.Status === 'Sucesso' ? 'text-green-700' : 'text-red-700'}`}>Status: {testParsedData.Status}</h5>
+                                      <p className="text-xs text-slate-600">Mensagem: {testParsedData.Mensagem}</p>
+                                      <p className="text-xs text-slate-600">HTTP: {testParsedData['HTTP Status']}</p>
+                                  </div>
+                              )}
+
+                              <h4 className="font-bold text-slate-800 dark:text-white">Resposta Bruta (JSON)</h4>
+                              <pre className="bg-slate-900 text-green-400 p-4 rounded-lg text-xs overflow-x-auto max-h-64 border border-slate-700">
+                                  {testResponse}
+                              </pre>
+                          </div>
+                      )}
                   </div>
               </div>
           </div>
