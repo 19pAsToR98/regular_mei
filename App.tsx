@@ -845,6 +845,8 @@ const App: React.FC = () => {
         is_exclusive: newOffer.isExclusive,
         is_featured: newOffer.isFeatured,
     };
+    
+    console.log('ADD OFFER PAYLOAD:', payload);
 
     const { error } = await supabase
         .from('offers')
@@ -852,7 +854,7 @@ const App: React.FC = () => {
 
     if (error) {
         console.error('Error adding offer:', error);
-        showError('Erro ao adicionar oferta.');
+        showError(`Erro ao adicionar oferta: ${error.message}`);
         return;
     }
     
@@ -878,6 +880,8 @@ const App: React.FC = () => {
         is_exclusive: updatedOffer.isExclusive,
         is_featured: updatedOffer.isFeatured,
     };
+    
+    console.log('UPDATE OFFER PAYLOAD:', payload);
 
     const { error } = await supabase
         .from('offers')
@@ -886,7 +890,7 @@ const App: React.FC = () => {
 
     if (error) {
         console.error('Error updating offer:', error);
-        showError('Erro ao atualizar oferta.');
+        showError(`Erro ao atualizar oferta: ${error.message}`);
         return;
     }
     
