@@ -60,6 +60,7 @@ const portugueseIconMap: Record<string, string[]> = {
 interface SettingsPageProps {
   user?: User | null;
   onUpdateUser?: (user: User) => void;
+  onUpdateUserPhone?: (userId: string, newPhone: string) => Promise<{ success: boolean, error?: string }>; // NEW PROP
   cnpj?: string;
   onCnpjChange?: (cnpj: string) => void;
   revenueCats: Category[];
@@ -73,8 +74,22 @@ interface SettingsPageProps {
 
 type SettingsSection = 'profile' | 'categories' | 'appearance';
 
+// --- UTILS ---
+const formatPhone = (value: string): string => {
+    const cleanValue = value.replace(/[^\d]/g, '');
+    const length = cleanValue.length;
+
+    if (length <= 2) return `(${cleanValue}`;
+    if (length <= 7) return `(${cleanValue.slice(0, 2)}) ${cleanValue.slice(2)}`;
+    if (length <= 11) return `(${cleanValue.slice(0, 2)}) ${cleanValue.slice(2, 7)}-${cleanValue.slice(7, 11)}`;
+    
+    return `(${cleanValue.slice(0, 2)}) ${cleanValue.slice(2, 7)}-${cleanValue.slice(7, 11)}`;
+};
+// --- END UTILS ---
+
+
 const SettingsPage: React.FC<SettingsPageProps> = ({ 
-  user, onUpdateUser,
+  user, onUpdateUser, onUpdateUserPhone,
   cnpj, onCnpjChange, 
   revenueCats, expenseCats, onAddCategory, onDeleteCategory,
   onExportData, onDeleteAccount, onChangePassword
@@ -87,7 +102,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   // Profile Form State
   const [profileForm, setProfileForm] = useState({
       name: user?.name || '',
-      phone: user?.phone || '',
+      phone: user?.phone ? formatPhone(user.phone) : '', // Format phone on load
       email: user?.email || '',
       receiveWeeklySummary: user?.receiveWeeklySummary ?? true // NEW FIELD
   });
@@ -139,12 +154,18 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       if (user) {
           setProfileForm({
               name: user.name,
-              phone: user.phone || '',
+              phone: user.phone ? formatPhone(user.phone) : '', // Format phone on user update
               email: user.email,
               receiveWeeklySummary: user.receiveWeeklySummary ?? true // Update on user change
           });
       }
   }, [user]);
+  
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    const formattedValue = formatPhone(rawValue);
+    setProfileForm({...profileForm, phone: formattedValue});
+  };
 
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
     setTheme(newTheme);
@@ -156,16 +177,32 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   const handleSaveProfile = async () => {
+    if (!user || !onUpdateUser || !onUpdateUserPhone) return;
+    
     setIsSaving(true);
-    await new Promise(r => setTimeout(r, 1000)); // Simulate save delay
+    
+    const originalPhone = user.phone ? formatPhone(user.phone) : '';
+    const newPhone = profileForm.phone;
+    const isPhoneChanged = originalPhone !== newPhone;
+    
+    let phoneUpdateSuccess = true;
 
-    // 1. Save CNPJ
+    // 1. Handle Phone Change (Requires separate logic due to duplication check)
+    if (isPhoneChanged) {
+        const { success, error } = await onUpdateUserPhone(user.id, newPhone);
+        if (!success) {
+            showError(error || "Erro ao atualizar telefone.");
+            phoneUpdateSuccess = false;
+        }
+    }
+
+    // 2. Handle CNPJ Change
     if (onCnpjChange) {
       onCnpjChange(localCnpj);
     }
 
-    // 2. Check for Email Change
-    if (user && profileForm.email !== user.email) {
+    // 3. Check for Email Change
+    if (profileForm.email !== user.email) {
         setPendingEmail(profileForm.email);
         setIsVerifyingEmail(true);
         setIsSaving(false);
@@ -174,16 +211,27 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         return;
     }
 
-    // 3. Save Basic Info (Name/Phone/Summary Preference) if email didn't change
-    if (user && onUpdateUser) {
+    // 4. Save Basic Info (Name/Summary Preference) if phone update was successful or not attempted
+    if (phoneUpdateSuccess) {
+        // Create a partial user object for fields that don't require special checks
+        const partialUpdate: Partial<User> = {
+            name: profileForm.name,
+            receiveWeeklySummary: profileForm.receiveWeeklySummary
+        };
+        
+        // If phone was updated successfully, it's already reflected in the user state via onUpdateUserPhone, 
+        // but we need to ensure the name/summary preference is also saved.
+        
+        // We call onUpdateUser which handles the DB update for these fields.
         onUpdateUser({
             ...user,
-            name: profileForm.name,
-            phone: profileForm.phone,
-            receiveWeeklySummary: profileForm.receiveWeeklySummary // SAVE NEW FIELD
+            ...partialUpdate,
+            // Note: phone is already updated in the DB by onUpdateUserPhone if successful
         });
+        
         showSuccessFeedback();
     }
+    
     setIsSaving(false);
   };
 
@@ -193,7 +241,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               onUpdateUser({
                   ...user,
                   name: profileForm.name,
-                  phone: profileForm.phone,
+                  phone: profileForm.phone.replace(/[^\d]/g, ''), // Save clean phone
                   email: pendingEmail,
                   receiveWeeklySummary: profileForm.receiveWeeklySummary // SAVE NEW FIELD
               });
@@ -334,10 +382,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             <input 
                                 type="tel" 
                                 value={profileForm.phone}
-                                onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
+                                onChange={handlePhoneChange} // Use custom handler
+                                maxLength={15} // Max length for (99) 99999-9999
                                 className="w-full px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none"
                                 placeholder="(00) 00000-0000"
                             />
+                            {user?.phone && formatPhone(user.phone) !== profileForm.phone && (
+                                <p className="text-xs text-orange-500 mt-1 flex items-center gap-1">
+                                    <span className="material-icons text-xs">warning</span>
+                                    O telefone será atualizado após salvar.
+                                </p>
+                            )}
                         </div>
 
                         <div>

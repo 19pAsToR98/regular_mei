@@ -768,12 +768,8 @@ const App: React.FC = () => {
       loadAllUserData(user.id, updatedUser.role || 'user');
   }
 
-  // --- USER MANAGEMENT HANDLERS (Admin) ---
-  const handleAddUser = (newUser: User) => {
-      setAllUsers([...allUsers, newUser]);
-      showSuccess('Usuário adicionado com sucesso!');
-  };
-
+  // --- USER MANAGEMENT HANDLERS (Admin & Settings) ---
+  
   const handleUpdateUser = async (updatedUser: User) => {
       // 1. Update Supabase Profile (only mutable fields)
       const { error } = await supabase
@@ -801,6 +797,57 @@ const App: React.FC = () => {
           setUser(updatedUser);
       }
       showSuccess('Perfil atualizado com sucesso!');
+  };
+  
+  const handleUpdateUserPhone = async (userId: string, newPhone: string): Promise<{ success: boolean, error?: string }> => {
+      const cleanPhone = newPhone.replace(/[^\d]/g, '');
+      
+      if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+          return { success: false, error: "Número de telefone inválido. O DDD e o número são obrigatórios." };
+      }
+
+      // 1. Check if phone number already exists for another user
+      const { data: existingPhone, error: phoneCheckError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('phone', cleanPhone)
+          .neq('id', userId) // Exclude current user
+          .maybeSingle();
+
+      if (phoneCheckError) {
+          console.error('Phone check error:', phoneCheckError);
+          return { success: false, error: 'Erro ao verificar telefone. Por favor, tente novamente.' };
+      }
+
+      if (existingPhone) {
+          return { success: false, error: 'Este número de telefone já está cadastrado em outra conta.' };
+      }
+      
+      // 2. Update the profile
+      const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ phone: cleanPhone })
+          .eq('id', userId);
+
+      if (updateError) {
+          console.error('Error updating phone:', updateError);
+          return { success: false, error: 'Erro ao salvar o novo telefone.' };
+      }
+      
+      // 3. Update local state
+      setUser(prev => {
+          if (prev && prev.id === userId) {
+              return { ...prev, phone: cleanPhone };
+          }
+          return prev;
+      });
+      
+      return { success: true };
+  };
+
+  const handleAddUser = (newUser: User) => {
+      setAllUsers([...allUsers, newUser]);
+      showSuccess('Usuário adicionado com sucesso!');
   };
 
   const handleChangePassword = async (newPassword: string): Promise<boolean> => {
@@ -1800,6 +1847,7 @@ const App: React.FC = () => {
             return <SettingsPage 
               user={user}
               onUpdateUser={handleUpdateUser}
+              onUpdateUserPhone={handleUpdateUserPhone} // NEW PROP
               cnpj={cnpj} 
               onCnpjChange={setCnpj}
               revenueCats={revenueCats}
