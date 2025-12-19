@@ -64,6 +64,8 @@ export interface NewsItem {
   imageUrl: string;
   readTime: string;
   status: 'published' | 'draft';
+  sourceUrl?: string; // NEW
+  sourceName?: string; // NEW
 }
 
 export interface MaintenanceConfig {

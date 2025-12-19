@@ -112,7 +112,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
   // --- NEWS STATE ---
   const initialNewsForm: Omit<NewsItem, 'id'> = {
-    title: '', category: 'Legislação', excerpt: '', content: '', imageUrl: '', readTime: '', date: getTodayDateString(), status: 'draft'
+    title: '', category: 'Legislação', excerpt: '', content: '', imageUrl: '', readTime: '', date: getTodayDateString(), status: 'draft',
+    sourceUrl: '', // NEW
+    sourceName: '' // NEW
   };
   const [newsForm, setNewsForm] = useState(initialNewsForm);
   const [editingNewsId, setEditingNewsId] = useState<number | null>(null);
@@ -304,7 +306,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
       setNewsForm({
           title: item.title, category: item.category, excerpt: item.excerpt, 
           content: item.content, imageUrl: item.imageUrl, readTime: item.readTime, 
-          date: item.date, status: item.status
+          date: item.date, status: item.status,
+          sourceUrl: item.sourceUrl || '', // NEW
+          sourceName: item.sourceName || '' // NEW
       });
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -333,10 +337,18 @@ const AdminPage: React.FC<AdminPageProps> = ({
     // Quill outputs clean HTML, no need for manual normalization
     const finalContent = newsForm.content; 
     
+    const newsPayload: Omit<NewsItem, 'id'> = { 
+        ...newsForm, 
+        date: finalDate, 
+        content: finalContent,
+        sourceUrl: newsForm.sourceUrl || undefined, // Ensure undefined if empty
+        sourceName: newsForm.sourceName || undefined // Ensure undefined if empty
+    };
+
     if (editingNewsId) {
-        onUpdateNews({ id: editingNewsId, ...newsForm, date: finalDate, content: finalContent });
+        onUpdateNews({ id: editingNewsId, ...newsPayload });
     } else {
-        onAddNews({ id: Date.now(), ...newsForm, date: finalDate, content: finalContent });
+        onAddNews({ id: Date.now(), ...newsPayload });
     }
     setIsSubmitting(false);
     handleCancelNewsEdit();
@@ -1011,6 +1023,18 @@ const AdminPage: React.FC<AdminPageProps> = ({
                    <textarea rows={2} required value={newsForm.excerpt} onChange={e => setNewsForm({...newsForm, excerpt: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" placeholder="Breve descrição que aparece no card..."></textarea>
                 </div>
                 
+                {/* NEW: Source Fields */}
+                <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome da Fonte (Opcional)</label>
+                        <input type="text" placeholder="Ex: SEBRAE" value={newsForm.sourceName} onChange={e => setNewsForm({...newsForm, sourceName: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">URL da Fonte (Opcional)</label>
+                        <input type="url" placeholder="https://fonte.com.br" value={newsForm.sourceUrl} onChange={e => setNewsForm({...newsForm, sourceUrl: e.target.value})} className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none" />
+                    </div>
+                </div>
+
                 {/* Enhanced Content Editor (Jodit) */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Conteúdo do Artigo</label>
@@ -1149,7 +1173,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={offerForm.isFeatured} onChange={e => setOfferForm({...offerForm, isFeatured: e.target.checked})} /> Destaque</label>
                  </div>
               </div>
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex justify-end pt-2 gap-3">
                 <button 
                     type="submit" 
                     disabled={isSubmitting}

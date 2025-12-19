@@ -370,6 +370,8 @@ const App: React.FC = () => {
             imageUrl: n.image_url,
             readTime: n.read_time,
             status: n.status as 'published' | 'draft',
+            sourceUrl: n.source_url, // NEW
+            sourceName: n.source_name, // NEW
         }));
         setNews(mappedNews);
     } else {
@@ -694,7 +696,7 @@ const App: React.FC = () => {
         setLoadingAuth(false);
         // Clear persisted tab on sign out
         localStorage.removeItem('activeTab');
-        setActiveTabState('dashboard');
+        setActiveTabState('login'); // Explicitly navigate to login view
       } else if (event === 'INITIAL_SESSION' && session?.user) {
         loadUserProfile(session.user);
       } else if (event === 'INITIAL_SESSION' && !session) {
@@ -953,7 +955,7 @@ const App: React.FC = () => {
             
             // Reset local state immediately
             setUser(null);
-            setActiveTab('dashboard');
+            setActiveTab('login'); // Redirect to login/home
             setTransactions([]);
             setAppointments([]);
             setCnpj('');
@@ -978,6 +980,7 @@ const App: React.FC = () => {
           showError('Erro ao sair.');
       }
       setUser(null);
+      setActiveTab('login'); // Explicitly navigate to login view
   };
 
   // --- OFFERS HANDLERS ---
@@ -1084,6 +1087,8 @@ const App: React.FC = () => {
         image_url: newItem.imageUrl,
         read_time: newItem.readTime,
         status: newItem.status,
+        source_url: newItem.sourceUrl || null, // NEW
+        source_name: newItem.sourceName || null, // NEW
     };
 
     const { error } = await supabase
@@ -1110,6 +1115,8 @@ const App: React.FC = () => {
         image_url: updatedItem.imageUrl,
         read_time: updatedItem.readTime,
         status: updatedItem.status,
+        source_url: updatedItem.sourceUrl || null, // NEW
+        source_name: updatedItem.sourceName || null, // NEW
     };
 
     const { error } = await supabase
@@ -1628,6 +1635,7 @@ const App: React.FC = () => {
                         url.searchParams.delete('page');
                         url.searchParams.delete('articleId'); // Clear article ID from URL
                         window.history.pushState({}, '', url);
+                        setActiveTab('login'); // Redirect to login/home
                     }}
                     className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
                   >
@@ -1658,7 +1666,7 @@ const App: React.FC = () => {
                       <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase ml-2">{activeTab === 'terms' ? 'Termos' : 'Privacidade'}</span>
                   </div>
                   <button 
-                    onClick={() => setActiveTab('dashboard')}
+                    onClick={() => setActiveTab('login')}
                     className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
                   >
                       Voltar ao Login <span className="material-icons text-sm">login</span>
@@ -1674,6 +1682,7 @@ const App: React.FC = () => {
       );
   }
 
+  // If not logged in, show AuthPage
   if (!user) {
       return <AuthPage onLogin={handleLogin} onForgotPassword={handleForgotPassword} onNavigate={setActiveTab} />;
   }
@@ -1681,7 +1690,13 @@ const App: React.FC = () => {
   if (!user.isSetupComplete) {
       return <OnboardingPage user={user} onComplete={handleOnboardingComplete} />;
   }
-
+  
+  // Logged in user: Redirect if on a public-only tab
+  if (activeTab === 'login' || activeTab === 'terms' || activeTab === 'privacy') {
+      setActiveTab('dashboard');
+      return null; // Prevent rendering until state updates
+  }
+  
   const isPageInMaintenance = (page: string) => {
       // Admins bypass all maintenance checks
       if (user?.role === 'admin') return false;
@@ -1701,7 +1716,7 @@ const App: React.FC = () => {
           return (
               <div className="flex flex-col items-center justify-center min-h-[600px] text-center p-8">
                   <span className="material-icons text-6xl text-red-500 mb-4">lock</span>
-                  <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Acesso Negado</h2>
+                  <h2 className="2xl font-bold text-slate-800 dark:text-white mb-2">Acesso Negado</h2>
                   <p className="text-slate-500 dark:text-slate-400">Você não tem permissão para acessar a área de administração.</p>
                   <button onClick={() => setActiveTab('dashboard')} className="mt-4 text-primary font-medium hover:underline">Voltar ao Dashboard</button>
               </div>

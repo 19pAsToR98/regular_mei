@@ -103,6 +103,26 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
                className="text-base text-slate-700 dark:text-slate-300 leading-relaxed space-y-4"
                dangerouslySetInnerHTML={{ __html: article?.content || '' }}
              />
+             
+             {/* Source Information */}
+             {(article?.sourceName || article?.sourceUrl) && (
+                 <div className="mt-8 pt-4 border-t border-slate-200 dark:border-slate-800">
+                     <p className="text-xs font-bold text-slate-500 uppercase mb-1">Fonte</p>
+                     {article.sourceUrl ? (
+                         <a 
+                             href={article.sourceUrl} 
+                             target="_blank" 
+                             rel="noopener noreferrer"
+                             className="text-sm text-primary hover:underline flex items-center gap-1"
+                         >
+                             {article.sourceName || article.sourceUrl}
+                             <span className="material-icons text-xs">open_in_new</span>
+                         </a>
+                     ) : (
+                         <p className="text-sm text-slate-600 dark:text-slate-300">{article.sourceName}</p>
+                     )}
+                 </div>
+             )}
 
              <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
                 
