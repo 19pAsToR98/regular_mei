@@ -1,5 +1,5 @@
 import { supabase } from '../src/integrations/supabase/client';
-import { showError, showSuccess, dismissToast, showLoading } from './toastUtils';
+import { showError, showSuccess, dismissToast, showLoading, showWarning } from './toastUtils';
 import { Appointment, Transaction } from '../types';
 
 // Helper para buscar a configuração da API do WhatsApp
