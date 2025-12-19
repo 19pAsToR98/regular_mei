@@ -119,7 +119,8 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
       .slice(0, 5); // Top 5
   }, [transactions, categoryType]);
 
-  const savingsRate = stats.revenue > 0 ? ((stats.balance / stats.revenue) * 100).toFixed(0) : 0;
+  // FIX: Use Math.round to ensure integer percentage
+  const savingsRate = stats.revenue > 0 ? Math.round((stats.balance / stats.revenue) * 100) : 0;
 
   const handleScroll = () => {
     if (scrollRef.current) {
