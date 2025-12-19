@@ -142,6 +142,7 @@ const App: React.FC = () => {
     whatsappApi: { // NEW: WhatsApp API Configuration
         sendTextUrl: 'https://regularmei.uazapi.com/send/text',
         token: 'b201c8c5-08fb-4d7e-adef-f9d4113922b5',
+        enabled: true, // NEW: Default to enabled
     },
     smtp: {
       host: 'smtp.example.com',
@@ -196,6 +197,45 @@ const App: React.FC = () => {
       setMaintenance(config);
       showSuccess('Configuração de manutenção atualizada!');
   };
+  
+  const loadConnectionConfig = async () => {
+      const { data, error } = await supabase
+          .from('app_config')
+          .select('connection_config')
+          .eq('id', 1)
+          .single();
+
+      if (error) {
+          console.error('Error fetching connection config:', error);
+          return;
+      }
+      
+      if (data && data.connection_config) {
+          setConnectionConfig(data.connection_config as ConnectionConfig);
+      }
+  };
+  
+  const handleUpdateConnectionConfig = async (config: ConnectionConfig) => {
+      if (user?.role !== 'admin') {
+          showError('Apenas administradores podem alterar as conexões.');
+          return;
+      }
+      
+      const { error } = await supabase
+          .from('app_config')
+          .update({ connection_config: config })
+          .eq('id', 1);
+
+      if (error) {
+          console.error('Error updating connection config:', error);
+          showError('Erro ao salvar configuração de conexões.');
+          return;
+      }
+      
+      setConnectionConfig(config);
+      showSuccess('Configuração de conexões atualizada!');
+  };
+
 
   const loadAllUsers = async () => {
       const { data, error } = await supabase
@@ -218,7 +258,8 @@ const App: React.FC = () => {
           role: p.role as 'admin' | 'user',
           status: p.status as 'active' | 'inactive' | 'suspended',
           joinedAt: p.joined_at,
-          lastActive: p.last_active
+          lastActive: p.last_active,
+          receiveWeeklySummary: p.receive_weekly_summary ?? true // NEW FIELD
       }));
       setAllUsers(mappedUsers);
   };
@@ -469,7 +510,8 @@ const App: React.FC = () => {
           loadAppointments(userId),
           loadUserCategories(userId), // Load user-specific categories
           loadNewsAndOffers(),
-          loadNotifications(userId) // Pass userId to load interactions
+          loadNotifications(userId), // Pass userId to load interactions
+          loadConnectionConfig() // Load connection config for WhatsApp status
       ];
 
       if (userRole === 'admin') {
@@ -527,7 +569,8 @@ const App: React.FC = () => {
         role: profileData.role as 'admin' | 'user',
         status: profileData.status as 'active' | 'inactive' | 'suspended',
         joinedAt: profileData.joined_at,
-        lastActive: profileData.last_active // Keep existing last_active from DB
+        lastActive: profileData.last_active, // Keep existing last_active from DB
+        receiveWeeklySummary: profileData.receive_weekly_summary ?? true // NEW FIELD
     };
 
     setUser(appUser);
@@ -679,7 +722,7 @@ const App: React.FC = () => {
       return true;
   }
 
-  const handleOnboardingComplete = async (newCnpj: string, theme: 'light' | 'dark', companyName: string) => {
+  const handleOnboardingComplete = async (newCnpj: string, theme: 'light' | 'dark', companyName: string, receiveWeeklySummary: boolean) => {
       if (!user) return;
       
       // 1. Update Supabase Profile
@@ -690,7 +733,8 @@ const App: React.FC = () => {
               cnpj: newCnpj, 
               name: companyName || user.name, 
               is_setup_complete: true,
-              last_active: now // Set last_active on completion
+              last_active: now, // Set last_active on completion
+              receive_weekly_summary: receiveWeeklySummary // SAVE NEW FIELD
           })
           .eq('id', user.id);
 
@@ -706,7 +750,8 @@ const App: React.FC = () => {
           isSetupComplete: true, 
           cnpj: newCnpj,
           name: companyName || user.name,
-          lastActive: now // Use the same timestamp for local state
+          lastActive: now, // Use the same timestamp for local state
+          receiveWeeklySummary: receiveWeeklySummary // NEW FIELD
       };
       setCnpj(newCnpj);
       setUser(updatedUser);
@@ -729,7 +774,28 @@ const App: React.FC = () => {
       showSuccess('Usuário adicionado com sucesso!');
   };
 
-  const handleUpdateUser = (updatedUser: User) => {
+  const handleUpdateUser = async (updatedUser: User) => {
+      // 1. Update Supabase Profile (only mutable fields)
+      const { error } = await supabase
+          .from('profiles')
+          .update({
+              name: updatedUser.name,
+              email: updatedUser.email,
+              phone: updatedUser.phone,
+              cnpj: updatedUser.cnpj,
+              role: updatedUser.role,
+              status: updatedUser.status,
+              receive_weekly_summary: updatedUser.receiveWeeklySummary // SAVE NEW FIELD
+          })
+          .eq('id', updatedUser.id);
+
+      if (error) {
+          console.error('Error updating user profile:', error);
+          showError('Erro ao atualizar perfil do usuário.');
+          return;
+      }
+      
+      // 2. Update Local State
       setAllUsers(allUsers.map(u => u.id === updatedUser.id ? updatedUser : u));
       if (user && user.id === updatedUser.id) {
           setUser(updatedUser);
@@ -1724,7 +1790,7 @@ const App: React.FC = () => {
                 maintenance={maintenance}
                 onUpdateMaintenance={handleUpdateMaintenance}
                 connectionConfig={connectionConfig}
-                onUpdateConnectionConfig={setConnectionConfig}
+                onUpdateConnectionConfig={handleUpdateConnectionConfig}
                 users={allUsers}
                 onAddUser={handleAddUser}
                 onUpdateUser={handleUpdateUser}

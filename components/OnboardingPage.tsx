@@ -3,14 +3,15 @@ import { User, CNPJResponse } from '../types';
 
 interface OnboardingPageProps {
   user: User;
-  onComplete: (cnpj: string, theme: 'light' | 'dark', companyName: string) => void;
+  onComplete: (cnpj: string, theme: 'light' | 'dark', companyName: string, receiveWeeklySummary: boolean) => void;
 }
 
 const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => {
   const [step, setStep] = useState(1);
   const [cnpj, setCnpj] = useState(''); // CNPJ inicializado como vazio
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-
+  const [receiveWeeklySummary, setReceiveWeeklySummary] = useState(true); // NEW STATE
+  
   // CNPJ Fetch State
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [fetchedCompany, setFetchedCompany] = useState<{name: string, tradeName: string, status: string} | null>(null);
@@ -21,8 +22,6 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => 
 
   const handleNext = () => {
     if (step === 1 && !fetchedCompany && !cnpjError) {
-        // Opcional: Forçar a busca antes de avançar, ou permitir avançar sem buscar.
-        // Aqui, vamos tentar buscar se o usuário não buscou ainda.
         fetchCompanyData();
         return; 
     }
@@ -47,7 +46,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => 
     await new Promise(r => setTimeout(r, 1500)); // Simulate processing
     // Pass the fetched company name (Razão Social) or fallback to trade name/empty
     const companyName = fetchedCompany?.name || fetchedCompany?.tradeName || '';
-    onComplete(cnpj, theme, companyName);
+    onComplete(cnpj, theme, companyName, receiveWeeklySummary); // PASS NEW STATE
   };
 
   const fetchCompanyData = async () => {
@@ -115,7 +114,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => 
           <div className="h-2 bg-slate-100 dark:bg-slate-800 w-full">
             <div 
                 className="h-full bg-primary transition-all duration-500"
-                style={{ width: `${(step / 2) * 100}%` }}
+                style={{ width: `${(step / 3) * 100}%` }}
             ></div>
           </div>
 
@@ -126,7 +125,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => 
                     alt="Regular MEI" 
                     className="h-8 object-contain dark:brightness-0 dark:invert"
                 />
-                <span className="text-sm font-medium text-slate-400">Passo {step} de 2</span>
+                <span className="text-sm font-medium text-slate-400">Passo {step} de 3</span>
             </div>
 
             {/* Step 1: CNPJ */}
@@ -189,7 +188,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => 
                 </div>
             )}
 
-            {/* Step 2: Theme (Previously Step 3) */}
+            {/* Step 2: Theme */}
             {step === 2 && (
                 <div className="flex-1 flex flex-col justify-center animate-in fade-in slide-in-from-right-8">
                     <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Escolha seu tema</h2>
@@ -197,6 +196,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => 
                     
                     <div className="grid grid-cols-2 gap-6">
                         <button 
+                            type="button"
                             onClick={() => handleThemePreview('light')}
                             className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${theme === 'light' ? 'border-primary bg-blue-50 ring-1 ring-primary' : 'border-slate-200 hover:border-slate-300'}`}
                         >
@@ -208,6 +208,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => 
                         </button>
 
                         <button 
+                            type="button"
                             onClick={() => handleThemePreview('dark')}
                             className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${theme === 'dark' ? 'border-primary bg-slate-800 ring-1 ring-primary' : 'border-slate-200 hover:border-slate-300'}`}
                         >
@@ -220,6 +221,44 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => 
                     </div>
                 </div>
             )}
+            
+            {/* Step 3: Weekly Summary Preference (NEW STEP) */}
+            {step === 3 && (
+                <div className="flex-1 flex flex-col justify-center animate-in fade-in slide-in-from-right-8">
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Resumo Semanal</h2>
+                    <p className="text-slate-500 mb-6">Deseja receber um resumo semanal das suas contas a pagar e receber via WhatsApp?</p>
+                    
+                    <div className="space-y-4">
+                        <button 
+                            type="button"
+                            onClick={() => setReceiveWeeklySummary(true)}
+                            className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${receiveWeeklySummary ? 'border-green-500 bg-green-50 dark:bg-green-900/20 ring-1 ring-green-500' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}
+                        >
+                            <span className={`material-icons text-2xl ${receiveWeeklySummary ? 'text-green-600' : 'text-slate-400'}`}>
+                                {receiveWeeklySummary ? 'check_circle' : 'radio_button_unchecked'}
+                            </span>
+                            <div>
+                                <p className="font-bold text-slate-800 dark:text-white">Sim, quero receber</p>
+                                <p className="text-sm text-slate-600 dark:text-slate-300">Receba um resumo inteligente todo domingo.</p>
+                            </div>
+                        </button>
+                        <button 
+                            type="button"
+                            onClick={() => setReceiveWeeklySummary(false)}
+                            className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${!receiveWeeklySummary ? 'border-red-500 bg-red-50 dark:bg-red-900/20 ring-1 ring-red-500' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}
+                        >
+                            <span className={`material-icons text-2xl ${!receiveWeeklySummary ? 'text-red-600' : 'text-slate-400'}`}>
+                                {!receiveWeeklySummary ? 'check_circle' : 'radio_button_unchecked'}
+                            </span>
+                            <div>
+                                <p className="font-bold text-slate-800 dark:text-white">Não, obrigado</p>
+                                <p className="text-sm text-slate-600 dark:text-slate-300">Você pode ativar isso nas configurações a qualquer momento.</p>
+                            </div>
+                        </button>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-4">O resumo será enviado para o número de telefone cadastrado.</p>
+                </div>
+            )}
 
             <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
                 {step > 1 ? (
@@ -230,10 +269,10 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => 
                     <div></div> // Spacer
                 )}
                 
-                {step < 2 ? (
+                {step < 3 ? (
                     <button 
                         onClick={handleNext} 
-                        disabled={step === 1 && !fetchedCompany} // Opcional: Bloquear se não buscou
+                        disabled={step === 1 && !fetchedCompany} // Bloquear se não buscou CNPJ
                         className="bg-primary hover:bg-blue-600 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-0.5 flex items-center gap-2"
                     >
                         Próximo <span className="material-icons text-sm">arrow_forward</span>

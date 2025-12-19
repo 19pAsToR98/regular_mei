@@ -88,7 +88,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const [profileForm, setProfileForm] = useState({
       name: user?.name || '',
       phone: user?.phone || '',
-      email: user?.email || ''
+      email: user?.email || '',
+      receiveWeeklySummary: user?.receiveWeeklySummary ?? true // NEW FIELD
   });
 
   // Password Form State
@@ -139,7 +140,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
           setProfileForm({
               name: user.name,
               phone: user.phone || '',
-              email: user.email
+              email: user.email,
+              receiveWeeklySummary: user.receiveWeeklySummary ?? true // Update on user change
           });
       }
   }, [user]);
@@ -172,12 +174,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         return;
     }
 
-    // 3. Save Basic Info (Name/Phone) if email didn't change
+    // 3. Save Basic Info (Name/Phone/Summary Preference) if email didn't change
     if (user && onUpdateUser) {
         onUpdateUser({
             ...user,
             name: profileForm.name,
-            phone: profileForm.phone
+            phone: profileForm.phone,
+            receiveWeeklySummary: profileForm.receiveWeeklySummary // SAVE NEW FIELD
         });
         showSuccessFeedback();
     }
@@ -191,7 +194,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                   ...user,
                   name: profileForm.name,
                   phone: profileForm.phone,
-                  email: pendingEmail
+                  email: pendingEmail,
+                  receiveWeeklySummary: profileForm.receiveWeeklySummary // SAVE NEW FIELD
               });
           }
           setIsVerifyingEmail(false);
@@ -366,6 +370,27 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             </p>
                         </div>
                     </div>
+                    
+                    {/* Weekly Summary Preference (NEW SECTION) */}
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Preferências de Notificação</h4>
+                        <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <div className="flex items-center gap-3">
+                                <span className="material-icons text-xl text-green-600">whatsapp</span>
+                                <div>
+                                    <p className="font-medium text-slate-800 dark:text-white">Resumo Semanal (WhatsApp)</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Receber resumo de contas a pagar/receber todo domingo.</p>
+                                </div>
+                            </div>
+                            <button 
+                                type="button"
+                                onClick={() => setProfileForm({...profileForm, receiveWeeklySummary: !profileForm.receiveWeeklySummary})}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${profileForm.receiveWeeklySummary ? 'bg-green-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+                            >
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${profileForm.receiveWeeklySummary ? 'translate-x-6' : 'translate-x-1'}`} />
+                            </button>
+                        </div>
+                    </div>
 
                     <div className="pt-2 pb-8 border-b border-slate-100 dark:border-slate-800">
                          <button 
@@ -531,6 +556,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                      
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl">
                         <button 
+                            type="button"
                             onClick={() => handleThemeChange('light')}
                             className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-4 ${theme === 'light' ? 'border-primary bg-blue-50/50 dark:bg-blue-900/10 ring-2 ring-primary/20' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}
                         >
@@ -547,6 +573,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                         </button>
 
                         <button 
+                            type="button"
                             onClick={() => handleThemeChange('dark')}
                             className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-4 ${theme === 'dark' ? 'border-primary bg-blue-50/50 dark:bg-blue-900/10 ring-2 ring-primary/20' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}
                         >

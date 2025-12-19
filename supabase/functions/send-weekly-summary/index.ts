@@ -54,7 +54,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 1. Fetch Connection Config (to get WhatsApp API details)
+    // 1. Fetch Connection Config (to get WhatsApp API details and global toggle)
     const { data: configData, error: configError } = await supabaseAdmin
         .from('app_config')
         .select('connection_config')
@@ -66,6 +66,13 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: 'Failed to load connection config' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     const connectionConfig = configData.connection_config;
+    
+    // Check global WhatsApp toggle
+    if (!connectionConfig.whatsappApi?.enabled) {
+        console.log('WhatsApp integration is globally disabled. Skipping weekly summary.');
+        return new Response(JSON.stringify({ message: 'WhatsApp integration is globally disabled.' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
 
     // 2. Determine the date range for the next 7 days
     const today = new Date();
@@ -75,12 +82,13 @@ serve(async (req) => {
     const todayStr = today.toISOString().split('T')[0];
     const nextWeekStr = nextWeek.toISOString().split('T')[0];
 
-    // 3. Fetch all active users with phone numbers
+    // 3. Fetch all active users who OPTED IN for the weekly summary
     const { data: profiles, error: profilesError } = await supabaseAdmin
         .from('profiles')
         .select('id, name, phone')
         .not('phone', 'is', null)
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .eq('receive_weekly_summary', true); // NEW FILTER
 
     if (profilesError) {
         console.error('Failed to fetch profiles:', profilesError.message);

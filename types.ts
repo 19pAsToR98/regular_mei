@@ -99,6 +99,7 @@ export interface ConnectionConfig {
   whatsappApi: { // NEW: WhatsApp API Configuration
     sendTextUrl: string;
     token: string;
+    enabled: boolean; // NEW: Global toggle for WhatsApp integration
   };
   smtp: {
     host: string;
@@ -178,6 +179,7 @@ export interface User {
   phone?: string;
   cnpj?: string;
   isSetupComplete: boolean;
+  receiveWeeklySummary?: boolean; // NEW FIELD
   // Admin Fields
   role?: 'admin' | 'user';
   status?: 'active' | 'inactive' | 'suspended';

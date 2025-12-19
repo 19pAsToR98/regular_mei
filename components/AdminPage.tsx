@@ -95,7 +95,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
     users, onAddUser, onUpdateUser, onDeleteUser
 }) => {
   const [activeTab, setActiveTab] = useState<'users' | 'news' | 'offers' | 'notifications' | 'maintenance' | 'connections'>('users');
-  const [isSubmitting, setIsSubmitting] = useState(false); // Global loading state for admin actions
+  const [isSubmitting, setIsSubmitting] = useState(false); // Global loading state for forms
 
   // --- USERS STATE ---
   const [userModalOpen, setUserModalOpen] = useState(false);
@@ -506,6 +506,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
       
       try {
           if (testType === 'whatsapp') {
+              if (!localConnConfig.whatsappApi.enabled) {
+                  throw new Error('A integração WhatsApp está desativada globalmente.');
+              }
               if (!testWhatsappNumber || !testWhatsappMessage) {
                   throw new Error('Número e mensagem são obrigatórios para o teste do WhatsApp.');
               }
@@ -1475,6 +1478,25 @@ const AdminPage: React.FC<AdminPageProps> = ({
                       <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                           <span className="material-icons text-green-500">whatsapp</span> API de Mensagens (WhatsApp)
                       </h4>
+                      
+                      {/* Global Toggle */}
+                      <div className="flex justify-between items-center pb-4 mb-4 border-b border-slate-100 dark:border-slate-800">
+                          <div className="flex items-center gap-3">
+                              <span className="material-icons text-xl text-green-600">toggle_on</span>
+                              <div>
+                                  <p className="font-medium text-slate-800 dark:text-white">Integração WhatsApp</p>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400">Ativa/desativa todos os envios de notificação e resumo.</p>
+                              </div>
+                          </div>
+                          <button 
+                              type="button"
+                              onClick={() => setLocalConnConfig({...localConnConfig, whatsappApi: {...localConnConfig.whatsappApi, enabled: !localConnConfig.whatsappApi.enabled}})}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${localConnConfig.whatsappApi.enabled ? 'bg-green-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+                          >
+                              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${localConnConfig.whatsappApi.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                      </div>
+                      
                       <div className="space-y-4">
                           <div>
                               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">URL de Envio de Texto</label>
