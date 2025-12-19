@@ -25,6 +25,8 @@ import FinancialScore from './components/FinancialScore';
 import MobileDashboard from './components/MobileDashboard';
 import InstallPrompt from './components/InstallPrompt';
 import ExternalTransactionModal from './components/ExternalTransactionModal';
+import TermsPage from './components/TermsPage'; // NEW
+import PrivacyPage from './components/PrivacyPage'; // NEW
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -1475,8 +1477,38 @@ const App: React.FC = () => {
       );
   }
 
+  // Handle public pages (Terms and Privacy) when not logged in
+  if (!user && (activeTab === 'terms' || activeTab === 'privacy')) {
+      return (
+          <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
+              <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 h-[72px] flex items-center justify-between px-6">
+                  <div className="flex items-center gap-2">
+                      <img 
+                        src="https://regularmei.com.br/wp-content/uploads/2024/07/REGULAR-500-x-200-px.png" 
+                        alt="Regular MEI" 
+                        className="h-8 w-auto object-contain dark:brightness-0 dark:invert"
+                      />
+                      <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase ml-2">{activeTab === 'terms' ? 'Termos' : 'Privacidade'}</span>
+                  </div>
+                  <button 
+                    onClick={() => setActiveTab('dashboard')}
+                    className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
+                  >
+                      Voltar ao Login <span className="material-icons text-sm">login</span>
+                  </button>
+              </header>
+              <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8">
+                  {activeTab === 'terms' ? <TermsPage /> : <PrivacyPage />}
+              </main>
+              <footer className="mt-8 text-center text-sm text-slate-400 pb-8">
+                <p>&copy; {new Date().getFullYear()} Regular MEI. Todos os direitos reservados.</p>
+              </footer>
+          </div>
+      );
+  }
+
   if (!user) {
-      return <AuthPage onLogin={handleLogin} onForgotPassword={handleForgotPassword} />;
+      return <AuthPage onLogin={handleLogin} onForgotPassword={handleForgotPassword} onNavigate={setActiveTab} />;
   }
 
   if (!user.isSetupComplete) {
@@ -1654,6 +1686,8 @@ const App: React.FC = () => {
               onDeleteAccount={handleDeleteAccount}
               onChangePassword={handleChangePassword}
             />;
+          case 'terms': return <TermsPage />; // NEW ROUTE
+          case 'privacy': return <PrivacyPage />; // NEW ROUTE
           default: return null;
       }
   };

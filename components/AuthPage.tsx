@@ -5,11 +5,12 @@ import { supabase } from '../src/integrations/supabase/client';
 interface AuthPageProps {
   onLogin: (user: User) => void;
   onForgotPassword: (email: string) => Promise<boolean>;
+  onNavigate: (tab: string) => void; // Added navigation prop
 }
 
 type AuthMode = 'login' | 'register' | 'forgot';
 
-const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
+const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNavigate }) => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false); // Global loading state for forms
   const [authError, setAuthError] = useState<string | null>(null);
@@ -28,6 +29,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [showRegPass, setShowRegPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
+  
+  // NEW: Legal Acceptance States
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
 
   // Forgot Password States
   const [forgotEmail, setForgotEmail] = useState('');
@@ -59,6 +64,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
     setAuthError(null);
     setAuthSuccess(null);
     
+    if (!acceptTerms || !acceptPrivacy) {
+        setAuthError("Você deve aceitar os Termos de Uso e a Política de Privacidade.");
+        return;
+    }
+
     if (regPassword !== regConfirmPassword) {
         setAuthError("As senhas não coincidem. Por favor, verifique.");
         return;
@@ -356,10 +366,36 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword }) => {
                             </button>
                         </div>
                     </div>
+                    
+                    {/* NEW: Legal Checkboxes */}
+                    <div className="space-y-2 pt-2">
+                        <label className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+                            <input 
+                                type="checkbox" 
+                                checked={acceptTerms}
+                                onChange={(e) => setAcceptTerms(e.target.checked)}
+                                className="mt-1 rounded text-primary focus:ring-primary"
+                            />
+                            <span>
+                                Eu li e aceito os <button type="button" onClick={() => onNavigate('terms')} className="text-primary font-semibold hover:underline">Termos de Uso</button>.
+                            </span>
+                        </label>
+                        <label className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+                            <input 
+                                type="checkbox" 
+                                checked={acceptPrivacy}
+                                onChange={(e) => setAcceptPrivacy(e.target.checked)}
+                                className="mt-1 rounded text-primary focus:ring-primary"
+                            />
+                            <span>
+                                Eu concordo com a <button type="button" onClick={() => onNavigate('privacy')} className="text-primary font-semibold hover:underline">Política de Privacidade</button>.
+                            </span>
+                        </label>
+                    </div>
 
                     <button 
                         type="submit" 
-                        disabled={isLoading}
+                        disabled={isLoading || !acceptTerms || !acceptPrivacy}
                         className="w-full bg-primary hover:bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed text-white py-3 rounded-lg font-bold shadow-sm transition-colors mt-2 flex items-center justify-center gap-2"
                     >
                         {isLoading ? (
