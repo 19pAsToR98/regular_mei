@@ -226,7 +226,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => 
             {step === 3 && (
                 <div className="flex-1 flex flex-col justify-center animate-in fade-in slide-in-from-right-8">
                     <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Resumo Semanal</h2>
-                    <p className="text-slate-500 mb-6">Deseja receber um resumo semanal das suas contas a pagar e receber via WhatsApp?</p>
+                    <p className="text-slate-500 mb-6">Deseja receber um resumo semanal das suas contas a pagar e a receber via WhatsApp?</p>
                     
                     <div className="space-y-4">
                         <button 
