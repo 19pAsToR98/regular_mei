@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { NewsItem } from '../types';
+import { showSuccess, showError } from '../utils/toastUtils';
 
 interface NewsPageProps {
   news: NewsItem[];
@@ -36,81 +37,113 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
     const currentIndex = filteredNews.findIndex(n => n.id === readingId);
     const prevArticle = currentIndex > 0 ? filteredNews[currentIndex - 1] : null;
     const nextArticle = currentIndex < filteredNews.length - 1 ? filteredNews[currentIndex + 1] : null;
+    
+    // --- Share Handler ---
+    const handleShare = async () => {
+        if (!article) return;
+
+        const shareData = {
+            title: article.title,
+            text: `Leia esta notícia importante para o MEI: ${article.title} - ${article.excerpt}`,
+            url: window.location.href, // Share the current URL
+        };
+
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+                showSuccess('Notícia compartilhada com sucesso!');
+            } else {
+                // Fallback for browsers that don't support navigator.share
+                await navigator.clipboard.writeText(`${shareData.title}: ${shareData.url}`);
+                showSuccess('Link copiado para a área de transferência!');
+            }
+        } catch (err) {
+            if ((err as Error).name !== 'AbortError') {
+                showError('Falha ao compartilhar. Tente copiar o link.');
+                console.error('Share failed:', err);
+            }
+        }
+    };
 
     return (
-      <div className="max-w-4xl mx-auto bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="relative h-64 md:h-80 w-full">
-           <img src={article?.imageUrl} alt={article?.title} className="w-full h-full object-cover" />
-           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-           <button 
-             onClick={() => onSelectNews(null)}
-             className="absolute top-4 left-4 bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-white/30 transition-colors"
-           >
-             <span className="material-icons text-sm">arrow_back</span> Voltar
-           </button>
-           <div className="absolute bottom-6 left-6 md:left-10 right-6 text-white">
-              <span className="inline-block px-3 py-1 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-md mb-3">
-                {article?.category}
-              </span>
-              <h1 className="text-2xl md:text-4xl font-bold leading-tight mb-2">{article?.title}</h1>
-              <div className="flex items-center gap-4 text-sm text-slate-200">
-                 <span className="flex items-center gap-1"><span className="material-icons text-sm">event</span> {article?.date}</span>
-                 <span className="flex items-center gap-1"><span className="material-icons text-sm">schedule</span> {article?.readTime}</span>
-              </div>
-           </div>
-        </div>
-        
-        <div className="p-6 md:p-10">
-           <p className="text-lg text-slate-600 dark:text-slate-300 font-medium mb-8 leading-relaxed border-l-4 border-primary pl-4 italic">
-             {article?.excerpt}
-           </p>
-           
-           {/* REMOVENDO PROSE E APLICANDO ESTILOS BÁSICOS PARA MANTER O ESPAÇAMENTO DO EDITOR */}
-           <div 
-             className="text-base text-slate-700 dark:text-slate-300 leading-relaxed space-y-4"
-             dangerouslySetInnerHTML={{ __html: article?.content || '' }}
-           />
+      <div className="max-w-4xl mx-auto p-4 md:p-0">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="relative h-64 md:h-80 w-full">
+             <img src={article?.imageUrl} alt={article?.title} className="w-full h-full object-cover" />
+             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+             <button 
+               onClick={() => onSelectNews(null)}
+               className="absolute top-4 left-4 bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-white/30 transition-colors"
+             >
+               <span className="material-icons text-sm">arrow_back</span> Voltar
+             </button>
+             <div className="absolute bottom-6 left-6 md:left-10 right-6 text-white">
+                <span className="inline-block px-3 py-1 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-md mb-3">
+                  {article?.category}
+                </span>
+                <h1 className="text-2xl md:text-4xl font-bold leading-tight mb-2">{article?.title}</h1>
+                <div className="flex items-center gap-4 text-sm text-slate-200">
+                   <span className="flex items-center gap-1"><span className="material-icons text-sm">event</span> {article?.date}</span>
+                   <span className="flex items-center gap-1"><span className="material-icons text-sm">schedule</span> {article?.readTime}</span>
+                </div>
+             </div>
+          </div>
+          
+          <div className="p-6 md:p-10">
+             <p className="text-lg text-slate-600 dark:text-slate-300 font-medium mb-8 leading-relaxed border-l-4 border-primary pl-4 italic">
+               {article?.excerpt}
+             </p>
+             
+             {/* REMOVENDO PROSE E APLICANDO ESTILOS BÁSICOS PARA MANTER O ESPAÇAMENTO DO EDITOR */}
+             <div 
+               className="text-base text-slate-700 dark:text-slate-300 leading-relaxed space-y-4"
+               dangerouslySetInnerHTML={{ __html: article?.content || '' }}
+             />
 
-           <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
-              
-              {/* Previous Article Button */}
-              {prevArticle ? (
-                  <button 
-                      onClick={() => onSelectNews(prevArticle.id)}
-                      className="text-slate-500 dark:text-slate-400 font-medium hover:text-primary flex items-center gap-2 transition-colors"
-                  >
-                      <span className="material-icons">chevron_left</span> Artigo Anterior
-                  </button>
-              ) : (
-                  <div className="w-32"></div> // Spacer
-              )}
+             <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                
+                {/* Previous Article Button */}
+                {prevArticle ? (
+                    <button 
+                        onClick={() => onSelectNews(prevArticle.id)}
+                        className="text-slate-500 dark:text-slate-400 font-medium hover:text-primary flex items-center gap-2 transition-colors"
+                    >
+                        <span className="material-icons">chevron_left</span> Artigo Anterior
+                    </button>
+                ) : (
+                    <div className="w-32"></div> // Spacer
+                )}
 
-              {/* Share Button */}
-              <button className="text-slate-500 hover:text-primary transition-colors flex items-center gap-2">
-                 <span className="material-icons">share</span> Compartilhar
-              </button>
-              
-              {/* Next Article Button */}
-              {nextArticle ? (
-                  <button 
-                      onClick={() => onSelectNews(nextArticle.id)}
-                      className="text-slate-500 dark:text-slate-400 font-medium hover:text-primary flex items-center gap-2 transition-colors"
-                  >
-                      Próximo Artigo <span className="material-icons">chevron_right</span>
-                  </button>
-              ) : (
-                  <div className="w-32"></div> // Spacer
-              )}
-           </div>
-           
-           <div className="mt-4 text-center">
-               <button 
-                 onClick={() => onSelectNews(null)}
-                 className="text-primary font-medium hover:underline flex items-center gap-2 mx-auto"
-              >
-                 <span className="material-icons text-sm">arrow_upward</span> Voltar para a lista
-              </button>
-           </div>
+                {/* Share Button */}
+                <button 
+                    onClick={handleShare}
+                    className="text-slate-500 hover:text-primary transition-colors flex items-center gap-2"
+                >
+                   <span className="material-icons">share</span> Compartilhar
+                </button>
+                
+                {/* Next Article Button */}
+                {nextArticle ? (
+                    <button 
+                        onClick={() => onSelectNews(nextArticle.id)}
+                        className="text-slate-500 dark:text-slate-400 font-medium hover:text-primary flex items-center gap-2 transition-colors"
+                    >
+                        Próximo Artigo <span className="material-icons">chevron_right</span>
+                    </button>
+                ) : (
+                    <div className="w-32"></div> // Spacer
+                )}
+             </div>
+             
+             <div className="mt-4 text-center">
+                 <button 
+                   onClick={() => onSelectNews(null)}
+                   className="text-primary font-medium hover:underline flex items-center gap-2 mx-auto"
+                >
+                   <span className="material-icons text-sm">arrow_upward</span> Voltar para a lista
+                </button>
+             </div>
+          </div>
         </div>
       </div>
     );
