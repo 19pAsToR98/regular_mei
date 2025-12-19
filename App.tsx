@@ -31,6 +31,7 @@ import BalanceForecastCard from './components/BalanceForecastCard';
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
+import { scheduleTransactionReminder } from './utils/whatsappUtils'; // NEW IMPORT
 
 // --- CATEGORIAS PADRÃO ---
 const defaultRevenueCats: Category[] = [
@@ -1200,6 +1201,11 @@ const App: React.FC = () => {
         externalApi: t.external_api || false,
     })) as Transaction[];
     setTransactions(prev => [...newTransactions, ...prev]);
+    
+    // NEW: Schedule reminder for the first pending transaction if it's not recurring/installment
+    if (user.id && newTransactions.length === 1 && newTransactions[0].status === 'pendente' && !newTransactions[0].isRecurring && !newTransactions[0].installments) {
+        scheduleTransactionReminder(user.id, newTransactions[0]);
+    }
   };
 
   const handleUpdateTransaction = async (t: Transaction) => {
@@ -1683,6 +1689,7 @@ const App: React.FC = () => {
                 onAddAppointment={handleAddAppointment}
                 onUpdateAppointment={handleUpdateAppointment}
                 onDeleteAppointment={handleDeleteAppointment}
+                userId={user.id} // PASSING USER ID
             />;
           case 'cnpj': return <CNPJPage cnpj={cnpj} fiscalData={fiscalData} onUpdateFiscalData={setFiscalData} />;
           case 'tools': return <ToolsPage user={user} />;

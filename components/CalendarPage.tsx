@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Transaction, Appointment, Category } from '../types';
+import { scheduleAppointmentReminder } from '../utils/whatsappUtils'; // Importando utilitário
 
 interface CalendarPageProps {
   transactions: Transaction[];
@@ -12,6 +13,7 @@ interface CalendarPageProps {
   onAddAppointment: (a: Appointment) => void;
   onUpdateAppointment: (a: Appointment) => void;
   onDeleteAppointment: (id: number) => void;
+  userId: string; // Adicionando userId para o agendamento
 }
 
 // Internal unified interface for display
@@ -24,11 +26,6 @@ interface CalendarEvent {
   amount?: number;
   time?: string;
   notify?: boolean;
-}
-
-interface Holiday {
-  date: Date;
-  title: string;
 }
 
 // --- HOLIDAY CALCULATION HELPERS ---
@@ -88,7 +85,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
   onDeleteTransaction,
   onAddAppointment,
   onUpdateAppointment,
-  onDeleteAppointment
+  onDeleteAppointment,
+  userId // Recebendo userId
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date()); 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -216,7 +214,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
     }
   };
 
-  const handleSaveEvent = (e: React.FormEvent) => {
+  const handleSaveEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     const year = selectedDate.getFullYear();
     const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
@@ -232,8 +230,18 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
             notify: newEventNotify,
             type: 'compromisso'
         };
-        if (editingId) onUpdateAppointment(appointment);
-        else onAddAppointment(appointment);
+        
+        if (editingId) {
+            onUpdateAppointment(appointment);
+        } else {
+            onAddAppointment(appointment);
+        }
+        
+        // NEW: Schedule WhatsApp reminder if notify is true
+        if (newEventNotify) {
+            await scheduleAppointmentReminder(userId, appointment);
+        }
+
     } else {
         const transaction: Transaction = {
             id: editingId || Date.now(),
@@ -629,20 +637,23 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
                 </div>
               </div>
               
-              <div className="flex items-center gap-3 py-2">
-                <button 
-                  type="button"
-                  onClick={() => setNewEventNotify(!newEventNotify)}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${newEventNotify ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700'}`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${newEventNotify ? 'translate-x-5' : 'translate-x-0'}`}
-                  />
-                </button>
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Notificar-me
-                </span>
-              </div>
+              {/* Notificar-me (Only for Compromisso) */}
+              {newEventType === 'compromisso' && (
+                  <div className="flex items-center gap-3 py-2 animate-in fade-in slide-in-from-top-2">
+                    <button 
+                      type="button"
+                      onClick={() => setNewEventNotify(!newEventNotify)}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${newEventNotify ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700'}`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${newEventNotify ? 'translate-x-5' : 'translate-x-0'}`}
+                      />
+                    </button>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Notificar-me (WhatsApp)
+                    </span>
+                  </div>
+              )}
 
               <div className="pt-2 flex gap-3">
                 <button 
