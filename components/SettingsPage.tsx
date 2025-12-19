@@ -439,7 +439,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             </div>
                             <button 
                                 type="button"
-                                onClick={() => setProfileForm({...profileForm, receiveWeeklySummary: !profileForm.receiveWeeklySummary})}
+                                onClick={() => setProfileForm(prev => ({
+                                    ...prev,
+                                    receiveWeeklySummary: !prev.receiveWeeklySummary
+                                }))}
                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${profileForm.receiveWeeklySummary ? 'bg-green-600' : 'bg-slate-300 dark:bg-slate-700'}`}
                             >
                                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${profileForm.receiveWeeklySummary ? 'translate-x-6' : 'translate-x-1'}`} />

@@ -1514,7 +1514,13 @@ const AdminPage: React.FC<AdminPageProps> = ({
                           </div>
                           <button 
                               type="button"
-                              onClick={() => setLocalConnConfig({...localConnConfig, whatsappApi: {...localConnConfig.whatsappApi, enabled: !localConnConfig.whatsappApi.enabled}})}
+                              onClick={() => setLocalConnConfig(prev => ({
+                                  ...prev,
+                                  whatsappApi: {
+                                      ...prev.whatsappApi,
+                                      enabled: !prev.whatsappApi.enabled
+                                  }
+                              }))}
                               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${localConnConfig.whatsappApi.enabled ? 'bg-green-600' : 'bg-slate-300 dark:bg-slate-700'}`}
                           >
                               <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${localConnConfig.whatsappApi.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
