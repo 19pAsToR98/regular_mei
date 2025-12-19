@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Transaction } from '../types';
@@ -13,8 +12,13 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ transactions }) => {
   const [viewMode, setViewMode] = useState<'evolution' | 'distribution' | 'general'>('general');
   const [distributionType, setDistributionType] = useState<'despesa' | 'receita'>('despesa');
 
+  // Helper para filtrar transações realizadas e não recorrentes/parceladas
+  const filterRealizedNonRecurring = (t: Transaction) => {
+    return t.status === 'pago' && !t.isRecurring && !t.installments;
+  };
+
   // --- PROCESS DATA FOR BAR CHART (EVOLUTION - LAST 6 MONTHS) ---
-  // Here we show only REALIZED values (Status = Pago) for past evolution analysis
+  // Here we show only REALIZED values (Status = Pago) AND exclude recurring/installments
   const barData = useMemo(() => {
     const last6Months = [];
     const today = new Date();
@@ -26,7 +30,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ transactions }) => {
       
       const monthTrans = transactions.filter(t => {
         const tDate = new Date(t.date);
-        return tDate.getMonth() === monthKey && tDate.getFullYear() === yearKey && t.status === 'pago';
+        return tDate.getMonth() === monthKey && tDate.getFullYear() === yearKey && filterRealizedNonRecurring(t);
       });
 
       const receita = monthTrans.filter(t => t.type === 'receita').reduce((acc, t) => acc + t.amount, 0);
@@ -42,7 +46,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ transactions }) => {
   }, [transactions]);
 
   // --- PROCESS DATA FOR PIE CHART (DISTRIBUTION) ---
-  // Here we include PENDING values to show budget distribution
+  // Here we include ALL values (Paid + Pending) for budget distribution, including recurring/installments
   const pieData = useMemo(() => {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
@@ -67,7 +71,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ transactions }) => {
   }, [transactions, distributionType]);
 
   // --- PROCESS DATA FOR GENERAL OVERVIEW (FULL YEAR JAN-DEC) ---
-  // Show Realized values to track actual cash flow evolution
+  // Show Realized values AND exclude recurring/installments
   const fullYearData = useMemo(() => {
     const yearData = [];
     const currentYear = new Date().getFullYear();
@@ -76,7 +80,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ transactions }) => {
     for (let i = 0; i < 12; i++) {
         const monthTrans = transactions.filter(t => {
             const tDate = new Date(t.date);
-            return tDate.getMonth() === i && tDate.getFullYear() === currentYear && t.status === 'pago';
+            return tDate.getMonth() === i && tDate.getFullYear() === currentYear && filterRealizedNonRecurring(t);
         });
 
         const receita = monthTrans.filter(t => t.type === 'receita').reduce((acc, t) => acc + t.amount, 0);
