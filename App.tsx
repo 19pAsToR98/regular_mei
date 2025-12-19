@@ -588,9 +588,15 @@ const App: React.FC = () => {
     // 0. Check for public route access before anything else
     if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
+        const articleIdParam = params.get('articleId');
+        
         if (params.get('page') === 'news') {
             setIsPublicView(true);
             setLoadingAuth(false);
+            // Set readingNewsId if provided in URL
+            if (articleIdParam) {
+                setReadingNewsId(parseInt(articleIdParam));
+            }
             // Ensure public data is loaded
             loadNewsAndOffers();
             return () => {}; // Return empty cleanup function
@@ -1458,8 +1464,10 @@ const App: React.FC = () => {
                   <button 
                     onClick={() => {
                         setIsPublicView(false);
+                        setReadingNewsId(null); // Clear article ID when navigating back
                         const url = new URL(window.location.href);
                         url.searchParams.delete('page');
+                        url.searchParams.delete('articleId'); // Clear article ID from URL
                         window.history.pushState({}, '', url);
                     }}
                     className="text-sm font-bold text-primary hover:underline flex items-center gap-1"

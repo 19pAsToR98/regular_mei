@@ -42,10 +42,14 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
     const handleShare = async () => {
         if (!article) return;
 
+        // 1. Construct the public URL
+        const baseUrl = window.location.origin;
+        const publicUrl = `${baseUrl}/?page=news&articleId=${article.id}`;
+
         const shareData = {
             title: article.title,
             text: `Leia esta notícia importante para o MEI: ${article.title} - ${article.excerpt}`,
-            url: window.location.href, // Share the current URL
+            url: publicUrl,
         };
 
         try {
@@ -53,9 +57,9 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
                 await navigator.share(shareData);
                 showSuccess('Notícia compartilhada com sucesso!');
             } else {
-                // Fallback for browsers that don't support navigator.share
+                // Fallback: Copy the public URL to clipboard
                 await navigator.clipboard.writeText(`${shareData.title}: ${shareData.url}`);
-                showSuccess('Link copiado para a área de transferência!');
+                showSuccess('Link público copiado para a área de transferência!');
             }
         } catch (err) {
             if ((err as Error).name !== 'AbortError') {
