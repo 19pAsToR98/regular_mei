@@ -694,7 +694,7 @@ const App: React.FC = () => {
         setLoadingAuth(false);
         // Clear persisted tab on sign out
         localStorage.removeItem('activeTab');
-        setActiveTabState('login'); // Explicitly navigate to login view
+        setActiveTabState('dashboard');
       } else if (event === 'INITIAL_SESSION' && session?.user) {
         loadUserProfile(session.user);
       } else if (event === 'INITIAL_SESSION' && !session) {
@@ -953,7 +953,7 @@ const App: React.FC = () => {
             
             // Reset local state immediately
             setUser(null);
-            setActiveTab('login'); // Redirect to login/home
+            setActiveTab('dashboard');
             setTransactions([]);
             setAppointments([]);
             setCnpj('');
@@ -978,7 +978,6 @@ const App: React.FC = () => {
           showError('Erro ao sair.');
       }
       setUser(null);
-      setActiveTab('login'); // Explicitly navigate to login view
   };
 
   // --- OFFERS HANDLERS ---
@@ -1629,7 +1628,6 @@ const App: React.FC = () => {
                         url.searchParams.delete('page');
                         url.searchParams.delete('articleId'); // Clear article ID from URL
                         window.history.pushState({}, '', url);
-                        setActiveTab('login'); // Redirect to login/home
                     }}
                     className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
                   >
@@ -1660,7 +1658,7 @@ const App: React.FC = () => {
                       <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase ml-2">{activeTab === 'terms' ? 'Termos' : 'Privacidade'}</span>
                   </div>
                   <button 
-                    onClick={() => setActiveTab('login')}
+                    onClick={() => setActiveTab('dashboard')}
                     className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
                   >
                       Voltar ao Login <span className="material-icons text-sm">login</span>
@@ -1676,7 +1674,6 @@ const App: React.FC = () => {
       );
   }
 
-  // If not logged in, show AuthPage
   if (!user) {
       return <AuthPage onLogin={handleLogin} onForgotPassword={handleForgotPassword} onNavigate={setActiveTab} />;
   }
@@ -1684,13 +1681,7 @@ const App: React.FC = () => {
   if (!user.isSetupComplete) {
       return <OnboardingPage user={user} onComplete={handleOnboardingComplete} />;
   }
-  
-  // Logged in user: Redirect if on a public-only tab
-  if (activeTab === 'login' || activeTab === 'terms' || activeTab === 'privacy') {
-      setActiveTab('dashboard');
-      return null; // Prevent rendering until state updates
-  }
-  
+
   const isPageInMaintenance = (page: string) => {
       // Admins bypass all maintenance checks
       if (user?.role === 'admin') return false;

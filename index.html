@@ -9,9 +9,8 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Dancing+Script:wght@400;700&display=swap"
       rel="stylesheet"
     />
-    <!-- Updated Material Symbols Link -->
-    <link 
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" 
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
       rel="stylesheet"
     />
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,23 +20,17 @@
         theme: {
           extend: {
             colors: {
-              "primary": "#024BAC",
-              "secondary": "#40B9FC",
-              "background-light": "#F5F7F8",
-              "background-dark": "#0f1823",
-              "text-main": "#101418",
-              "text-muted": "#5e728d",
+              primary: "#3B82F6",
+              "background-light": "#F8FAFC",
+              "background-dark": "#0F172A",
             },
             fontFamily: {
               sans: ["Inter", "sans-serif"],
               display: ["Inter", "sans-serif"],
-              cursive: ["Dancing Script", "cursive"],
+              cursive: ["Dancing Script", "cursive"], // Mantendo Dancing Script, mas ajustando o uso no componente
             },
             borderRadius: {
-              DEFAULT: "0.25rem",
-              "lg": "0.5rem",
-              "xl": "0.75rem",
-              "full": "9999px"
+              DEFAULT: "0.75rem",
             },
           },
         },
@@ -49,10 +42,6 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-      }
-      /* New style for Material Symbols Outlined */
-      .material-symbols-outlined {
-          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
       }
       /* Custom scrollbar for webkit */
       ::-webkit-scrollbar {
