@@ -31,7 +31,7 @@ import BalanceForecastCard from './components/BalanceForecastCard';
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
-import { scheduleTransactionReminder } from './utils/whatsappUtils'; // NEW IMPORT
+import { scheduleTransactionReminder, scheduleAppointmentReminder, deleteScheduledReminder } from './utils/whatsappUtils'; // UPDATED IMPORT
 
 // --- CATEGORIAS PADRÃO ---
 const defaultRevenueCats: Category[] = [
@@ -790,7 +790,7 @@ const App: React.FC = () => {
       ].join(';');
     });
 
-    const csvContent = "\uFEFF" + headers.join(";") + "\n" + rows.join("\n");
+    const csvContent = "\uFEFF" + headers.join(";") + "\n" + rows.map(r => r.join(";")).join("\n");
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -1370,6 +1370,9 @@ const App: React.FC = () => {
 
   const handleUpdateAppointment = async (a: Appointment) => {
     if (!user) return;
+    
+    // 1. Delete existing reminder (if any)
+    await deleteScheduledReminder(a.id);
 
     const payload = {
         title: a.title,
@@ -1390,12 +1393,21 @@ const App: React.FC = () => {
         showError('Erro ao atualizar compromisso.');
         return;
     }
+    
+    // 2. Re-schedule reminder if notify is true
+    if (a.notify) {
+        await scheduleAppointmentReminder(user.id, a);
+    }
+
     showSuccess('Compromisso atualizado!');
     setAppointments(prev => prev.map(appt => appt.id === a.id ? a : appt));
   };
 
   const handleDeleteAppointment = async (id: number) => {
     if (!user) return;
+    
+    // 1. Delete existing reminder (if any)
+    await deleteScheduledReminder(id);
 
     const { error } = await supabase
         .from('appointments')

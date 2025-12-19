@@ -121,6 +121,28 @@ export async function scheduleAppointmentReminder(userId: string, appt: Appointm
     }
 
     // 3. Chamar a Edge Function para registrar o lembrete
+    // Nota: Usamos o ID do compromisso como parte da mensagem ou metadado para identificação futura,
+    // mas a tabela scheduled_reminders não tem uma coluna para appointment_id.
+    // Para simplificar, vamos usar a coluna 'message' para armazenar o ID do compromisso
+    // temporariamente, mas o ideal é adicionar uma coluna 'related_id' na tabela.
+    // Como não posso alterar o schema, vamos confiar na exclusão por ID do compromisso.
+    
+    // Para garantir que o lembrete seja único para este compromisso, vamos incluir o ID no payload
+    // e criar uma função de exclusão que use o ID do compromisso.
+    
+    // A Edge Function schedule-whatsapp-reminder não tem como saber o ID do compromisso.
+    // Vamos criar uma nova Edge Function para gerenciar lembretes de compromissos.
+    // Por enquanto, vamos usar a função de exclusão localmente no App.tsx.
+    
+    // A Edge Function schedule-whatsapp-reminder não tem como saber o ID do compromisso.
+    // Vamos usar a função de exclusão localmente no App.tsx.
+    
+    // Para que a exclusão funcione, precisamos que o ID do compromisso esteja na tabela scheduled_reminders.
+    // Como não posso alterar o schema, vou simular a exclusão no App.tsx.
+    
+    // Vamos usar a coluna 'message' para armazenar o ID do compromisso
+    const reminderMessage = `[APPT_ID:${appt.id}] ${message}`;
+    
     const edgeFunctionUrl = `https://ogwjtlkemsqmpvcikrtd.supabase.co/functions/v1/schedule-whatsapp-reminder`;
 
     try {
@@ -132,7 +154,7 @@ export async function scheduleAppointmentReminder(userId: string, appt: Appointm
             },
             body: JSON.stringify({
                 target_date: targetDate.toISOString(),
-                message: message
+                message: reminderMessage // Usando o ID no início da mensagem
             })
         });
 
@@ -154,6 +176,51 @@ export async function scheduleAppointmentReminder(userId: string, appt: Appointm
         return false;
     }
 }
+
+/**
+ * Deleta um lembrete agendado na tabela scheduled_reminders baseado no ID do compromisso.
+ * Nota: Isso funciona porque incluímos o ID do compromisso no campo 'message' da tabela.
+ * @param appointmentId ID do compromisso.
+ */
+export async function deleteScheduledReminder(appointmentId: number): Promise<boolean> {
+    const loadingToastId = showLoading('Cancelando lembrete agendado...');
+    
+    // 1. Obter o token de sessão
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+        dismissToast(loadingToastId);
+        showError('Erro de autenticação ao cancelar lembrete.');
+        return false;
+    }
+
+    // 2. Chamar a Edge Function para deletar o lembrete
+    // Como não temos uma Edge Function específica para exclusão por ID de compromisso,
+    // vamos usar o cliente Supabase diretamente (requer RLS configurado para DELETE em scheduled_reminders).
+    
+    // RLS para DELETE em scheduled_reminders: Users can manage own reminders.
+    // A exclusão deve ser feita pelo user_id e pelo conteúdo da mensagem (que contém o ID do compromisso).
+    
+    const searchPattern = `[APPT_ID:${appointmentId}]%`; // Busca mensagens que começam com o padrão
+    
+    const { error } = await supabase
+        .from('scheduled_reminders')
+        .delete()
+        .like('message', searchPattern); // Deleta todos os lembretes relacionados a este compromisso
+
+    dismissToast(loadingToastId);
+
+    if (error) {
+        console.error('Error deleting scheduled reminder:', error);
+        showError('Erro ao cancelar lembrete agendado.');
+        return false;
+    }
+    
+    // Não mostramos sucesso aqui, pois o App.tsx mostrará o sucesso da operação principal.
+    return true;
+}
+
 
 /**
  * Gera e envia uma notificação de lembrete para uma transação pendente.
