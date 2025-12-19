@@ -400,6 +400,10 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         // New fields for payment method
         paymentMethod: 'pix',
         otherPaymentMethod: '',
+
+        // NEW: Signature fields
+        signatureName: user?.name || '',
+        signatureRole: 'Emitente',
     });
 
     const [items, setItems] = useState<{id: number, desc: string, qty: number, price: number}[]>([
@@ -586,7 +590,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
             <div className="pt-16 text-center">
                 <p className="text-lg">Local e data: {renderLine(locationAndDate, 'min-w-[150px]')}</p>
                 <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
-                    <p className="text-lg font-bold">Assinatura do Recebedor</p>
+                    <p className="text-lg font-bold">{formData.signatureName || 'Assinatura'}</p>
+                    {formData.signatureRole && <p className="text-sm text-slate-600">{formData.signatureRole}</p>}
                 </div>
             </div>
         );
@@ -596,7 +601,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
             <div className="pt-16 text-center">
                 <p className="text-lg">Local e data: {renderLine(locationAndDate, 'min-w-[150px]')}</p>
                 <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
-                    <p className="text-lg font-bold">Assinatura do MEI</p>
+                    <p className="text-lg font-bold">{formData.signatureName || 'Assinatura do MEI'}</p>
+                    {formData.signatureRole && <p className="text-sm text-slate-600">{formData.signatureRole}</p>}
                 </div>
             </div>
         );
@@ -878,6 +884,21 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             ) : (
                                 <input type="text" value={formData.issuerDoc} onChange={e => setFormData({...formData, issuerDoc: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Seu CNPJ" />
                             )}
+                        </div>
+                        
+                        {/* NEW: Signature Fields */}
+                        <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
+                            <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Assinatura no Recibo</h4>
+                            <div className="space-y-2">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nome para Assinatura</label>
+                                    <input type="text" value={formData.signatureName} onChange={e => setFormData({...formData, signatureName: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Ex: Nome Completo" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Cargo/Função (Opcional)</label>
+                                    <input type="text" value={formData.signatureRole} onChange={e => setFormData({...formData, signatureRole: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Ex: Proprietário, MEI" />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
