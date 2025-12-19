@@ -1,5 +1,5 @@
 import { supabase } from '../src/integrations/supabase/client';
-import { showError, showSuccess, dismissToast } from './toastUtils';
+import { showError, showSuccess, dismissToast, showLoading } from './toastUtils';
 import { Appointment, Transaction } from '../types';
 
 // Helper para buscar a configuração da API do WhatsApp
@@ -45,7 +45,6 @@ export async function sendImmediateNotification(userId: string, message: string)
 
     if (!config || !phone) return false;
 
-    const loadingToastId = 'whatsapp-send';
     const toastId = showLoading('Enviando notificação via WhatsApp...');
 
     try {
@@ -81,30 +80,84 @@ export async function sendImmediateNotification(userId: string, message: string)
 }
 
 /**
- * Gera e envia uma notificação de lembrete para um compromisso.
- * Nota: Como não temos um serviço de agendamento (cron job) no frontend, 
- * esta função simula o envio imediato ou registra a intenção.
- * Para um lembrete real, precisaríamos de um serviço de terceiros ou uma Edge Function agendada.
- * Por enquanto, vamos apenas enviar uma confirmação de agendamento.
- * 
+ * Agenda um lembrete de compromisso para ser enviado no futuro via Edge Function.
+ * O lembrete será agendado para 1 hora antes do compromisso.
  * @param userId ID do usuário logado.
  * @param appt O compromisso a ser lembrado.
  */
 export async function scheduleAppointmentReminder(userId: string, appt: Appointment): Promise<boolean> {
-    if (!appt.notify) return true; // No need to schedule if notify is false
+    if (!appt.notify) return true; // Não agenda se notify for false
 
-    const date = new Date(appt.date);
-    const formattedDate = date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const loadingToastId = showLoading('Agendando lembrete...');
     
-    const message = `🔔 Lembrete Agendado: Seu compromisso "${appt.title}" está marcado para ${formattedDate} às ${appt.time}.`;
+    // 1. Calcular a data/hora alvo (1 hora antes do compromisso)
+    const [year, month, day] = appt.date.split('-').map(Number);
+    const [hour, minute] = appt.time.split(':').map(Number);
+    
+    // Cria a data do compromisso
+    const appointmentDateTime = new Date(year, month - 1, day, hour, minute, 0);
+    
+    // Agenda 1 hora antes
+    const targetDate = new Date(appointmentDateTime.getTime() - 60 * 60 * 1000);
+    
+    // Se a data alvo já passou, não agendamos (ou agendamos para agora, mas vamos evitar)
+    if (targetDate < new Date()) {
+        dismissToast(loadingToastId);
+        showWarning('O compromisso está muito próximo ou já passou. Lembrete não agendado.');
+        return false;
+    }
 
-    // In a real scenario, this would call a backend service to schedule the message.
-    // Here, we send an immediate confirmation message to the user.
-    return sendImmediateNotification(userId, message);
+    const formattedDate = appointmentDateTime.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const message = `🔔 Lembrete: Seu compromisso "${appt.title}" está marcado para ${formattedDate} às ${appt.time}.`;
+
+    // 2. Obter o token de sessão
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+        dismissToast(loadingToastId);
+        showError('Erro de autenticação ao agendar lembrete.');
+        return false;
+    }
+
+    // 3. Chamar a Edge Function para registrar o lembrete
+    const edgeFunctionUrl = `https://ogwjtlkemsqmpvcikrtd.supabase.co/functions/v1/schedule-whatsapp-reminder`;
+
+    try {
+        const response = await fetch(edgeFunctionUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                target_date: targetDate.toISOString(),
+                message: message
+            })
+        });
+
+        dismissToast(loadingToastId);
+
+        if (response.ok) {
+            showSuccess(`Lembrete agendado para 1 hora antes do compromisso!`);
+            return true;
+        } else {
+            const errorData = await response.json();
+            console.error('Edge Function Error:', errorData);
+            showError(`Falha ao agendar lembrete: ${errorData.error || 'Erro desconhecido.'}`);
+            return false;
+        }
+    } catch (e) {
+        dismissToast(loadingToastId);
+        console.error('Network or Fetch Error:', e);
+        showError('Erro de conexão ao agendar lembrete.');
+        return false;
+    }
 }
 
 /**
  * Gera e envia uma notificação de lembrete para uma transação pendente.
+ * Mantemos o envio imediato para transações, pois o lembrete é mais sobre a confirmação de registro.
  * @param userId ID do usuário logado.
  * @param t A transação pendente.
  */

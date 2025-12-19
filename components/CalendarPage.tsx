@@ -47,6 +47,11 @@ const getEasterDate = (year: number): Date => {
   return new Date(year, month, day);
 };
 
+interface Holiday {
+    date: Date;
+    title: string;
+}
+
 const getBrazilianHolidays = (year: number): Holiday[] => {
   const easter = getEasterDate(year);
   
@@ -237,7 +242,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
             onAddAppointment(appointment);
         }
         
-        // NEW: Schedule WhatsApp reminder if notify is true
+        // CHAMA A EDGE FUNCTION PARA AGENDAR O LEMBRETE
         if (newEventNotify) {
             await scheduleAppointmentReminder(userId, appointment);
         }
@@ -395,7 +400,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
                       ev.type === 'despesa' ? 'Conta a Pagar' : 'Compromisso'}
                     </span>
                      {ev.notify && (
-                       <span className="material-icons text-[14px] text-slate-400" title="Notificação Ativada">notifications_active</span>
+                       <span className="material-icons text-[14px] text-slate-400" title="Notificação Agendada">notifications_active</span>
                      )}
                   </div>
                 </div>
