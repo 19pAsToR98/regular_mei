@@ -30,7 +30,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
   const [showRegPass, setShowRegPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
   
-  // NEW: Legal Acceptance States
+  // Legal Acceptance States
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
 
@@ -38,6 +38,25 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState(false);
+
+  // --- UTILS ---
+  const formatPhone = (value: string): string => {
+    const cleanValue = value.replace(/[^\d]/g, '');
+    const length = cleanValue.length;
+
+    if (length <= 2) return `(${cleanValue}`;
+    if (length <= 7) return `(${cleanValue.slice(0, 2)}) ${cleanValue.slice(2)}`;
+    if (length <= 11) return `(${cleanValue.slice(0, 2)}) ${cleanValue.slice(2, 7)}-${cleanValue.slice(7, 11)}`;
+    
+    return `(${cleanValue.slice(0, 2)}) ${cleanValue.slice(2, 7)}-${cleanValue.slice(7, 11)}`;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    const formattedValue = formatPhone(rawValue);
+    setPhone(formattedValue);
+  };
+  // --- END UTILS ---
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,8 +101,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
     
     // 1. Clean and Validate Phone Number
     const cleanPhone = phone.replace(/[^\d]/g, '');
-    if (cleanPhone.length < 8) {
-        setAuthError("Número de telefone inválido.");
+    if (cleanPhone.length < 10 || cleanPhone.length > 11) { // Requires 10 (DDD + 8 digitos) or 11 (DDD + 9 digitos)
+        setAuthError("Número de telefone inválido. O DDD e o número são obrigatórios.");
         setIsLoading(false);
         return;
     }
@@ -314,7 +333,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
                                 type="tel" 
                                 required
                                 value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
+                                onChange={handlePhoneChange}
+                                inputMode="numeric"
+                                maxLength={15} // Max length for (99) 99999-9999
                                 className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
                                 placeholder="(11) 99999-9999"
                             />
@@ -367,7 +388,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
                         </div>
                     </div>
                     
-                    {/* NEW: Legal Checkboxes */}
+                    {/* Legal Checkboxes */}
                     <div className="space-y-2 pt-2">
                         <label className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
                             <input 
