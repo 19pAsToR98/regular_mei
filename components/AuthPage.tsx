@@ -116,7 +116,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
 
     if (phoneCheckError) {
         console.error('Phone check error:', phoneCheckError);
-        setAuthError('Erro ao verificar telefone. Tente novamente.');
+        // Refinando a mensagem de erro para o usuário
+        setAuthError('Erro ao verificar telefone. Por favor, tente novamente ou contate o suporte.');
         setIsLoading(false);
         return;
     }
