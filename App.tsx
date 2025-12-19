@@ -25,8 +25,9 @@ import FinancialScore from './components/FinancialScore';
 import MobileDashboard from './components/MobileDashboard';
 import InstallPrompt from './components/InstallPrompt';
 import ExternalTransactionModal from './components/ExternalTransactionModal';
-import TermsPage from './components/TermsPage'; // NEW
-import PrivacyPage from './components/PrivacyPage'; // NEW
+import TermsPage from './components/TermsPage';
+import PrivacyPage from './components/PrivacyPage';
+import BalanceForecastCard from './components/BalanceForecastCard';
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -438,6 +439,27 @@ const App: React.FC = () => {
 
     setNotifications(processedNotifications);
   };
+  
+  // NEW: Function to update last active timestamp
+  const updateLastActive = async (userId: string) => {
+    const now = new Date().toISOString();
+    const { error } = await supabase
+        .from('profiles')
+        .update({ last_active: now })
+        .eq('id', userId);
+
+    if (error) {
+        console.error('Error updating last_active:', error);
+    } else {
+        // Update local state to reflect the change
+        setUser(prev => {
+            if (prev && prev.id === userId) {
+                return { ...prev, lastActive: now };
+            }
+            return prev;
+        });
+    }
+  };
 
   const loadAllUserData = async (userId: string, userRole: 'admin' | 'user') => {
       
@@ -458,6 +480,9 @@ const App: React.FC = () => {
       setTransactions(trans as Transaction[]);
       setAppointments(appts as Appointment[]);
       setLoadingAuth(false);
+      
+      // Call updateLastActive after all data is loaded and user is confirmed active
+      updateLastActive(userId); 
   };
 
   const loadUserProfile = async (supabaseUser: any) => {
@@ -501,7 +526,7 @@ const App: React.FC = () => {
         role: profileData.role as 'admin' | 'user',
         status: profileData.status as 'active' | 'inactive' | 'suspended',
         joinedAt: profileData.joined_at,
-        lastActive: profileData.last_active
+        lastActive: profileData.last_active // Keep existing last_active from DB
     };
 
     setUser(appUser);
@@ -607,17 +632,18 @@ const App: React.FC = () => {
     loadMaintenanceConfig();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      // Access current user state via ref
       const currentUser = userRef.current; 
       const isUserAlreadyLoaded = currentUser && currentUser.id === session?.user?.id;
 
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-        // If the user is already loaded, this is likely a session refresh on focus. Skip full reload.
         if (!isUserAlreadyLoaded) {
             loadUserProfile(session.user);
         } else {
-            // Ensure loading spinner is off if we skipped the load
             setLoadingAuth(false);
+            // If user is already loaded and setup is complete, update last active time on refresh
+            if (currentUser.isSetupComplete) {
+                updateLastActive(currentUser.id);
+            }
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
@@ -656,12 +682,14 @@ const App: React.FC = () => {
       if (!user) return;
       
       // 1. Update Supabase Profile
+      const now = new Date().toISOString(); // Capture current time for lastActive
       const { error } = await supabase
           .from('profiles')
           .update({ 
               cnpj: newCnpj, 
               name: companyName || user.name, 
-              is_setup_complete: true 
+              is_setup_complete: true,
+              last_active: now // Set last_active on completion
           })
           .eq('id', user.id);
 
@@ -677,7 +705,7 @@ const App: React.FC = () => {
           isSetupComplete: true, 
           cnpj: newCnpj,
           name: companyName || user.name,
-          lastActive: new Date().toISOString()
+          lastActive: now // Use the same timestamp for local state
       };
       setCnpj(newCnpj);
       setUser(updatedUser);
@@ -1609,11 +1637,14 @@ const App: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 xl:col-span-6 h-full">
+                    <div className="col-span-12 xl:col-span-4 h-full">
                         <FinancialScore transactions={transactions} />
                     </div>
-                    <div className="col-span-12 xl:col-span-6 h-full">
+                    <div className="col-span-12 xl:col-span-4 h-full">
                         <Thermometer transactions={transactions} />
+                    </div>
+                    <div className="col-span-12 xl:col-span-4 h-full">
+                        <BalanceForecastCard transactions={transactions} />
                     </div>
                   </div>
 
@@ -1694,8 +1725,8 @@ const App: React.FC = () => {
               onDeleteAccount={handleDeleteAccount}
               onChangePassword={handleChangePassword}
             />;
-          case 'terms': return <TermsPage />; // NEW ROUTE
-          case 'privacy': return <PrivacyPage />; // NEW ROUTE
+          case 'terms': return <TermsPage />;
+          case 'privacy': return <PrivacyPage />;
           default: return null;
       }
   };
