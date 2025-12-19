@@ -544,7 +544,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
 
     const renderPaymentCheckboxes = (template: 'mei' | 'detailed') => {
         return (
-            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-800 dark:text-slate-800">
                 {paymentOptions.map(opt => (
                     <span key={opt.value} className="flex items-center">
                         ({formData.paymentMethod === opt.value ? 'X' : ' '}) {opt.label}
@@ -559,7 +559,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
 
     // NEW: Helper para renderizar campos com tamanho dinâmico
     const renderDynamicValue = (content: string, className: string = '') => (
-        <span className={`font-bold px-1 inline-block whitespace-normal text-slate-900 dark:text-white ${className}`}>
+        <span className={`font-bold px-1 inline-block whitespace-normal text-slate-900 dark:text-slate-900 ${className}`}>
             {content || '____________________'}
         </span>
     );
@@ -579,7 +579,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         
         // Helper para renderizar campos com destaque (sem linha de preenchimento)
         const renderValue = (content: string) => (
-            <span className="font-bold px-1 inline-block whitespace-normal text-slate-900 dark:text-white">
+            <span className="font-bold px-1 inline-block whitespace-normal text-slate-900 dark:text-slate-900">
                 {content}
             </span>
         );
@@ -587,7 +587,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         switch (formData.template) {
             case 'classic':
                 return (
-                    <div className="space-y-6">
+                    <div className="space-y-6 text-slate-800 dark:text-slate-800">
                         <div className="text-center border-b-2 border-slate-800 pb-4 mb-6">
                             <h2 className="text-2xl font-black uppercase tracking-widest">RECIBO</h2>
                         </div>
@@ -616,7 +616,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                 );
             case 'mei':
                 return (
-                    <div className="space-y-6">
+                    <div className="space-y-6 text-slate-800 dark:text-slate-800">
                         <div className="text-center border-b-2 border-slate-800 pb-4 mb-6">
                             <h2 className="text-2xl font-black uppercase tracking-widest">RECIBO MEI</h2>
                         </div>
@@ -651,7 +651,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                 );
             case 'detailed':
                 return (
-                    <div className="space-y-6">
+                    <div className="space-y-6 text-slate-800 dark:text-slate-800">
                         <div className="text-center border-b-2 border-slate-800 pb-4 mb-6">
                             <h2 className="text-2xl font-black uppercase tracking-widest">COMPROVANTE DE PAGAMENTO</h2>
                         </div>
@@ -668,17 +668,17 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                                 <tr className="bg-slate-100 border-y border-slate-300">
                                     <th className="py-2 px-2 text-left text-xs font-bold uppercase text-slate-500">Descrição</th>
                                     <th className="py-2 px-2 text-center text-xs font-bold uppercase text-slate-500 w-16">Qtd</th>
-                                    <th className="py-2 px-2 text-right text-xs font-bold uppercase text-slate-500 w-24">Preço</th>
+                                    <th className="py-2 px-2 text-right text-xs font-bold uppercase text-slate-500 w-24">Preço Unit.</th>
                                     <th className="py-2 px-2 text-right text-xs font-bold uppercase text-slate-500 w-24">Total</th>
                                 </tr>
                             </thead>
                             <tbody className="text-sm">
                                 {items.map((item) => (
                                     <tr key={item.id} className="border-b border-slate-100">
-                                        <td className="py-1 px-2 font-medium">{item.desc || 'Item sem descrição'}</td>
-                                        <td className="py-1 px-2 text-center text-slate-600">{item.qty}</td>
-                                        <td className="py-1 px-2 text-right text-slate-600">R$ {item.price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                                        <td className="py-1 px-2 text-right font-bold">R$ {(item.qty * item.price).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                                        <td className="py-1 px-2 font-medium text-slate-800 dark:text-slate-800">{item.desc || 'Item sem descrição'}</td>
+                                        <td className="py-1 px-2 text-center text-slate-600 dark:text-slate-600">{item.qty}</td>
+                                        <td className="py-1 px-2 text-right text-slate-600 dark:text-slate-600">R$ {item.price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                                        <td className="py-1 px-2 text-right font-bold text-slate-800 dark:text-slate-800">R$ {(item.qty * item.price).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -1016,7 +1016,7 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                                         <button 
                                             key={t}
                                             onClick={() => setBudget({...budget, template: t as any})}
-                                            className={`flex-1 py-2 text-xs font-bold uppercase rounded border ${budget.template === t ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200'}`}
+                                            className={`flex-1 py-2 text-xs font-bold uppercase rounded border transition-colors ${budget.template === t ? 'bg-slate-800 text-white border-slate-800 dark:bg-slate-700' : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'}`}
                                         >
                                             {t === 'classic' ? 'Padrão' : t === 'modern' ? 'Moderno' : 'Minim.'}
                                         </button>
@@ -1106,7 +1106,7 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                         disabled={isExporting}
                         className="w-full bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transition-colors"
                     >
-                        {isExporting ? <span className="material-icons animate-spin">refresh</span> : <span className="material-icons">file_download</span>}
+                        {isExporting ? <span className="material-icons animate-spin text-sm">refresh</span> : <span className="material-icons">file_download</span>}
                         Exportar PDF
                     </button>
                 </div>
@@ -1129,29 +1129,29 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                                 {/* <p className="text-slate-500 font-mono text-sm">#{budget.number}</p> */}
                             </div>
                             <div className="text-right">
-                                <h2 className="font-bold text-xl">{budget.issuerName || 'Sua Empresa'}</h2>
-                                <p className="text-sm text-slate-500">{budget.issuerCnpj}</p>
-                                <p className="text-sm text-slate-500">{budget.issuerEmail}</p>
-                                <p className="text-sm text-slate-500">{budget.issuerPhone}</p>
+                                <h2 className="font-bold text-xl text-slate-900 dark:text-slate-900">{budget.issuerName || 'Sua Empresa'}</h2>
+                                <p className="text-sm text-slate-500 dark:text-slate-500">{budget.issuerCnpj}</p>
+                                <p className="text-sm text-slate-500 dark:text-slate-500">{budget.issuerEmail}</p>
+                                <p className="text-sm text-slate-500 dark:text-slate-500">{budget.issuerPhone}</p>
                             </div>
                         </div>
 
                         {/* INFO GRID */}
                         <div className="grid grid-cols-2 gap-8 mb-12">
                             <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase mb-1">Cliente</p>
-                                <p className="font-bold text-lg">{budget.clientName || 'Nome do Cliente'}</p>
-                                {budget.clientCnpj && <p className="text-sm text-slate-600">{budget.clientCnpj}</p>}
-                                {budget.clientEmail && <p className="text-sm text-slate-600">{budget.clientEmail}</p>}
+                                <p className="text-xs font-bold text-slate-400 dark:text-slate-400 uppercase mb-1">Cliente</p>
+                                <p className="font-bold text-lg text-slate-900 dark:text-slate-900">{budget.clientName || 'Nome do Cliente'}</p>
+                                {budget.clientCnpj && <p className="text-sm text-slate-600 dark:text-slate-600">{budget.clientCnpj}</p>}
+                                {budget.clientEmail && <p className="text-sm text-slate-600 dark:text-slate-600">{budget.clientEmail}</p>}
                             </div>
                             <div className="text-right">
                                 <div className="mb-2">
-                                    <span className="text-xs font-bold text-slate-400 uppercase mr-2">Data de Emissão:</span>
-                                    <span className="font-medium">{new Date(budget.date).toLocaleDateString('pt-BR')}</span>
+                                    <span className="text-xs font-bold text-slate-400 dark:text-slate-400 uppercase mr-2">Data de Emissão:</span>
+                                    <span className="font-medium text-slate-900 dark:text-slate-900">{new Date(budget.date).toLocaleDateString('pt-BR')}</span>
                                 </div>
                                 <div>
-                                    <span className="text-xs font-bold text-slate-400 uppercase mr-2">Válido Até:</span>
-                                    <span className="font-medium">{new Date(budget.validUntil).toLocaleDateString('pt-BR')}</span>
+                                    <span className="text-xs font-bold text-slate-400 dark:text-slate-400 uppercase mr-2">Válido Até:</span>
+                                    <span className="font-medium text-slate-900 dark:text-slate-900">{new Date(budget.validUntil).toLocaleDateString('pt-BR')}</span>
                                 </div>
                             </div>
                         </div>
@@ -1169,10 +1169,10 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                             <tbody className="text-sm">
                                 {items.map((item) => (
                                     <tr key={item.id} className="border-b border-slate-100">
-                                        <td className="py-3 px-4 font-medium">{item.desc || 'Item sem descrição'}</td>
-                                        <td className="py-3 px-4 text-center text-slate-600">{item.qty}</td>
-                                        <td className="py-3 px-4 text-right text-slate-600">R$ {item.price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                                        <td className="py-3 px-4 text-right font-bold">R$ {(item.qty * item.price).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                                        <td className="py-3 px-4 font-medium text-slate-900 dark:text-slate-900">{item.desc || 'Item sem descrição'}</td>
+                                        <td className="py-3 px-4 text-center text-slate-600 dark:text-slate-600">{item.qty}</td>
+                                        <td className="py-3 px-4 text-right text-slate-600 dark:text-slate-600">R$ {item.price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                                        <td className="py-3 px-4 text-right font-bold text-slate-900 dark:text-slate-900">R$ {(item.qty * item.price).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -1182,7 +1182,7 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                         <div className="flex justify-end mb-12">
                             <div className="w-64 space-y-2">
                                 <div className={`flex justify-between items-center py-3 border-t-2 ${colors[budget.color].split(' ')[1].replace('text-', 'border-')}`}>
-                                    <span className="font-bold text-lg uppercase">Total</span>
+                                    <span className="font-bold text-lg uppercase text-slate-900 dark:text-slate-900">Total</span>
                                     <span className={`font-bold text-2xl ${colors[budget.color].split(' ')[0]}`}>
                                         R$ {total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
                                     </span>
@@ -1193,8 +1193,8 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                         {/* FOOTER / NOTES */}
                         {budget.notes && (
                             <div className="bg-slate-50 p-6 rounded-lg border border-slate-100 text-sm text-slate-600 leading-relaxed print:bg-transparent print:border-slate-200">
-                                <p className="font-bold text-xs uppercase text-slate-400 mb-2">Observações & Termos</p>
-                                {budget.notes}
+                                <p className="font-bold text-xs uppercase text-slate-400 dark:text-slate-400 mb-2">Observações & Termos</p>
+                                <p className="text-slate-600 dark:text-slate-600">{budget.notes}</p>
                             </div>
                         )}
 
