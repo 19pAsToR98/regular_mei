@@ -94,6 +94,14 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ transactions }) => {
     }
     return yearData;
   }, [transactions]);
+  
+  // Custom formatter for YAxis to handle 'k' notation without long decimals
+  const formatKilo = (value: number) => {
+      if (value === 0) return 'R$0';
+      const kValue = value / 1000;
+      // Use toLocaleString to format the number with max 1 decimal place, removing trailing zero if integer
+      return `R$${kValue.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}k`;
+  };
 
   return (
     <div className="bg-white dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col h-full shadow-sm w-full">
@@ -135,7 +143,12 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ transactions }) => {
             <BarChart data={barData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }} barGap={8}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={(value) => `R$${value/1000}k`} />
+                <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#94a3b8', fontSize: 11 }} 
+                    tickFormatter={formatKilo} 
+                />
                 <Tooltip cursor={{ fill: '#F1F5F9', opacity: 0.5 }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, '']} />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
                 <Bar dataKey="receita" name="Receitas" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={20} />
@@ -173,7 +186,12 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ transactions }) => {
                 <BarChart data={fullYearData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }} barGap={2}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={(value) => `R$${value/1000}k`} />
+                    <YAxis 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fill: '#94a3b8', fontSize: 11 }} 
+                        tickFormatter={formatKilo} 
+                    />
                     <Tooltip cursor={{ fill: '#F1F5F9', opacity: 0.5 }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, '']} />
                     <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
                     <Bar dataKey="receita" name="Receitas" fill="#10B981" radius={[2, 2, 0, 0]} barSize={12} />
