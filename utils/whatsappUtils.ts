@@ -1,5 +1,5 @@
 import { supabase } from '../src/integrations/supabase/client';
-import { showError, showSuccess } from './toastUtils';
+import { showError, showSuccess, dismissToast } from './toastUtils';
 import { Appointment, Transaction } from '../types';
 
 // Helper para buscar a configuração da API do WhatsApp
@@ -46,7 +46,7 @@ export async function sendImmediateNotification(userId: string, message: string)
     if (!config || !phone) return false;
 
     const loadingToastId = 'whatsapp-send';
-    showSuccess('Enviando notificação via WhatsApp...');
+    const toastId = showLoading('Enviando notificação via WhatsApp...');
 
     try {
         const response = await fetch(config.sendTextUrl, {
@@ -62,7 +62,7 @@ export async function sendImmediateNotification(userId: string, message: string)
         });
 
         const data = await response.json();
-        dismissToast(loadingToastId);
+        dismissToast(toastId);
 
         if (response.ok && data.success) {
             showSuccess('Notificação enviada com sucesso!');
@@ -73,7 +73,7 @@ export async function sendImmediateNotification(userId: string, message: string)
             return false;
         }
     } catch (e) {
-        dismissToast(loadingToastId);
+        dismissToast(toastId);
         console.error('Network error during WhatsApp send:', e);
         showError('Erro de rede ao tentar enviar notificação.');
         return false;
