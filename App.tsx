@@ -28,7 +28,6 @@ import ExternalTransactionModal from './components/ExternalTransactionModal';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
 import BalanceForecastCard from './components/BalanceForecastCard';
-import HomePage from './components/HomePage';
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -1677,23 +1676,9 @@ const App: React.FC = () => {
       );
   }
 
-  // If not logged in, determine if we show AuthPage or HomePage
+  // If not logged in, show AuthPage
   if (!user) {
-      // If activeTab is explicitly 'login' (or 'register'/'forgot' which AuthPage handles internally)
-      if (activeTab === 'login' || activeTab === 'register' || activeTab === 'forgot') {
-          return <AuthPage onLogin={handleLogin} onForgotPassword={handleForgotPassword} onNavigate={setActiveTab} />;
-      }
-      
-      // Default unauthenticated view is HomePage (Landing Page)
-      return (
-          <HomePage 
-              onNavigateToClientArea={() => setActiveTab('login')}
-              onNavigateToServices={() => {
-                  // Anchor link navigation is handled by the browser, but we ensure the tab is set correctly if needed.
-                  // Since we are on the landing page, no tab change is strictly necessary.
-              }}
-          />
-      );
+      return <AuthPage onLogin={handleLogin} onForgotPassword={handleForgotPassword} onNavigate={setActiveTab} />;
   }
 
   if (!user.isSetupComplete) {
