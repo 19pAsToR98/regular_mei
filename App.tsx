@@ -28,6 +28,7 @@ import ExternalTransactionModal from './components/ExternalTransactionModal';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
 import BalanceForecastCard from './components/BalanceForecastCard';
+import HomePage from './components/HomePage';
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -694,7 +695,7 @@ const App: React.FC = () => {
         setLoadingAuth(false);
         // Clear persisted tab on sign out
         localStorage.removeItem('activeTab');
-        setActiveTabState('dashboard');
+        setActiveTabState('login'); // Explicitly navigate to login view
       } else if (event === 'INITIAL_SESSION' && session?.user) {
         loadUserProfile(session.user);
       } else if (event === 'INITIAL_SESSION' && !session) {
@@ -953,7 +954,7 @@ const App: React.FC = () => {
             
             // Reset local state immediately
             setUser(null);
-            setActiveTab('dashboard');
+            setActiveTab('login'); // Redirect to login/home
             setTransactions([]);
             setAppointments([]);
             setCnpj('');
@@ -978,6 +979,7 @@ const App: React.FC = () => {
           showError('Erro ao sair.');
       }
       setUser(null);
+      setActiveTab('login'); // Explicitly navigate to login view
   };
 
   // --- OFFERS HANDLERS ---
@@ -1628,6 +1630,7 @@ const App: React.FC = () => {
                         url.searchParams.delete('page');
                         url.searchParams.delete('articleId'); // Clear article ID from URL
                         window.history.pushState({}, '', url);
+                        setActiveTab('login'); // Redirect to login/home
                     }}
                     className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
                   >
@@ -1658,7 +1661,7 @@ const App: React.FC = () => {
                       <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase ml-2">{activeTab === 'terms' ? 'Termos' : 'Privacidade'}</span>
                   </div>
                   <button 
-                    onClick={() => setActiveTab('dashboard')}
+                    onClick={() => setActiveTab('login')}
                     className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
                   >
                       Voltar ao Login <span className="material-icons text-sm">login</span>
@@ -1674,14 +1677,35 @@ const App: React.FC = () => {
       );
   }
 
+  // If not logged in, determine if we show AuthPage or HomePage
   if (!user) {
-      return <AuthPage onLogin={handleLogin} onForgotPassword={handleForgotPassword} onNavigate={setActiveTab} />;
+      // If activeTab is explicitly 'login' (or 'register'/'forgot' which AuthPage handles internally)
+      if (activeTab === 'login' || activeTab === 'register' || activeTab === 'forgot') {
+          return <AuthPage onLogin={handleLogin} onForgotPassword={handleForgotPassword} onNavigate={setActiveTab} />;
+      }
+      
+      // Default unauthenticated view is HomePage (Landing Page)
+      return (
+          <HomePage 
+              onNavigateToClientArea={() => setActiveTab('login')}
+              onNavigateToServices={() => {
+                  // Anchor link navigation is handled by the browser, but we ensure the tab is set correctly if needed.
+                  // Since we are on the landing page, no tab change is strictly necessary.
+              }}
+          />
+      );
   }
 
   if (!user.isSetupComplete) {
       return <OnboardingPage user={user} onComplete={handleOnboardingComplete} />;
   }
-
+  
+  // Logged in user: Redirect if on a public-only tab
+  if (activeTab === 'login' || activeTab === 'terms' || activeTab === 'privacy') {
+      setActiveTab('dashboard');
+      return null; // Prevent rendering until state updates
+  }
+  
   const isPageInMaintenance = (page: string) => {
       // Admins bypass all maintenance checks
       if (user?.role === 'admin') return false;

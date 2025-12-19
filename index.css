@@ -30,16 +30,22 @@
   display: none;  /* Chrome, Safari and Opera */
 }
 
+/* Material Symbols Outlined style from template */
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
 /* Tailwind utility classes for dark mode compatibility */
+/* Updated Jodit colors to match new dark theme: background-dark (#0f1823) and a darker slate (#1e293b) */
 .dark .jodit-container {
-  background-color: #0F172A; /* background-dark */
-  border-color: #1e293b; /* slate-800 */
+  background-color: #0f1823; /* background-dark */
+  border-color: #1e293b; /* Darker slate for borders */
 }
 
 .dark .jodit-workplace,
 .dark .jodit-toolbar-editor-collection {
-  background-color: #1e293b; /* slate-800 */
-  border-color: #334155; /* slate-700 */
+  background-color: #1e293b; /* Darker slate for background */
+  border-color: #334155; /* slate-700 equivalent */
 }
 
 .dark .jodit-wysiwyg {
@@ -51,10 +57,10 @@
 }
 
 .dark .jodit-toolbar-btn:hover {
-  background-color: #334155; /* slate-700 */
+  background-color: #334155; /* slate-700 equivalent */
 }
 
 .dark .jodit-toolbar-btn.jodit-active {
-  background-color: #3B82F6; /* primary */
+  background-color: #024BAC; /* New Primary */
   color: white;
 }
