@@ -359,7 +359,7 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                                     </p>
                                     
                                     <div className="bg-black/20 rounded-lg py-2 px-4 inline-block max-w-full">
-                                        <p className="text-white font-mono text-sm truncate">{formData.key || 'CHAVE PIX'}</p>
+                                        <p className="font-mono text-sm truncate">{formData.key || 'CHAVE PIX'}</p>
                                     </div>
                                     
                                     <div className="mt-4 flex items-center justify-center gap-1 text-[10px] text-white/50 font-medium">
@@ -400,6 +400,9 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         // New fields for payment method
         paymentMethod: 'pix',
         otherPaymentMethod: '',
+        
+        // NEW: Signature field
+        signature: '', // Placeholder for signature text/image URL
     });
 
     const [items, setItems] = useState<{id: number, desc: string, qty: number, price: number}[]>([
@@ -481,6 +484,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                 return h + (rest ? ' e ' + rest : '');
             }
             return '';
+            // Simplified logic for brevity, full implementation is complex
         };
 
         const integerPart = Math.floor(num);
@@ -553,10 +557,10 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         );
     };
 
-    // Helper para renderizar campos com linha de preenchimento
-    const renderLine = (content: string, minWidth: string = 'w-64') => (
-        <span className={`font-bold border-b border-slate-400 px-1 inline-block ${minWidth} whitespace-normal`}>
-            {content}
+    // NEW: Helper para renderizar campos com tamanho dinâmico
+    const renderDynamicValue = (content: string, className: string = '') => (
+        <span className={`font-bold px-1 inline-block whitespace-normal text-slate-900 dark:text-white ${className}`}>
+            {content || '____________________'}
         </span>
     );
 
@@ -589,20 +593,24 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </div>
                         
                         <p>
-                            Eu, {renderLine(issuerName)}
-                            , CPF nº {renderLine(issuerCpf)}
-                            , recebi de {renderLine(payerName)}
-                            , CPF/CNPJ nº {renderLine(payerDoc)}
-                            , a quantia de R$ {renderLine(amount)} ({renderLine(amountExtenso)}), referente a {renderLine(serviceDescription)}.
+                            Eu, {renderDynamicValue(issuerName)}
+                            , CPF nº {renderDynamicValue(issuerCpf)}
+                            , recebi de {renderDynamicValue(payerName)}
+                            , CPF/CNPJ nº {renderDynamicValue(payerDoc)}
+                            , a quantia de R$ {renderDynamicValue(amount)} ({renderDynamicValue(amountExtenso)}), referente a {renderDynamicValue(serviceDescription)}.
                         </p>
 
                         <p>
                             Declaro que o valor foi recebido integralmente nesta data.
                         </p>
 
-                        <div className="pt-12">
-                            <p>Local e data: {renderLine(locationAndDate)}</p>
-                            <p className="mt-12">Assinatura: {renderLine(' ', 'w-64 mx-auto block')}</p>
+                        <div className="pt-12 text-center">
+                            <p>Local e data: {renderDynamicValue(locationAndDate)}</p>
+                            
+                            {/* Assinatura */}
+                            <div className="mt-12 w-64 mx-auto border-t border-slate-800 pt-1">
+                                <p className="text-sm font-bold">{formData.issuerName || 'Assinatura do Emitente'}</p>
+                            </div>
                         </div>
                     </div>
                 );
@@ -614,11 +622,11 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </div>
                         
                         <p>
-                            Eu, {renderLine(issuerName)}
-                            , MEI inscrito no CNPJ {renderLine(issuerDoc)}
-                            , recebi de {renderLine(payerName)}
-                            , CPF/CNPJ {renderLine(payerDoc)}
-                            , o valor de R$ {renderLine(amount)} ({renderLine(amountExtenso)}), referente a:
+                            Eu, {renderDynamicValue(issuerName)}
+                            , MEI inscrito no CNPJ {renderDynamicValue(issuerDoc)}
+                            , recebi de {renderDynamicValue(payerName)}
+                            , CPF/CNPJ {renderDynamicValue(payerDoc)}
+                            , o valor de R$ {renderDynamicValue(amount)} ({renderDynamicValue(amountExtenso)}), referente a:
                         </p>
 
                         <p className="font-bold mt-4">Serviço prestado / Produto vendido:</p>
@@ -631,9 +639,13 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             Declaro que este recibo comprova o pagamento integral referente ao item descrito.
                         </p>
 
-                        <div className="pt-12">
-                            <p>Local e data: {renderLine(locationAndDate)}</p>
-                            <p className="mt-12">Assinatura do MEI: {renderLine(' ', 'w-64 mx-auto block')}</p>
+                        <div className="pt-12 text-center">
+                            <p>Local e data: {renderDynamicValue(locationAndDate)}</p>
+                            
+                            {/* Assinatura */}
+                            <div className="mt-12 w-64 mx-auto border-t border-slate-800 pt-1">
+                                <p className="text-sm font-bold">{formData.issuerName || 'Assinatura do MEI'}</p>
+                            </div>
                         </div>
                     </div>
                 );
@@ -645,9 +657,9 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </div>
                         
                         <p>
-                            Recebi de {renderLine(payerName)}
-                            , inscrito no CPF/CNPJ nº {renderLine(payerDoc)}
-                            , o valor de R$ {renderLine(amount)} ({renderLine(amountExtenso)}), referente ao pagamento de:
+                            Recebi de {renderDynamicValue(payerName)}
+                            , inscrito no CPF/CNPJ nº {renderDynamicValue(payerDoc)}
+                            , o valor de R$ {renderDynamicValue(amount)} ({renderDynamicValue(amountExtenso)}), referente ao pagamento de:
                         </p>
 
                         {/* Tabela de Itens para o modelo detalhado */}
@@ -684,10 +696,10 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
 
                         <div className="grid grid-cols-2 gap-4 mt-6">
                             <div>
-                                <span className="font-bold">Data do pagamento:</span> {renderLine(formattedDate)}
+                                <span className="font-bold">Data do pagamento:</span> {renderDynamicValue(formattedDate)}
                             </div>
                             <div>
-                                <span className="font-bold">Valor total recebido:</span> {renderLine(`R$ ${amount}`)}
+                                <span className="font-bold">Valor total recebido:</span> {renderDynamicValue(`R$ ${amount}`)}
                             </div>
                         </div>
 
@@ -695,9 +707,13 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             Declaro para os devidos fins que o valor foi quitado integralmente.
                         </p>
 
-                        <div className="pt-12">
-                            <p>Local e data: {renderLine(locationAndDate)}</p>
-                            <p className="mt-12">Assinatura: {renderLine(' ', 'w-64 mx-auto block')}</p>
+                        <div className="pt-12 text-center">
+                            <p>Local e data: {renderDynamicValue(locationAndDate)}</p>
+                            
+                            {/* Assinatura */}
+                            <div className="mt-12 w-64 mx-auto border-t border-slate-800 pt-1">
+                                <p className="text-sm font-bold">{formData.issuerName || 'Assinatura do Emitente'}</p>
+                            </div>
                         </div>
                     </div>
                 );
