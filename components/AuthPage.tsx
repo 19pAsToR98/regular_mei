@@ -92,7 +92,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
     const { data: existingPhone, error: phoneCheckError } = await supabase
         .from('profiles')
         .select('id')
-        .eq('phone', cleanPhone)
+        .eq('phone', cleanPhone) // Use cleanPhone for lookup
         .maybeSingle();
 
     if (phoneCheckError) {

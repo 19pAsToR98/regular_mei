@@ -13,10 +13,19 @@ serve(async (req) => {
   }
   
   try {
-    const { phone, date_start, date_end, limit } = await req.json();
+    const { phone: rawPhone, date_start, date_end, limit } = await req.json();
 
-    if (!phone) {
+    if (!rawPhone) {
         return new Response(JSON.stringify({ error: 'Missing required field: phone' }), { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+    }
+
+    // Padronização: Limpar o telefone para buscar no formato armazenado (apenas dígitos)
+    const phone = rawPhone.replace(/[^\d]/g, '');
+    if (phone.length < 8) {
+        return new Response(JSON.stringify({ error: 'Invalid phone number format.' }), { 
             status: 400, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         });
