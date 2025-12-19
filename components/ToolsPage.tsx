@@ -229,7 +229,7 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                                     <button
                                         key={type}
                                         onClick={() => setFormData({...formData, keyType: type})}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-colors border ${formData.keyType === type ? 'bg-cyan-100 text-cyan-700 border-cyan-200' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-colors border ${formData.keyType === type ? 'bg-cyan-100 text-cyan-700 border-cyan-200 font-bold' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                                     >
                                         {type}
                                     </button>
@@ -555,7 +555,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
 
     // Helper para renderizar campos com linha de preenchimento
     const renderLine = (content: string, minWidth: string = 'w-64') => (
-        <span className={`font-bold border-b border-slate-400 px-1 inline-block ${minWidth} whitespace-normal`}>
+        <span className={`font-bold border-b border-slate-400 px-1 inline-block ${minWidth} whitespace-normal text-slate-900`}>
             {content}
         </span>
     );
@@ -583,131 +583,186 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         switch (formData.template) {
             case 'classic':
                 return (
-                    <div className="space-y-6">
-                        <div className="text-center border-b-2 border-slate-800 pb-4 mb-6">
-                            <h2 className="text-2xl font-black uppercase tracking-widest">RECIBO</h2>
+                    <div className="space-y-6 p-8">
+                        <div className="text-center border-b-4 border-slate-900 pb-4 mb-8">
+                            <h2 className="text-4xl font-black uppercase tracking-widest text-slate-900">RECIBO</h2>
                         </div>
                         
-                        <p>
-                            Eu, {renderLine(issuerName)}
-                            , CPF nº {renderLine(issuerCpf)}
-                            , recebi de {renderLine(payerName)}
-                            , CPF/CNPJ nº {renderLine(payerDoc)}
-                            , a quantia de R$ {renderLine(amount)} ({renderLine(amountExtenso)}), referente a {renderLine(serviceDescription)}.
+                        <p className="text-lg leading-relaxed">
+                            Eu, {renderLine(issuerName, 'w-full')}
+                            , CPF nº {renderLine(issuerCpf, 'w-full')}
+                            , recebi de {renderLine(payerName, 'w-full')}
+                            , CPF/CNPJ nº {renderLine(payerDoc, 'w-full')}
+                            , a quantia de <span className="text-xl font-black">R$ {renderLine(amount, 'w-40')}</span> ({renderLine(amountExtenso, 'w-full')}), 
+                            referente a {renderLine(serviceDescription, 'w-full')}.
                         </p>
 
-                        <p>
+                        <p className="text-lg leading-relaxed">
                             Declaro que o valor foi recebido integralmente nesta data.
                         </p>
 
-                        <div className="pt-12">
-                            <p>Local e data: {renderLine(locationAndDate)}</p>
-                            <p className="mt-12">Assinatura: {renderLine(' ', 'w-64 mx-auto block')}</p>
+                        <div className="pt-16 text-center">
+                            <p className="text-lg">Local e data: {renderLine(locationAndDate, 'w-48')}</p>
+                            <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
+                                <p className="text-lg font-bold">Assinatura do Recebedor</p>
+                            </div>
                         </div>
                     </div>
                 );
             case 'mei':
                 return (
-                    <div className="space-y-6">
-                        <div className="text-center border-b-2 border-slate-800 pb-4 mb-6">
-                            <h2 className="text-2xl font-black uppercase tracking-widest">RECIBO MEI</h2>
+                    <div className="space-y-6 p-8">
+                        <div className="text-center border-b-4 border-emerald-600 pb-4 mb-8">
+                            <h2 className="text-4xl font-black uppercase tracking-widest text-emerald-700">RECIBO MEI</h2>
+                            <p className="text-sm text-slate-600 mt-1">Microempreendedor Individual</p>
                         </div>
                         
-                        <p>
-                            Eu, {renderLine(issuerName)}
-                            , MEI inscrito no CNPJ {renderLine(issuerDoc)}
-                            , recebi de {renderLine(payerName)}
-                            , CPF/CNPJ {renderLine(payerDoc)}
-                            , o valor de R$ {renderLine(amount)} ({renderLine(amountExtenso)}), referente a:
+                        <div className="border border-slate-200 p-4 rounded-lg bg-slate-50 text-sm">
+                            <p className="font-bold text-slate-800 mb-1">Emitente:</p>
+                            <p>{issuerName} (CNPJ: {issuerDoc})</p>
+                        </div>
+
+                        <p className="text-lg leading-relaxed">
+                            Recebi de {renderLine(payerName, 'w-full')}
+                            , CPF/CNPJ {renderLine(payerDoc, 'w-full')}
+                            , o valor de <span className="text-xl font-black text-emerald-700">R$ {renderLine(amount, 'w-40')}</span> ({renderLine(amountExtenso, 'w-full')}), referente a:
                         </p>
 
-                        <p className="font-bold mt-4">Serviço prestado / Produto vendido:</p>
-                        <p className="border-b border-slate-400 min-h-[1.5em]">{serviceDescription}</p>
+                        <div className="border border-slate-200 p-4 rounded-lg bg-slate-50 text-sm">
+                            <p className="font-bold text-slate-800 mb-1">Serviço prestado / Produto vendido:</p>
+                            <p className="min-h-[1.5em]">{serviceDescription}</p>
+                        </div>
 
-                        <p className="font-bold mt-4">O pagamento foi realizado em {day}/{month}/{year} por meio de:</p>
+                        <p className="font-bold mt-4 text-sm">O pagamento foi realizado em {day}/{month}/{year} por meio de:</p>
                         {renderPaymentCheckboxes('mei')}
 
-                        <p className="mt-6">
+                        <p className="mt-6 text-lg leading-relaxed">
                             Declaro que este recibo comprova o pagamento integral referente ao item descrito.
                         </p>
 
-                        <div className="pt-12">
-                            <p>Local e data: {renderLine(locationAndDate)}</p>
-                            <p className="mt-12">Assinatura do MEI: {renderLine(' ', 'w-64 mx-auto block')}</p>
+                        <div className="pt-16 text-center">
+                            <p className="text-lg">Local e data: {renderLine(locationAndDate, 'w-48')}</p>
+                            <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
+                                <p className="text-lg font-bold">Assinatura do MEI</p>
+                            </div>
                         </div>
                     </div>
                 );
             case 'detailed':
                 return (
-                    <div className="space-y-6">
-                        <div className="text-center border-b-2 border-slate-800 pb-4 mb-6">
-                            <h2 className="text-2xl font-black uppercase tracking-widest">COMPROVANTE DE PAGAMENTO</h2>
+                    <div className="space-y-6 p-8">
+                        <div className="flex justify-between items-end border-b-4 border-blue-600 pb-4 mb-8">
+                            <div>
+                                <h2 className="text-4xl font-black uppercase tracking-widest text-blue-700">COMPROVANTE</h2>
+                                <p className="text-sm text-slate-600 mt-1">Detalhe de Pagamento</p>
+                            </div>
+                            <div className="text-right text-sm">
+                                <p className="font-bold">{issuerName}</p>
+                                <p>{issuerDoc}</p>
+                            </div>
                         </div>
                         
-                        <p>
-                            Recebi de {renderLine(payerName)}
-                            , inscrito no CPF/CNPJ nº {renderLine(payerDoc)}
-                            , o valor de R$ {renderLine(amount)} ({renderLine(amountExtenso)}), referente ao pagamento de:
-                        </p>
+                        <div className="text-lg leading-relaxed">
+                            Recebi de {renderLine(payerName, 'w-full')}
+                            , inscrito no CPF/CNPJ nº {renderLine(payerDoc, 'w-full')}
+                            , o valor de <span className="text-xl font-black text-blue-700">R$ {renderLine(amount, 'w-40')}</span> ({renderLine(amountExtenso, 'w-full')}), referente ao pagamento de:
+                        </div>
 
                         {/* Tabela de Itens para o modelo detalhado */}
-                        <table className="w-full text-sm border-collapse">
+                        <table className="w-full text-sm border-collapse border border-slate-300">
                             <thead>
-                                <tr className="bg-slate-100 border-y border-slate-300">
-                                    <th className="py-2 px-2 text-left text-xs font-bold uppercase text-slate-500">Descrição</th>
-                                    <th className="py-2 px-2 text-center text-xs font-bold uppercase text-slate-500 w-16">Qtd</th>
-                                    <th className="py-2 px-2 text-right text-xs font-bold uppercase text-slate-500 w-24">Preço</th>
-                                    <th className="py-2 px-2 text-right text-xs font-bold uppercase text-slate-500 w-24">Total</th>
+                                <tr className="bg-blue-50 border-b border-blue-200">
+                                    <th className="py-2 px-3 text-left text-xs font-bold uppercase text-slate-600">Descrição</th>
+                                    <th className="py-2 px-3 text-center text-xs font-bold uppercase text-slate-600 w-16">Qtd</th>
+                                    <th className="py-2 px-3 text-right text-xs font-bold uppercase text-slate-600 w-24">Preço</th>
+                                    <th className="py-2 px-3 text-right text-xs font-bold uppercase text-slate-600 w-24">Total</th>
                                 </tr>
                             </thead>
                             <tbody className="text-sm">
                                 {items.map((item) => (
                                     <tr key={item.id} className="border-b border-slate-100">
-                                        <td className="py-1 px-2 font-medium">{item.desc || 'Item sem descrição'}</td>
-                                        <td className="py-1 px-2 text-center text-slate-600">{item.qty}</td>
-                                        <td className="py-1 px-2 text-right text-slate-600">R$ {item.price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                                        <td className="py-1 px-2 text-right font-bold">R$ {(item.qty * item.price).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                                        <td className="py-2 px-3 font-medium">{item.desc || 'Item sem descrição'}</td>
+                                        <td className="py-2 px-3 text-center text-slate-600">{item.qty}</td>
+                                        <td className="py-2 px-3 text-right text-slate-600">R$ {item.price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                                        <td className="py-2 px-3 text-right font-bold">R$ {(item.qty * item.price).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                         
                         <div className="flex justify-end mt-2">
-                            <div className="w-48 flex justify-between border-t border-slate-400 pt-1">
-                                <span className="font-bold">TOTAL:</span>
-                                <span className="font-bold">R$ {formattedAmount}</span>
+                            <div className="w-64 space-y-2">
+                                <div className="flex justify-between border-t border-slate-400 pt-2">
+                                    <span className="font-bold text-lg">TOTAL:</span>
+                                    <span className="font-black text-xl text-blue-700">R$ {formattedAmount}</span>
+                                </div>
                             </div>
                         </div>
 
-                        <p className="font-bold mt-4">Forma de pagamento:</p>
+                        <p className="font-bold mt-6 text-sm">Forma de pagamento:</p>
                         {renderPaymentCheckboxes('detailed')}
 
-                        <div className="grid grid-cols-2 gap-4 mt-6">
-                            <div>
-                                <span className="font-bold">Data do pagamento:</span> {renderLine(formattedDate)}
+                        <div className="pt-16 text-center">
+                            <p className="text-lg">Local e data: {renderLine(locationAndDate, 'w-48')}</p>
+                            <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
+                                <p className="text-lg font-bold">Assinatura</p>
                             </div>
-                            <div>
-                                <span className="font-bold">Valor total recebido:</span> {renderLine(`R$ ${amount}`)}
-                            </div>
-                        </div>
-
-                        <p className="mt-6">
-                            Declaro para os devidos fins que o valor foi quitado integralmente.
-                        </p>
-
-                        <div className="pt-12">
-                            <p>Local e data: {renderLine(locationAndDate)}</p>
-                            <p className="mt-12">Assinatura: {renderLine(' ', 'w-64 mx-auto block')}</p>
                         </div>
                     </div>
                 );
             default:
-                return <p className="text-center text-slate-500">Selecione um modelo de recibo.</p>;
+                return <p className="text-center text-slate-500 p-8">Selecione um modelo de recibo.</p>;
         }
     };
 
     return (
         <div className="animate-in fade-in slide-in-from-right-8 duration-300">
+            <style>{`
+                @media print {
+                    @page {
+                        size: A4;
+                        margin: 0;
+                    }
+                    body {
+                        background: white;
+                    }
+                    body * {
+                        visibility: hidden;
+                    }
+                    #receipt-preview, #receipt-preview * {
+                        visibility: visible;
+                    }
+                    #receipt-preview {
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 210mm !important;
+                        min-height: 297mm !important;
+                        margin: 0 !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                        background: white !important;
+                        padding: 15mm !important;
+                        color: #1e293b !important; /* Ensure dark text for print */
+                    }
+                    /* Ensure lines are visible in print */
+                    #receipt-preview .border-b {
+                        border-color: #1e293b !important;
+                    }
+                    #receipt-preview .border-t {
+                        border-color: #1e293b !important;
+                    }
+                    #receipt-preview .border-slate-900 {
+                        border-color: #1e293b !important;
+                    }
+                    #receipt-preview .bg-slate-50 {
+                        background-color: #f8fafc !important;
+                    }
+                    #receipt-preview .text-slate-900 {
+                        color: #1e293b !important;
+                    }
+                }
+            `}</style>
             <button onClick={onBack} className="mb-4 flex items-center text-slate-500 hover:text-primary transition-colors font-medium print:hidden">
                 <span className="material-icons text-sm mr-1">arrow_back</span> Voltar para ferramentas
             </button>
@@ -728,7 +783,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                                     key={t}
                                     type="button"
                                     onClick={() => setFormData({...formData, template: t as any})}
-                                    className={`flex-1 py-2 text-xs font-bold uppercase rounded border transition-colors ${formData.template === t ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}
+                                    className={`flex-1 py-2 text-xs font-bold uppercase rounded border transition-colors ${formData.template === t ? 'bg-emerald-100 text-emerald-700 border-emerald-200 font-bold' : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                                 >
                                     {t === 'classic' ? 'Simples' : t === 'mei' ? 'MEI' : 'Detalhado'}
                                 </button>
@@ -759,7 +814,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                                         <input type="text" value={item.desc} onChange={e => updateItem(item.id, 'desc', e.target.value)} className="flex-1 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Descrição" />
                                         <input type="number" value={item.qty} onChange={e => updateItem(item.id, 'qty', parseFloat(e.target.value))} className="w-16 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Qtd" />
                                         <input type="number" value={item.price} onChange={e => updateItem(item.id, 'price', parseFloat(e.target.value))} className="w-20 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="R$" />
-                                        <button onClick={() => removeItem(item.id)} className="text-red-500 hover:text-red-700"><span className="material-icons text-sm">close</span></button>
+                                        <button onClick={() => removeItem(item.id)} className="p-1 text-red-500 hover:text-red-700"><span className="material-icons text-sm">close</span></button>
                                     </div>
                                 ))}
                                 <button onClick={addItem} className="w-full py-2 border border-dashed border-slate-300 rounded text-slate-500 hover:bg-slate-50 text-sm flex items-center justify-center gap-1">
@@ -823,13 +878,10 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
 
                 {/* Preview */}
                 <div className="flex flex-col gap-4">
-                    <div ref={receiptRef} id="receipt-preview" className="bg-[#fffbeb] text-slate-800 p-8 rounded-sm shadow-lg border-2 border-dashed border-slate-300 relative font-mono text-sm leading-relaxed">
-                        {/* Paper Texture Effect */}
-                        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-                        
+                    <div ref={receiptRef} id="receipt-preview" className="bg-white text-slate-900 shadow-2xl mx-auto relative font-sans text-base leading-relaxed border border-slate-300" style={{ maxWidth: '210mm', minHeight: '297mm' }}>
                         {renderReceiptContent()}
                         
-                        <div className="absolute bottom-4 left-0 w-full text-center text-[10px] text-slate-400">
+                        <div className="absolute bottom-4 left-0 w-full text-center text-xs text-slate-400">
                             Gerado via Regular MEI
                         </div>
                     </div>
@@ -971,11 +1023,21 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                         border: none !important;
                         background: white !important;
                         padding: 15mm !important;
+                        color: #1e293b !important;
                     }
                     /* Remove border radius and shadows for print */
                     * {
                         box-shadow: none !important;
                     }
+                    /* Ensure colors are printed */
+                    #budget-preview .text-blue-600 { color: #2563eb !important; }
+                    #budget-preview .text-emerald-600 { color: #059669 !important; }
+                    #budget-preview .text-slate-800 { color: #1e293b !important; }
+                    #budget-preview .text-orange-600 { color: #ea580c !important; }
+                    #budget-preview .bg-blue-50 { background-color: #eff6ff !important; }
+                    #budget-preview .bg-emerald-50 { background-color: #ecfdf5 !important; }
+                    #budget-preview .bg-slate-100 { background-color: #f1f5f9 !important; }
+                    #budget-preview .bg-orange-50 { background-color: #fff7ed !important; }
                 }
             `}</style>
 
@@ -1000,7 +1062,7 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                                         <button 
                                             key={t}
                                             onClick={() => setBudget({...budget, template: t as any})}
-                                            className={`flex-1 py-2 text-xs font-bold uppercase rounded border ${budget.template === t ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200'}`}
+                                            className={`flex-1 py-2 text-xs font-bold uppercase rounded border transition-colors ${budget.template === t ? 'bg-slate-800 text-white border-slate-800 font-bold' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
                                         >
                                             {t === 'classic' ? 'Padrão' : t === 'modern' ? 'Moderno' : 'Minim.'}
                                         </button>
@@ -1057,7 +1119,7 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                                     <input type="text" value={item.desc} onChange={e => updateItem(item.id, 'desc', e.target.value)} className="flex-1 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="Descrição" />
                                     <input type="number" value={item.qty} onChange={e => updateItem(item.id, 'qty', parseFloat(e.target.value))} className="w-16 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="Qtd" />
                                     <input type="number" value={item.price} onChange={e => updateItem(item.id, 'price', parseFloat(e.target.value))} className="w-20 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="R$" />
-                                    <button onClick={() => removeItem(item.id)} className="text-red-500 hover:text-red-700"><span className="material-icons text-sm">close</span></button>
+                                    <button onClick={() => removeItem(item.id)} className="p-1 text-red-500 hover:text-red-700"><span className="material-icons text-sm">close</span></button>
                                 </div>
                             ))}
                             <button onClick={addItem} className="w-full py-2 border border-dashed border-slate-300 rounded text-slate-500 hover:bg-slate-50 text-sm flex items-center justify-center gap-1">
