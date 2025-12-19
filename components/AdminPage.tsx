@@ -57,6 +57,35 @@ const getTodayDateString = () => {
     return new Date().toISOString().split('T')[0];
 };
 
+// Helper to format ISO date string to readable format
+const formatLastActive = (isoDate?: string) => {
+    if (!isoDate) return 'Nunca';
+    try {
+        const date = new Date(isoDate);
+        // Check if date is valid
+        if (isNaN(date.getTime())) return 'Inválido';
+        
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) {
+            return `Hoje às ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+        if (diffDays === 1) {
+            return `Ontem às ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+        if (diffDays < 7) {
+            return `Há ${diffDays} dias`;
+        }
+        
+        return date.toLocaleDateString('pt-BR');
+    } catch (e) {
+        return 'Inválido';
+    }
+};
+
+
 const AdminPage: React.FC<AdminPageProps> = ({ 
     offers, onAddOffer, onUpdateOffer, onDeleteOffer,
     news, onAddNews, onUpdateNews, onDeleteNews,
@@ -237,7 +266,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
           role: userForm.role as 'admin' | 'user',
           status: userForm.status as 'active' | 'inactive' | 'suspended',
           isSetupComplete: true, // Assuming manual admin creation implies setup
-          lastActive: editingUserId ? (users.find(u => u.id === editingUserId)?.lastActive) : undefined,
+          lastActive: editingUserId ? (users.find(u => u.id === editingUserId)?.lastActive) : now,
           joinedAt: editingUserId ? (users.find(u => u.id === editingUserId)?.joinedAt) : now
       };
 
@@ -779,7 +808,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                               </span>
                                           </td>
                                           <td className="px-6 py-3 text-xs text-slate-500">
-                                              {user.lastActive ? new Date(user.lastActive).toLocaleString('pt-BR') : 'Nunca'}
+                                              {formatLastActive(user.lastActive)}
                                           </td>
                                           <td className="px-6 py-3 text-right">
                                               <div className="flex justify-end gap-1">

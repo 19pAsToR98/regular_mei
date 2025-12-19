@@ -1,10 +1,10 @@
-
 import React, { useMemo, useState, useRef } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, CartesianGrid } from 'recharts';
 import { Transaction, Category, Appointment, FiscalData } from '../types';
 import Reminders from './Reminders';
 import Thermometer from './Thermometer';
 import FinancialScore from './FinancialScore';
+import BalanceForecastCard from './BalanceForecastCard'; // NEW IMPORT
 
 interface MobileDashboardProps {
   transactions: Transaction[];
@@ -282,12 +282,19 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
                 <FinancialScore transactions={transactions} />
              </div>
           </div>
+          
+          {/* --- SLIDE 5: PROJEÇÃO DE SALDO --- */}
+          <div className="min-w-full snap-center flex flex-col items-center px-4 py-2">
+             <div className="w-full h-full min-h-[300px] flex items-center justify-center">
+                <BalanceForecastCard transactions={transactions} />
+             </div>
+          </div>
 
       </div>
 
       {/* PAGINATION DOTS */}
       <div className="flex justify-center gap-2 -mt-4 mb-2">
-          {[0, 1, 2, 3, 4].map(idx => (
+          {[0, 1, 2, 3, 4, 5].map(idx => (
               <button 
                 key={idx}
                 onClick={() => scrollToSlide(idx)}
