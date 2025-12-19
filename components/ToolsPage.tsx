@@ -400,10 +400,6 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         // New fields for payment method
         paymentMethod: 'pix',
         otherPaymentMethod: '',
-
-        // NEW: Signature fields
-        signatureName: user?.name || '',
-        signatureRole: 'Emitente',
     });
 
     const [items, setItems] = useState<{id: number, desc: string, qty: number, price: number}[]>([
@@ -558,9 +554,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
     };
 
     // Helper para renderizar campos com linha de preenchimento
-    // Ajustado para usar min-width e permitir expansão
-    const renderLine = (content: string, minWidth: string = 'min-w-[100px]') => (
-        <span className={`font-bold border-b border-slate-400 px-1 inline-block ${minWidth} whitespace-normal text-slate-900`} style={{ width: content.length > 0 ? 'auto' : undefined }}>
+    const renderLine = (content: string, minWidth: string = 'w-64') => (
+        <span className={`font-bold border-b border-slate-400 px-1 inline-block ${minWidth} whitespace-normal text-slate-900`}>
             {content}
         </span>
     );
@@ -585,28 +580,6 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
             </span>
         );
 
-        // --- Assinatura Comum ---
-        const signatureSection = (
-            <div className="pt-16 text-center">
-                <p className="text-lg">Local e data: {renderLine(locationAndDate, 'min-w-[150px]')}</p>
-                <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
-                    <p className="text-lg font-bold">{formData.signatureName || 'Assinatura'}</p>
-                    {formData.signatureRole && <p className="text-sm text-slate-600">{formData.signatureRole}</p>}
-                </div>
-            </div>
-        );
-
-        // --- Assinatura MEI ---
-        const signatureSectionMei = (
-            <div className="pt-16 text-center">
-                <p className="text-lg">Local e data: {renderLine(locationAndDate, 'min-w-[150px]')}</p>
-                <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
-                    <p className="text-lg font-bold">{formData.signatureName || 'Assinatura do MEI'}</p>
-                    {formData.signatureRole && <p className="text-sm text-slate-600">{formData.signatureRole}</p>}
-                </div>
-            </div>
-        );
-
         switch (formData.template) {
             case 'classic':
                 return (
@@ -616,19 +589,24 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </div>
                         
                         <p className="text-lg leading-relaxed">
-                            Eu, {renderLine(issuerName, 'min-w-[200px]')}
-                            , CPF nº {renderLine(issuerCpf, 'min-w-[150px]')}
-                            , recebi de {renderLine(payerName, 'min-w-[200px]')}
-                            , CPF/CNPJ nº {renderLine(payerDoc, 'min-w-[150px]')}
-                            , a quantia de <span className="text-xl font-black">R$ {renderLine(amount, 'min-w-[100px]')}</span> ({renderLine(amountExtenso, 'min-w-[300px]')}), 
-                            referente a {renderLine(serviceDescription, 'min-w-[300px]')}.
+                            Eu, {renderLine(issuerName, 'w-full')}
+                            , CPF nº {renderLine(issuerCpf, 'w-full')}
+                            , recebi de {renderLine(payerName, 'w-full')}
+                            , CPF/CNPJ nº {renderLine(payerDoc, 'w-full')}
+                            , a quantia de <span className="text-xl font-black">R$ {renderLine(amount, 'w-40')}</span> ({renderLine(amountExtenso, 'w-full')}), 
+                            referente a {renderLine(serviceDescription, 'w-full')}.
                         </p>
 
                         <p className="text-lg leading-relaxed">
                             Declaro que o valor foi recebido integralmente nesta data.
                         </p>
 
-                        {signatureSection}
+                        <div className="pt-16 text-center">
+                            <p className="text-lg">Local e data: {renderLine(locationAndDate, 'w-48')}</p>
+                            <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
+                                <p className="text-lg font-bold">Assinatura do Recebedor</p>
+                            </div>
+                        </div>
                     </div>
                 );
             case 'mei':
@@ -645,9 +623,9 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </div>
 
                         <p className="text-lg leading-relaxed">
-                            Recebi de {renderLine(payerName, 'min-w-[200px]')}
-                            , CPF/CNPJ {renderLine(payerDoc, 'min-w-[150px]')}
-                            , o valor de <span className="text-xl font-black text-emerald-700">R$ {renderLine(amount, 'min-w-[100px]')}</span> ({renderLine(amountExtenso, 'min-w-[300px]')}), referente a:
+                            Recebi de {renderLine(payerName, 'w-full')}
+                            , CPF/CNPJ {renderLine(payerDoc, 'w-full')}
+                            , o valor de <span className="text-xl font-black text-emerald-700">R$ {renderLine(amount, 'w-40')}</span> ({renderLine(amountExtenso, 'w-full')}), referente a:
                         </p>
 
                         <div className="border border-slate-200 p-4 rounded-lg bg-slate-50 text-sm">
@@ -662,7 +640,12 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             Declaro que este recibo comprova o pagamento integral referente ao item descrito.
                         </p>
 
-                        {signatureSectionMei}
+                        <div className="pt-16 text-center">
+                            <p className="text-lg">Local e data: {renderLine(locationAndDate, 'w-48')}</p>
+                            <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
+                                <p className="text-lg font-bold">Assinatura do MEI</p>
+                            </div>
+                        </div>
                     </div>
                 );
             case 'detailed':
@@ -680,9 +663,9 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </div>
                         
                         <div className="text-lg leading-relaxed">
-                            Recebi de {renderLine(payerName, 'min-w-[200px]')}
-                            , inscrito no CPF/CNPJ nº {renderLine(payerDoc, 'min-w-[150px]')}
-                            , o valor de <span className="text-xl font-black text-blue-700">R$ {renderLine(amount, 'min-w-[100px]')}</span> ({renderLine(amountExtenso, 'min-w-[300px]')}), referente ao pagamento de:
+                            Recebi de {renderLine(payerName, 'w-full')}
+                            , inscrito no CPF/CNPJ nº {renderLine(payerDoc, 'w-full')}
+                            , o valor de <span className="text-xl font-black text-blue-700">R$ {renderLine(amount, 'w-40')}</span> ({renderLine(amountExtenso, 'w-full')}), referente ao pagamento de:
                         </div>
 
                         {/* Tabela de Itens para o modelo detalhado */}
@@ -719,7 +702,12 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         <p className="font-bold mt-6 text-sm">Forma de pagamento:</p>
                         {renderPaymentCheckboxes('detailed')}
 
-                        {signatureSection}
+                        <div className="pt-16 text-center">
+                            <p className="text-lg">Local e data: {renderLine(locationAndDate, 'w-48')}</p>
+                            <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
+                                <p className="text-lg font-bold">Assinatura</p>
+                            </div>
+                        </div>
                     </div>
                 );
             default:
@@ -884,21 +872,6 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             ) : (
                                 <input type="text" value={formData.issuerDoc} onChange={e => setFormData({...formData, issuerDoc: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Seu CNPJ" />
                             )}
-                        </div>
-                        
-                        {/* NEW: Signature Fields */}
-                        <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
-                            <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Assinatura no Recibo</h4>
-                            <div className="space-y-2">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nome para Assinatura</label>
-                                    <input type="text" value={formData.signatureName} onChange={e => setFormData({...formData, signatureName: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Ex: Nome Completo" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Cargo/Função (Opcional)</label>
-                                    <input type="text" value={formData.signatureRole} onChange={e => setFormData({...formData, signatureRole: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Ex: Proprietário, MEI" />
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
