@@ -581,6 +581,26 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
             </span>
         );
 
+        // --- Assinatura Comum ---
+        const signatureSection = (
+            <div className="pt-16 text-center">
+                <p className="text-lg">Local e data: {renderLine(locationAndDate, 'min-w-[150px]')}</p>
+                <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
+                    <p className="text-lg font-bold">Assinatura do Recebedor</p>
+                </div>
+            </div>
+        );
+
+        // --- Assinatura MEI ---
+        const signatureSectionMei = (
+            <div className="pt-16 text-center">
+                <p className="text-lg">Local e data: {renderLine(locationAndDate, 'min-w-[150px]')}</p>
+                <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
+                    <p className="text-lg font-bold">Assinatura do MEI</p>
+                </div>
+            </div>
+        );
+
         switch (formData.template) {
             case 'classic':
                 return (
@@ -602,12 +622,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             Declaro que o valor foi recebido integralmente nesta data.
                         </p>
 
-                        <div className="pt-16 text-center">
-                            <p className="text-lg">Local e data: {renderLine(locationAndDate, 'min-w-[150px]')}</p>
-                            <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
-                                <p className="text-lg font-bold">Assinatura do Recebedor</p>
-                            </div>
-                        </div>
+                        {signatureSection}
                     </div>
                 );
             case 'mei':
@@ -641,12 +656,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             Declaro que este recibo comprova o pagamento integral referente ao item descrito.
                         </p>
 
-                        <div className="pt-16 text-center">
-                            <p className="text-lg">Local e data: {renderLine(locationAndDate, 'min-w-[150px]')}</p>
-                            <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
-                                <p className="text-lg font-bold">Assinatura do MEI</p>
-                            </div>
-                        </div>
+                        {signatureSectionMei}
                     </div>
                 );
             case 'detailed':
@@ -703,12 +713,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         <p className="font-bold mt-6 text-sm">Forma de pagamento:</p>
                         {renderPaymentCheckboxes('detailed')}
 
-                        <div className="pt-16 text-center">
-                            <p className="text-lg">Local e data: {renderLine(locationAndDate, 'min-w-[150px]')}</p>
-                            <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
-                                <p className="text-lg font-bold">Assinatura</p>
-                            </div>
-                        </div>
+                        {signatureSection}
                     </div>
                 );
             default:
