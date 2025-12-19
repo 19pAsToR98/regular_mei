@@ -554,8 +554,9 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
     };
 
     // Helper para renderizar campos com linha de preenchimento
-    const renderLine = (content: string, minWidth: string = 'w-64') => (
-        <span className={`font-bold border-b border-slate-400 px-1 inline-block ${minWidth} whitespace-normal text-slate-900`}>
+    // Ajustado para usar min-width e permitir expansão
+    const renderLine = (content: string, minWidth: string = 'min-w-[100px]') => (
+        <span className={`font-bold border-b border-slate-400 px-1 inline-block ${minWidth} whitespace-normal text-slate-900`} style={{ width: content.length > 0 ? 'auto' : undefined }}>
             {content}
         </span>
     );
@@ -589,12 +590,12 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </div>
                         
                         <p className="text-lg leading-relaxed">
-                            Eu, {renderLine(issuerName, 'w-full')}
-                            , CPF nº {renderLine(issuerCpf, 'w-full')}
-                            , recebi de {renderLine(payerName, 'w-full')}
-                            , CPF/CNPJ nº {renderLine(payerDoc, 'w-full')}
-                            , a quantia de <span className="text-xl font-black">R$ {renderLine(amount, 'w-40')}</span> ({renderLine(amountExtenso, 'w-full')}), 
-                            referente a {renderLine(serviceDescription, 'w-full')}.
+                            Eu, {renderLine(issuerName, 'min-w-[200px]')}
+                            , CPF nº {renderLine(issuerCpf, 'min-w-[150px]')}
+                            , recebi de {renderLine(payerName, 'min-w-[200px]')}
+                            , CPF/CNPJ nº {renderLine(payerDoc, 'min-w-[150px]')}
+                            , a quantia de <span className="text-xl font-black">R$ {renderLine(amount, 'min-w-[100px]')}</span> ({renderLine(amountExtenso, 'min-w-[300px]')}), 
+                            referente a {renderLine(serviceDescription, 'min-w-[300px]')}.
                         </p>
 
                         <p className="text-lg leading-relaxed">
@@ -602,7 +603,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </p>
 
                         <div className="pt-16 text-center">
-                            <p className="text-lg">Local e data: {renderLine(locationAndDate, 'w-48')}</p>
+                            <p className="text-lg">Local e data: {renderLine(locationAndDate, 'min-w-[150px]')}</p>
                             <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
                                 <p className="text-lg font-bold">Assinatura do Recebedor</p>
                             </div>
@@ -623,9 +624,9 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </div>
 
                         <p className="text-lg leading-relaxed">
-                            Recebi de {renderLine(payerName, 'w-full')}
-                            , CPF/CNPJ {renderLine(payerDoc, 'w-full')}
-                            , o valor de <span className="text-xl font-black text-emerald-700">R$ {renderLine(amount, 'w-40')}</span> ({renderLine(amountExtenso, 'w-full')}), referente a:
+                            Recebi de {renderLine(payerName, 'min-w-[200px]')}
+                            , CPF/CNPJ {renderLine(payerDoc, 'min-w-[150px]')}
+                            , o valor de <span className="text-xl font-black text-emerald-700">R$ {renderLine(amount, 'min-w-[100px]')}</span> ({renderLine(amountExtenso, 'min-w-[300px]')}), referente a:
                         </p>
 
                         <div className="border border-slate-200 p-4 rounded-lg bg-slate-50 text-sm">
@@ -641,7 +642,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </p>
 
                         <div className="pt-16 text-center">
-                            <p className="text-lg">Local e data: {renderLine(locationAndDate, 'w-48')}</p>
+                            <p className="text-lg">Local e data: {renderLine(locationAndDate, 'min-w-[150px]')}</p>
                             <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
                                 <p className="text-lg font-bold">Assinatura do MEI</p>
                             </div>
@@ -663,9 +664,9 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </div>
                         
                         <div className="text-lg leading-relaxed">
-                            Recebi de {renderLine(payerName, 'w-full')}
-                            , inscrito no CPF/CNPJ nº {renderLine(payerDoc, 'w-full')}
-                            , o valor de <span className="text-xl font-black text-blue-700">R$ {renderLine(amount, 'w-40')}</span> ({renderLine(amountExtenso, 'w-full')}), referente ao pagamento de:
+                            Recebi de {renderLine(payerName, 'min-w-[200px]')}
+                            , inscrito no CPF/CNPJ nº {renderLine(payerDoc, 'min-w-[150px]')}
+                            , o valor de <span className="text-xl font-black text-blue-700">R$ {renderLine(amount, 'min-w-[100px]')}</span> ({renderLine(amountExtenso, 'min-w-[300px]')}), referente ao pagamento de:
                         </div>
 
                         {/* Tabela de Itens para o modelo detalhado */}
@@ -703,7 +704,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         {renderPaymentCheckboxes('detailed')}
 
                         <div className="pt-16 text-center">
-                            <p className="text-lg">Local e data: {renderLine(locationAndDate, 'w-48')}</p>
+                            <p className="text-lg">Local e data: {renderLine(locationAndDate, 'min-w-[150px]')}</p>
                             <div className="mt-20 border-t border-slate-900 w-64 mx-auto pt-2">
                                 <p className="text-lg font-bold">Assinatura</p>
                             </div>
