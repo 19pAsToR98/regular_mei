@@ -21,7 +21,7 @@ const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen,
       `}
       aria-label="Abrir Assistente Virtual"
       title="Assistente Virtual"
-      style={style} // Apply dynamic position
+      style={style} // <-- APLICAÇÃO DO ESTILO DINÂMICO
     >
       <span className="material-icons text-3xl">smart_toy</span>
       
