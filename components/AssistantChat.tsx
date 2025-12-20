@@ -33,12 +33,72 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
   const [messages, setMessages] = useState<Message[]>([
     { sender: 'assistant', text: 'Olá! Eu sou Dyad, seu assistente virtual. Como posso ajudar com suas finanças ou obrigações MEI hoje?' }
   ]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<number | null>(null);
 
   // Scroll to bottom on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+  
+  // Timer logic for recording simulation
+  useEffect(() => {
+    if (isRecording) {
+        timerRef.current = setInterval(() => {
+            setRecordingTime(prev => prev + 1);
+        }, 1000);
+    } else {
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+        // Note: We reset recordingTime only when starting a new recording, not when stopping.
+    }
+    return () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isRecording]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleRecordToggle = () => {
+    if (isRecording) {
+        // Stop recording and simulate processing
+        setIsRecording(false);
+        
+        // Simulate transcription and processing
+        const simulatedText = "Qual é o limite de faturamento do MEI este ano?";
+        
+        const voiceMessage: Message = { 
+            sender: 'user', 
+            text: `(Áudio de ${recordingTime}s) ${simulatedText}` 
+        };
+        setMessages(prev => [...prev, voiceMessage]);
+
+        // Simulate AI response
+        const assistantResponse: Message = { 
+            sender: 'assistant', 
+            text: 'O limite de faturamento anual para o MEI em 2024 é de R$ 81.000,00. Se você ultrapassar esse valor, precisará solicitar o desenquadramento.' 
+        };
+
+        setTimeout(() => {
+            setMessages(prev => [...prev, assistantResponse]);
+        }, 1500);
+        
+        setRecordingTime(0); // Reset time after processing
+    } else {
+        // Start recording
+        setRecordingTime(0);
+        setIsRecording(true);
+    }
+  };
+
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,20 +191,61 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
       {/* Input Area */}
       <form onSubmit={handleSend} className="p-4 border-t border-slate-200 dark:border-slate-800">
         <div className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Pergunte algo..."
-            className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none"
-          />
-          <button
-            type="submit"
-            className="bg-primary hover:bg-blue-600 text-white p-2 rounded-lg transition-colors disabled:bg-slate-400"
-            disabled={input.trim() === ''}
-          >
-            <span className="material-icons">send</span>
-          </button>
+          
+          {isRecording ? (
+            // Recording UI
+            <div className="flex-1 flex items-center justify-between px-4 py-2 border border-red-500 dark:border-red-400 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 animate-pulse">
+                <div className="flex items-center gap-2">
+                    <span className="material-icons text-lg">mic</span>
+                    <span className="font-medium text-sm">Gravando...</span>
+                </div>
+                <span className="font-mono text-sm">{formatTime(recordingTime)}</span>
+            </div>
+          ) : (
+            // Text Input UI
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Pergunte algo..."
+              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none"
+            />
+          )}
+
+          {/* Action Buttons */}
+          {isRecording ? (
+            // Stop Recording Button
+            <button
+              type="button"
+              onClick={handleRecordToggle}
+              className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition-colors"
+              title="Parar Gravação e Enviar"
+            >
+              <span className="material-icons">stop</span>
+            </button>
+          ) : (
+            <>
+              {/* Send Text Button */}
+              <button
+                type="submit"
+                className="bg-primary hover:bg-blue-600 text-white p-2 rounded-lg transition-colors disabled:bg-slate-400"
+                disabled={input.trim() === ''}
+                title="Enviar Mensagem"
+              >
+                <span className="material-icons">send</span>
+              </button>
+              
+              {/* Start Recording Button */}
+              <button
+                type="button"
+                onClick={handleRecordToggle}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-lg transition-colors"
+                title="Gravar Áudio"
+              >
+                <span className="material-icons">mic</span>
+              </button>
+            </>
+          )}
         </div>
       </form>
     </div>
