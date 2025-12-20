@@ -15,7 +15,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
     if (input.trim() === '') return;
 
     const newMessage = { sender: 'user', text: input.trim() };
-    setMessages([...messages, newMessage]);
+    setMessages(prev => [...prev, newMessage]);
     setInput('');
 
     // Simulação de resposta (será substituída pela integração com Gemini)
@@ -25,7 +25,10 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 w-full max-w-sm h-[80vh] max-h-[600px] bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300">
+    <div className="fixed bottom-24 right-6 z-40 w-full max-w-sm h-[80vh] max-h-[600px] bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300 relative">
+      
+      {/* Balão de fala (Tail) - Aponta para o botão abaixo */}
+      <div className="absolute bottom-[-10px] right-4 w-0 h-0 border-x-8 border-x-transparent border-t-[10px] border-t-white dark:border-t-slate-900 shadow-lg"></div>
       
       {/* Header */}
       <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-primary rounded-t-xl">

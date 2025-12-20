@@ -21,7 +21,10 @@ const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen,
       aria-label="Abrir Assistente Virtual"
       title="Assistente Virtual"
     >
-      <span className="material-icons text-3xl animate-pulse">smart_toy</span>
+      <span className="material-icons text-3xl">smart_toy</span>
+      
+      {/* Pequeno balão de fala para simular interação */}
+      <div className="absolute top-0 left-0 w-4 h-4 bg-green-400 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></div>
     </button>
   );
 };
