@@ -13,7 +13,7 @@ const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen,
       className={`
         fixed z-40 
         w-16 h-16 rounded-full 
-        bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700
+        bg-transparent 
         shadow-xl hover:scale-110 
         transition-all duration-500 ease-in-out
         flex items-center justify-center 
