@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { sendAssistantQuery } from '../utils/assistantUtils'; // Importando a nova utilidade
+import { sendAssistantQuery } from '../utils/assistantUtils';
+import { showError } from '../utils/toastUtils'; // Importando utilitário de erro
 
 interface AssistantChatProps {
   onClose: () => void;
@@ -16,11 +17,14 @@ interface Message {
     }
 }
 
-// Função utilitária para simular a geração de Base64
-const generateSimulatedBase64 = (query: string): string => {
-    // Simula uma string Base64 longa baseada no tamanho da query
-    const length = query.length * 10;
-    return `data:audio/wav;base64,${'A'.repeat(length)}`;
+// Helper para converter Blob em Base64
+const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
 };
 
 const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) => {
@@ -29,8 +33,12 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
     { sender: 'assistant', text: 'Olá! Eu sou Dyad, seu assistente virtual. Como posso ajudar com suas finanças ou obrigações MEI hoje?' }
   ]);
   const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false); // Novo estado para processamento
+  const [isProcessing, setIsProcessing] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  
+  // Refs e State para a gravação real
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const audioChunks = useRef<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<number | null>(null);
 
@@ -39,7 +47,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
   
-  // Timer logic for recording simulation
+  // Timer logic for recording
   useEffect(() => {
     if (isRecording) {
         timerRef.current = setInterval(() => {
@@ -65,11 +73,10 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
   const processQuery = async (query: string, isVoice: boolean = false, audioBase64?: string) => {
       setIsProcessing(true);
       
-      // Adiciona uma mensagem de "digitando" ou "processando"
+      // Adiciona uma mensagem de "processando"
       const processingMessage: Message = { sender: 'assistant', text: isVoice ? 'Ouvindo e processando...' : 'Digitando...' };
       setMessages(prev => [...prev, processingMessage]);
       
-      // Se for voz, enviamos o Base64 e o texto é apenas um fallback/identificador
       const response = await sendAssistantQuery(query, audioBase64);
       
       // Remove a mensagem de processamento (assumindo que é a última)
@@ -87,34 +94,64 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
       setIsProcessing(false);
   };
 
-  const handleRecordToggle = () => {
+  const handleRecordToggle = async () => {
     if (isProcessing) return;
 
-    if (isRecording) {
-        // Stop recording
+    if (isRecording && mediaRecorder) {
+        // 1. STOP RECORDING
+        mediaRecorder.stop();
         setIsRecording(false);
+        // The onstop handler will take over from here.
         
-        // SIMULAÇÃO: Texto transcrito (para exibição local) e Base64 (para envio)
-        const simulatedTranscription = "Quero adicionar uma despesa de R$ 500 para fornecedores.";
-        const simulatedBase64 = generateSimulatedBase64(simulatedTranscription);
-        
-        const voiceMessage: Message = { 
-            sender: 'user', 
-            text: `(Áudio de ${formatTime(recordingTime)}) ${simulatedTranscription}` 
-        };
-        setMessages(prev => [...prev, voiceMessage]);
-        
-        // Foco no Base64: Enviamos um texto de consulta genérico, pois o webhook fará a transcrição.
-        // O Base64 é o dado principal.
-        const queryForWebhook = `Voz: ${simulatedTranscription}`; 
-        
-        processQuery(queryForWebhook, true, simulatedBase64);
-        
-        setRecordingTime(0);
     } else {
-        // Start recording
-        setRecordingTime(0);
-        setIsRecording(true);
+        // 2. START RECORDING
+        try {
+            // Solicita acesso ao microfone
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // Cria o MediaRecorder
+            const recorder = new MediaRecorder(stream);
+            audioChunks.current = [];
+
+            // Coleta os dados do áudio
+            recorder.ondataavailable = (event) => {
+                audioChunks.current.push(event.data);
+            };
+
+            // Processa o áudio quando a gravação para
+            recorder.onstop = async () => {
+                // Cria o Blob final
+                const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' });
+                
+                // Converte para Base64
+                const audioBase64 = await blobToBase64(audioBlob);
+
+                // Texto de exibição local (indicando que o áudio foi capturado)
+                const transcriptionPlaceholder = "Áudio gravado. Enviando para transcrição...";
+                
+                const voiceMessage: Message = { 
+                    sender: 'user', 
+                    text: `(Áudio de ${formatTime(recordingTime)} capturado) ${transcriptionPlaceholder}` 
+                };
+                setMessages(prev => [...prev, voiceMessage]);
+                
+                // Envia o Base64 real para o webhook
+                // Usamos o texto de placeholder como 'query' para o webhook, pois ele fará a transcrição
+                processQuery(transcriptionPlaceholder, true, audioBase64);
+                
+                // Para as tracks para liberar o microfone
+                stream.getTracks().forEach(track => track.stop());
+                setRecordingTime(0);
+            };
+
+            recorder.start();
+            setMediaRecorder(recorder);
+            setIsRecording(true);
+            setRecordingTime(0);
+        } catch (err) {
+            console.error('Microphone access denied or error:', err);
+            showError('Não foi possível acessar o microfone. Verifique as permissões do navegador.');
+        }
     }
   };
 
