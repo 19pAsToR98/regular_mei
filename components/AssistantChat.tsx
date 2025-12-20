@@ -248,10 +248,10 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
       <div className="flex-1 p-4 overflow-y-auto space-y-4 custom-scrollbar">
         {messages.map((msg, index) => (
           <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] p-3 shadow-md transition-all ${
+            <div className={`max-w-[80%] p-3 shadow-md transition-all rounded-xl ${
               msg.sender === 'user' 
-                ? 'bg-primary text-white rounded-t-xl rounded-bl-xl rounded-br-md' 
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white rounded-t-xl rounded-br-xl rounded-tl-md'
+                ? 'bg-primary text-white rounded-br-none' 
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white rounded-tl-none'
             }`}>
               {msg.sender === 'assistant' ? (
                   <AssistantMessageContent text={msg.text} />
@@ -279,7 +279,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
           
           {isRecording ? (
             // Recording UI with Wave Indicator
-            <div className="flex-1 flex items-center justify-between px-4 py-2 border-2 border-red-500 dark:border-red-400 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 shadow-inner">
+            <div className="flex-1 flex items-center justify-between px-4 py-3 border-2 border-red-500 dark:border-red-400 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 shadow-inner">
                 <div className="flex items-center gap-2">
                     <AudioWaveIndicator isRecording={isRecording} />
                     <span className="font-medium text-sm">Gravando...</span>
@@ -288,7 +288,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
             </div>
           ) : isProcessing ? (
             // Processing UI
-            <div className="flex-1 flex items-center justify-center px-4 py-2 border border-primary dark:border-blue-400 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-primary dark:text-blue-400 shadow-inner">
+            <div className="flex-1 flex items-center justify-center px-4 py-3 border border-primary dark:border-blue-400 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-primary dark:text-blue-400 shadow-inner">
                 <span className="w-4 h-4 border-2 border-primary dark:border-blue-400 border-t-transparent rounded-full animate-spin mr-2"></span>
                 <span className="font-medium text-sm">Processando...</span>
             </div>
