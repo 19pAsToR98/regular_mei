@@ -109,10 +109,13 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
             // Solicita acesso ao microfone
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             
-            // Verifica se o WebM/Opus é suportado (formato mais eficiente)
-            const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-                ? 'audio/webm;codecs=opus' 
-                : 'audio/wav'; // Fallback para WAV se Opus não for suportado
+            // Prioriza Ogg/Opus, fallback para WebM/Opus, e por último WAV
+            let mimeType = 'audio/wav';
+            if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+                mimeType = 'audio/ogg;codecs=opus';
+            } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                mimeType = 'audio/webm;codecs=opus';
+            }
                 
             const recorder = new MediaRecorder(stream, { mimeType });
             audioChunks.current = [];
