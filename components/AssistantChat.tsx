@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { sendAssistantQuery } from '../utils/assistantUtils';
 import { showError } from '../utils/toastUtils'; // Importando utilitário de erro
 import { ConnectionConfig } from '../types'; // Importando o tipo
-import AssistantMessageContent from './AssistantMessageContent'; // NOVO IMPORT
+import AssistantMessageContent from './AssistantMessageContent'; 
+import AudioWaveIndicator from './AudioWaveIndicator'; // NOVO IMPORT
 
 interface AssistantChatProps {
   onClose: () => void;
@@ -277,10 +278,10 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
         <div className="flex gap-2">
           
           {isRecording ? (
-            // Recording UI
+            // Recording UI with Wave Indicator
             <div className="flex-1 flex items-center justify-between px-4 py-2 border border-red-500 dark:border-red-400 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 animate-pulse">
                 <div className="flex items-center gap-2">
-                    <span className="material-icons text-lg">mic</span>
+                    <AudioWaveIndicator isRecording={isRecording} />
                     <span className="font-medium text-sm">Gravando...</span>
                 </div>
                 <span className="font-mono text-sm">{formatTime(recordingTime)}</span>
