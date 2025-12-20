@@ -48,6 +48,9 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
   const audioChunks = useRef<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<number | null>(null);
+  
+  // Placeholder para a mensagem de áudio que será transcrita
+  const TRANSCRIPTION_PLACEHOLDER = "Áudio gravado. Enviando para transcrição...";
 
   // Scroll to bottom on new message
   useEffect(() => {
@@ -91,12 +94,40 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
       setMessages(prev => prev.slice(0, -1)); 
 
       if (response) {
-          const assistantResponse: Message = { 
-              sender: 'assistant', 
-              text: response.text,
-              action: response.action
-          };
-          setMessages(prev => [...prev, assistantResponse]);
+          // O formato esperado é um array: [{ resposta: ..., mensagem_transcrita: ..., body: ... }]
+          const responseData = Array.isArray(response) && response.length > 0 ? response[0] : null;
+          
+          if (responseData) {
+              const { resposta, mensagem_transcrita, action } = responseData;
+              
+              // 1. Atualiza a mensagem do usuário com a transcrição, se for áudio
+              if (mensagem_transcrita) {
+                  setMessages(prev => {
+                      const lastUserMessageIndex = prev.findIndex(msg => msg.text.includes(TRANSCRIPTION_PLACEHOLDER));
+                      if (lastUserMessageIndex !== -1) {
+                          const updatedMessages = [...prev];
+                          // Substitui o placeholder pela transcrição real
+                          updatedMessages[lastUserMessageIndex] = {
+                              ...updatedMessages[lastUserMessageIndex],
+                              text: `(Áudio transcrito): ${mensagem_transcrita}`
+                          };
+                          return updatedMessages;
+                      }
+                      return prev;
+                  });
+              }
+
+              // 2. Adiciona a resposta do assistente
+              const assistantResponse: Message = { 
+                  sender: 'assistant', 
+                  text: resposta,
+                  action: action
+              };
+              setMessages(prev => [...prev, assistantResponse]);
+          } else {
+              showError('Resposta do assistente em formato inesperado.');
+              setMessages(prev => [...prev, { sender: 'assistant', text: 'Desculpe, recebi uma resposta inválida do servidor.' }]);
+          }
       }
       
       setIsProcessing(false);
@@ -142,7 +173,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
                 const audioBase64 = await blobToBase64(audioBlob);
 
                 // Texto de exibição local (indicando que o áudio foi capturado)
-                const transcriptionPlaceholder = "Áudio gravado. Enviando para transcrição...";
+                const transcriptionPlaceholder = TRANSCRIPTION_PLACEHOLDER;
                 
                 const voiceMessage: Message = { 
                     sender: 'user', 
