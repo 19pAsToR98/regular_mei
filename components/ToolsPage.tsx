@@ -440,21 +440,21 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
     };
 
     const [formData, setFormData] = useState({
-        template: 'classic' as 'classic' | 'mei' | 'detailed', // New state for template selection
+        template: 'classic' as 'classic' | 'mei' | 'detailed',
         payerName: '',
         payerDoc: '',
-        date: getLocalISODate(), // CORREÇÃO: Usando data local
-        local: '', // NOVO CAMPO
+        date: getLocalISODate(),
+        local: '',
         issuerName: user?.name || 'Minha Empresa MEI',
         issuerDoc: user?.cnpj || '00.000.000/0001-00',
-        issuerCpf: '', // For Simple template
+        issuerCpf: '',
         
-        // New fields for payment method
         paymentMethod: 'pix',
         otherPaymentMethod: '',
         
-        // NEW: Signature field
-        signatureUrl: '', // NOVO CAMPO PARA URL DA ASSINATURA
+        // NOVO: Assinatura digitada e estilo
+        signatureText: user?.name || '',
+        signatureStyle: 'standard' as 'standard' | 'cursive',
     });
 
     const [items, setItems] = useState<{id: number, desc: string, qty: number, price: number}[]>([
@@ -630,19 +630,17 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         </ul>
     );
 
-    // Componente de Assinatura
+    // NOVO: Componente de Assinatura
     const renderSignatureArea = () => (
         <div className="pt-12 text-center">
             <p>Local e data: {renderDynamicValue(locationAndDate)}</p>
             
             {/* Assinatura */}
             <div className="mt-12 w-64 mx-auto pt-1">
-                {formData.signatureUrl ? (
-                    <img 
-                        src={formData.signatureUrl} 
-                        alt="Assinatura Digital" 
-                        className="w-full h-auto object-contain max-h-20 border-b border-slate-800 pb-1"
-                    />
+                {formData.signatureText ? (
+                    <div className={`w-full h-auto object-contain max-h-20 border-b border-slate-800 pb-1 ${formData.signatureStyle === 'cursive' ? 'font-cursive text-3xl' : 'font-sans text-lg'}`}>
+                        {formData.signatureText}
+                    </div>
                 ) : (
                     <div className="border-t border-slate-800 pt-1">
                         <p className="text-sm font-bold">{formData.issuerName || 'Assinatura do Emitente'}</p>
@@ -907,15 +905,34 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         
                         {/* NOVO CAMPO DE ASSINATURA */}
                         <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">URL da Assinatura Digital (Opcional)</label>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Assinatura (Nome Completo)</label>
                             <input 
-                                type="url" 
-                                value={formData.signatureUrl} 
-                                onChange={e => setFormData({...formData, signatureUrl: e.target.value})} 
+                                type="text" 
+                                value={formData.signatureText} 
+                                onChange={e => setFormData({...formData, signatureText: e.target.value})} 
                                 className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" 
-                                placeholder="https://link-para-sua-assinatura.png"
+                                placeholder="Seu nome para assinatura"
                             />
-                            <p className="text-xs text-slate-500 mt-1">Use uma imagem PNG com fundo transparente para melhor resultado.</p>
+                            
+                            <div className="mt-2">
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Estilo</label>
+                                <div className="flex gap-3">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setFormData({...formData, signatureStyle: 'standard'})}
+                                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors border ${formData.signatureStyle === 'standard' ? 'bg-slate-100 text-slate-700 border-slate-300' : 'text-slate-500 border-transparent hover:bg-slate-50'}`}
+                                    >
+                                        Padrão
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setFormData({...formData, signatureStyle: 'cursive'})}
+                                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors border font-cursive ${formData.signatureStyle === 'cursive' ? 'bg-slate-100 text-slate-700 border-slate-300' : 'text-slate-500 border-transparent hover:bg-slate-50'}`}
+                                    >
+                                        Manuscrito
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
