@@ -500,9 +500,17 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                 scale: 2, 
                 logging: false, 
                 useCORS: true,
-                // --- CORREÇÃO: Forçar renderização em preto e branco no html2canvas ---
-                color: false, 
-                // Removendo onclone, pois color: false é mais robusto
+                // Usando onclone para forçar o fundo branco e o grayscale
+                onclone: (doc: Document) => {
+                    const receiptElement = doc.getElementById('receipt-preview');
+                    if (receiptElement) {
+                        // 1. Forçar fundo branco para eliminar o pastel yellow
+                        receiptElement.style.backgroundColor = '#FFFFFF';
+                        // 2. Forçar filtro grayscale
+                        receiptElement.style.filter = 'grayscale(100%)';
+                        receiptElement.style.webkitFilter = 'grayscale(100%)';
+                    }
+                }
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
