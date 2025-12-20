@@ -150,7 +150,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
   // --- CONNECTIONS FORM STATE ---
   const [localConnConfig, setLocalConnConfig] = useState<ConnectionConfig>(connectionConfig);
   const [testModalOpen, setTestModalOpen] = useState(false);
-  const [testType, setTestType] = useState<'cnpj' | 'diagnostic' | 'whatsapp'>('cnpj');
+  const [testType, setTestType] = useState<'cnpj' | 'diagnostic' | 'whatsapp' | 'assistant'>('cnpj'); // ADDED 'assistant'
   const [testCnpj, setTestCnpj] = useState('');
   const [testLoading, setTestLoading] = useState(false);
   const [testResponse, setTestResponse] = useState<string | null>(null);
@@ -159,6 +159,14 @@ const AdminPage: React.FC<AdminPageProps> = ({
   // WhatsApp Test State
   const [testWhatsappNumber, setTestWhatsappNumber] = useState('553199664201');
   const [testWhatsappMessage, setTestWhatsappMessage] = useState('Olá! Teste de conexão bem-sucedido.');
+  
+  // Assistant Test State
+  const [testAssistantQuery, setTestAssistantQuery] = useState('Qual o limite do MEI?');
+
+  // Sync local state with prop changes (e.g., after saving in App.tsx)
+  useEffect(() => {
+      setLocalConnConfig(connectionConfig);
+  }, [connectionConfig]);
 
   // --- UTILS ---
   const isNotificationExpired = (n: AppNotification) => {
@@ -556,6 +564,44 @@ const AdminPage: React.FC<AdminPageProps> = ({
                   Mensagem: json.message || json.error || 'Verifique a resposta JSON.'
               });
               
+          } else if (testType === 'assistant') {
+              if (!localConnConfig.assistantWebhookUrl) {
+                  throw new Error('A URL do Webhook do Assistente não está configurada.');
+              }
+              
+              const url = localConnConfig.assistantWebhookUrl;
+              
+              // Simular payload mínimo que a Edge Function enviaria
+              const payload = {
+                  userId: 'TEST_USER_ID',
+                  query: testAssistantQuery,
+                  timestamp: new Date().toISOString(),
+                  messageType: 'text',
+              };
+              
+              const response = await fetch(url, {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(payload)
+              });
+              
+              const rawText = await response.text();
+              let json;
+              try {
+                  json = JSON.parse(rawText);
+              } catch {
+                  json = { error: "Could not parse JSON", raw: rawText };
+              }
+              
+              setTestResponse(JSON.stringify(json, null, 2));
+              setTestParsedData({
+                  Status: response.ok ? 'Sucesso' : 'Falha',
+                  'HTTP Status': response.status,
+                  Resposta: json.text || json.error || 'Verifique a resposta JSON.'
+              });
+
           } else {
               // CNPJ or Diagnostic API logic
               if (!testCnpj) {
@@ -1433,6 +1479,29 @@ const AdminPage: React.FC<AdminPageProps> = ({
               <h3 className="text-xl font-bold text-slate-800 dark:text-white">Configuração de Conexões (APIs)</h3>
               <form onSubmit={handleSaveConnection} className="space-y-6">
                   
+                  {/* ASSISTANT WEBHOOK */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                          <span className="material-icons text-primary">smart_toy</span> Webhook do Assistente Dyad
+                      </h4>
+                      <div className="space-y-4">
+                          <div>
+                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">URL do Webhook</label>
+                              <input 
+                                  type="url" 
+                                  required
+                                  value={localConnConfig.assistantWebhookUrl} 
+                                  onChange={e => setLocalConnConfig({...localConnConfig, assistantWebhookUrl: e.target.value})}
+                                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm"
+                                  placeholder="https://seu-webhook.com/assistant"
+                              />
+                          </div>
+                          <button type="button" onClick={() => { setTestType('assistant'); setTestModalOpen(true); }} className="mt-2 text-sm font-medium text-primary hover:underline flex items-center gap-1">
+                              <span className="material-icons text-sm">science</span> Testar Conexão
+                          </button>
+                      </div>
+                  </div>
+
                   {/* CNPJ API */}
                   <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                       <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
@@ -1682,7 +1751,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
               <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden border border-slate-200 dark:border-slate-800 max-h-[90vh] flex flex-col">
                   <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
                       <h3 className="font-bold text-lg text-slate-800 dark:text-white">
-                          Teste de Conexão: {testType === 'cnpj' ? 'CNPJ' : testType === 'diagnostic' ? 'Diagnóstico Fiscal' : 'WhatsApp'}
+                          Teste de Conexão: {testType === 'cnpj' ? 'CNPJ' : testType === 'diagnostic' ? 'Diagnóstico Fiscal' : testType === 'whatsapp' ? 'WhatsApp' : 'Assistente Dyad'}
                       </h3>
                       <button onClick={() => setTestModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                           <span className="material-icons">close</span>
@@ -1695,7 +1764,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                       <div className="mb-6 p-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/50">
                           <h4 className="font-bold text-slate-800 dark:text-white mb-3">Parâmetros de Teste</h4>
                           
-                          {testType !== 'whatsapp' && (
+                          {testType === 'cnpj' || testType === 'diagnostic' ? (
                               <div>
                                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">CNPJ</label>
                                   <input 
@@ -1706,9 +1775,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                       placeholder="00.000.000/0001-00"
                                   />
                               </div>
-                          )}
-                          
-                          {testType === 'whatsapp' && (
+                          ) : testType === 'whatsapp' ? (
                               <div className="space-y-4">
                                   <div>
                                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Número de Destino (Ex: 5531999999999)</label>
@@ -1731,11 +1798,23 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                       />
                                   </div>
                               </div>
+                          ) : (
+                              // Assistant Test
+                              <div>
+                                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Pergunta de Teste</label>
+                                  <input 
+                                      type="text" 
+                                      value={testAssistantQuery} 
+                                      onChange={e => setTestAssistantQuery(e.target.value)}
+                                      className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-900 text-sm"
+                                      placeholder="Qual o limite do MEI?"
+                                  />
+                              </div>
                           )}
 
                           <button 
                               onClick={handleTestConnection}
-                              disabled={testLoading || (testType !== 'whatsapp' && !testCnpj)}
+                              disabled={testLoading || (testType !== 'whatsapp' && testType !== 'assistant' && !testCnpj)}
                               className="mt-4 w-full bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-6 py-2 rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2"
                           >
                               {testLoading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : <span className="material-icons text-sm">send</span>}
@@ -1748,27 +1827,16 @@ const AdminPage: React.FC<AdminPageProps> = ({
                           <div className="mt-6 space-y-4 animate-in fade-in">
                               <h4 className="font-bold text-slate-800 dark:text-white">Resultado da Chamada</h4>
                               
-                              {/* Parsed Data (Only for CNPJ/Diagnostic) */}
-                              {testParsedData && testType !== 'whatsapp' && (
-                                  <div className="p-4 border border-green-200 dark:border-green-900/50 rounded-lg bg-green-50 dark:bg-green-900/20">
-                                      <h5 className="text-sm font-bold text-green-700 dark:text-green-300 mb-2">Dados Mapeados</h5>
-                                      <div className="grid grid-cols-2 gap-2 text-xs">
-                                          {Object.entries(testParsedData).map(([label, value]) => (
-                                              <div key={label} className="truncate">
-                                                  <span className="font-semibold text-slate-600 dark:text-slate-400">{label}:</span> 
-                                                  <span className="font-mono text-slate-800 dark:text-white ml-1">{value as string}</span>
-                                              </div>
-                                          ))}
-                                      </div>
-                                  </div>
-                              )}
-                              
-                              {/* WhatsApp Test Result */}
-                              {testParsedData && testType === 'whatsapp' && (
+                              {/* Parsed Data (CNPJ/Diagnostic/Assistant) */}
+                              {testParsedData && (
                                   <div className={`p-4 border rounded-lg ${testParsedData.Status === 'Sucesso' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
                                       <h5 className={`text-sm font-bold mb-2 ${testParsedData.Status === 'Sucesso' ? 'text-green-700' : 'text-red-700'}`}>Status: {testParsedData.Status}</h5>
-                                      <p className="text-xs text-slate-600">Mensagem: {testParsedData.Mensagem}</p>
-                                      <p className="text-xs text-slate-600">HTTP: {testParsedData['HTTP Status']}</p>
+                                      {Object.entries(testParsedData).filter(([key]) => key !== 'Status' && key !== 'HTTP Status').map(([label, value]) => (
+                                          <div key={label} className="text-xs text-slate-600">
+                                              <span className="font-semibold">{label}:</span> {value as string}
+                                          </div>
+                                      ))}
+                                      <p className="text-xs text-slate-600 mt-2">HTTP: {testParsedData['HTTP Status']}</p>
                                   </div>
                               )}
 

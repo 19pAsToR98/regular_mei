@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { sendAssistantQuery } from '../utils/assistantUtils';
 import { showError } from '../utils/toastUtils'; // Importando utilitário de erro
+import { ConnectionConfig } from '../types'; // Importando o tipo
 
 interface AssistantChatProps {
   onClose: () => void;
   onNavigate: (tab: string) => void;
+  connectionConfig: ConnectionConfig; // NOVA PROP
 }
 
 interface Message {
@@ -32,7 +34,7 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
     });
 };
 
-const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) => {
+const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, connectionConfig }) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     { sender: 'assistant', text: 'Olá! Eu sou Dyad, seu assistente virtual. Como posso ajudar com suas finanças ou obrigações MEI hoje?' }
@@ -82,8 +84,8 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
       const processingMessage: Message = { sender: 'assistant', text: isVoice ? 'Ouvindo e processando...' : 'Digitando...' };
       setMessages(prev => [...prev, processingMessage]);
       
-      // Passa o mimeType para sendAssistantQuery
-      const response = await sendAssistantQuery(query, audioBase64, mimeType);
+      // Passa o mimeType e a URL do webhook
+      const response = await sendAssistantQuery(query, connectionConfig.assistantWebhookUrl, audioBase64, mimeType);
       
       // Remove a mensagem de processamento (assumindo que é a última)
       setMessages(prev => prev.slice(0, -1)); 

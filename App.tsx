@@ -159,7 +159,8 @@ const App: React.FC = () => {
     },
     ai: {
       enabled: true
-    }
+    },
+    assistantWebhookUrl: 'https://n8nauto.portalmei360.com/webhook-test/d5c69353-a50b-471b-b518-919af0ced726' // NEW DEFAULT URL
   });
 
   // --- DATA FETCHING FUNCTIONS ---
@@ -216,7 +217,12 @@ const App: React.FC = () => {
       }
       
       if (data && data.connection_config) {
-          setConnectionConfig(data.connection_config as ConnectionConfig);
+          // Merge fetched config with default to ensure new fields exist
+          setConnectionConfig(prev => ({
+              ...prev,
+              ...(data.connection_config as ConnectionConfig),
+              // Ensure nested objects are merged correctly if needed, but for now, direct assignment is fine
+          }));
       }
   };
   
@@ -1937,6 +1943,7 @@ const App: React.FC = () => {
                   <AssistantChat 
                       onClose={() => setIsAssistantOpen(false)} 
                       onNavigate={setActiveTab}
+                      connectionConfig={connectionConfig} // PASSING CONFIG
                   />
               )}
           </>

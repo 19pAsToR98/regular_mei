@@ -114,6 +114,7 @@ export interface ConnectionConfig {
   ai: {
     enabled: boolean;
   };
+  assistantWebhookUrl: string; // NEW: URL do webhook do assistente
 }
 
 export interface PollOption {

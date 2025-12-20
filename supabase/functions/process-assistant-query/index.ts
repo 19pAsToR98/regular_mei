@@ -6,7 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const WEBHOOK_URL = 'https://n8nauto.portalmei360.com/webhook-test/d5c69353-a50b-471b-b518-919af0ced726';
+// Removendo a URL fixa, ela virá no payload
+// const WEBHOOK_URL = 'https://n8nauto.portalmei360.com/webhook-test/d5c69353-a50b-471b-b518-919af0ced726';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -40,11 +41,11 @@ serve(async (req) => {
     }
     const userId = user.id;
 
-    // 2. Get the user query, audioBase64, mimeType, and messageType from the request body
-    const { query, audioBase64, mimeType, messageType } = await req.json();
+    // 2. Get the user query, audioBase64, mimeType, messageType, and assistantWebhookUrl from the request body
+    const { query, audioBase64, mimeType, messageType, assistantWebhookUrl } = await req.json();
 
-    if (!query) {
-        return new Response(JSON.stringify({ error: 'Missing required field: query' }), { 
+    if (!query || !assistantWebhookUrl) {
+        return new Response(JSON.stringify({ error: 'Missing required fields: query or assistantWebhookUrl' }), { 
             status: 400, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         });
@@ -55,7 +56,7 @@ serve(async (req) => {
         userId: userId,
         query: query,
         timestamp: new Date().toISOString(),
-        messageType: messageType, // NOVO CAMPO REPASSADO
+        messageType: messageType,
     };
     
     // Include Base64 and MIME type if provided
@@ -64,8 +65,8 @@ serve(async (req) => {
         webhookPayload.mimeType = mimeType;
     }
 
-    // 4. Send request to the external webhook
-    const webhookResponse = await fetch(WEBHOOK_URL, {
+    // 4. Send request to the external webhook using the provided URL
+    const webhookResponse = await fetch(assistantWebhookUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
