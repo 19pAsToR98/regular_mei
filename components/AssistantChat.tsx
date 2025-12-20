@@ -109,8 +109,12 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
             // Solicita acesso ao microfone
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             
-            // Cria o MediaRecorder
-            const recorder = new MediaRecorder(stream);
+            // Verifica se o WebM/Opus é suportado (formato mais eficiente)
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+                ? 'audio/webm;codecs=opus' 
+                : 'audio/wav'; // Fallback para WAV se Opus não for suportado
+                
+            const recorder = new MediaRecorder(stream, { mimeType });
             audioChunks.current = [];
 
             // Coleta os dados do áudio
@@ -121,7 +125,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
             // Processa o áudio quando a gravação para
             recorder.onstop = async () => {
                 // Cria o Blob final
-                const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' });
+                const audioBlob = new Blob(audioChunks.current, { type: mimeType });
                 
                 // Converte para Base64
                 const audioBase64 = await blobToBase64(audioBlob);
