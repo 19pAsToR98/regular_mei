@@ -457,9 +457,6 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         signatureStyle: 'standard' as 'standard' | 'cursive',
     });
     
-    // REMOVIDO: Estado para exportação P&B
-    // const [isBlackAndWhite, setIsBlackAndWhite] = useState(false);
-
     const [items, setItems] = useState<{id: number, desc: string, qty: number, price: number}[]>([
         { id: 1, desc: 'Serviço Exemplo', qty: 1, price: 100.00 }
     ]);
@@ -504,7 +501,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                 scale: 2, 
                 logging: false, 
                 useCORS: true,
-                // FORÇANDO O GRYSCALE (P&B)
+                // FORÇANDO O GRYSCALE (P&B) no elemento clonado
                 onclone: (doc: Document) => {
                     const receiptElement = doc.getElementById('receipt-preview');
                     if (receiptElement) {
@@ -948,19 +945,6 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                                 </div>
                             </div>
                         </div>
-                        
-                        {/* REMOVIDO: Opção P&B */}
-                        {/* <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
-                            <label className="flex items-center gap-3 cursor-pointer">
-                                <input 
-                                    type="checkbox" 
-                                    checked={isBlackAndWhite}
-                                    onChange={(e) => setIsBlackAndWhite(e.target.checked)}
-                                    className="rounded text-slate-800 focus:ring-slate-800"
-                                />
-                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Exportar em Preto e Branco (Economia de Tinta)</span>
-                            </label>
-                        </div> */}
                     </div>
                 </div>
 
@@ -969,8 +953,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                     <div 
                         ref={receiptRef} 
                         id="receipt-preview" 
-                        // Aplicando grayscale na pré-visualização para refletir o PDF final
-                        className={`bg-[#fffbeb] text-slate-800 p-8 rounded-sm shadow-lg border-2 border-dashed border-slate-300 relative font-mono text-sm leading-relaxed grayscale`}
+                        // Removendo a classe 'grayscale' do JSX para que a pré-visualização seja colorida
+                        className={`bg-[#fffbeb] text-slate-800 p-8 rounded-sm shadow-lg border-2 border-dashed border-slate-300 relative font-mono text-sm leading-relaxed`}
                     >
                         {/* Paper Texture Effect */}
                         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
