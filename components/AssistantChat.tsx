@@ -227,16 +227,16 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
 
   return (
     <div 
-        className="fixed bottom-[6.5rem] right-6 z-40 w-full max-w-sm h-[80vh] max-h-[600px] bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300 transition-all ease-in-out"
+        className="fixed bottom-[6.5rem] right-6 z-40 w-full max-w-sm h-[80vh] max-h-[600px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300 transition-all ease-in-out"
     >
       
       {/* Balão de fala (Tail) - Aponta para o botão abaixo */}
       <div className="absolute bottom-[-10px] right-4 w-0 h-0 border-x-8 border-x-transparent border-t-[10px] border-t-white dark:border-t-slate-900 shadow-lg"></div>
       
       {/* Header */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-primary rounded-t-xl">
+      <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-gradient-to-r from-primary to-blue-600 rounded-t-2xl">
         <div className="flex items-center gap-3">
-          <span className="material-icons text-white">smart_toy</span>
+          <span className="material-icons text-white text-2xl">smart_toy</span>
           <h3 className="font-bold text-white">Dyad Assistente</h3>
         </div>
         <button onClick={onClose} className="text-white/80 hover:text-white p-1 rounded-full transition-colors">
@@ -248,10 +248,10 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
       <div className="flex-1 p-4 overflow-y-auto space-y-4 custom-scrollbar">
         {messages.map((msg, index) => (
           <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] p-3 rounded-xl shadow-sm ${
+            <div className={`max-w-[80%] p-3 shadow-md transition-all ${
               msg.sender === 'user' 
-                ? 'bg-blue-500 text-white rounded-br-none' 
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white rounded-tl-none'
+                ? 'bg-primary text-white rounded-t-xl rounded-bl-xl rounded-br-md' 
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white rounded-t-xl rounded-br-xl rounded-tl-md'
             }`}>
               {msg.sender === 'assistant' ? (
                   <AssistantMessageContent text={msg.text} />
@@ -279,7 +279,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
           
           {isRecording ? (
             // Recording UI with Wave Indicator
-            <div className="flex-1 flex items-center justify-between px-4 py-2 border border-red-500 dark:border-red-400 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 animate-pulse">
+            <div className="flex-1 flex items-center justify-between px-4 py-2 border-2 border-red-500 dark:border-red-400 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 shadow-inner">
                 <div className="flex items-center gap-2">
                     <AudioWaveIndicator isRecording={isRecording} />
                     <span className="font-medium text-sm">Gravando...</span>
@@ -288,7 +288,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
             </div>
           ) : isProcessing ? (
             // Processing UI
-            <div className="flex-1 flex items-center justify-center px-4 py-2 border border-primary dark:border-blue-400 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-primary dark:text-blue-400">
+            <div className="flex-1 flex items-center justify-center px-4 py-2 border border-primary dark:border-blue-400 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-primary dark:text-blue-400 shadow-inner">
                 <span className="w-4 h-4 border-2 border-primary dark:border-blue-400 border-t-transparent rounded-full animate-spin mr-2"></span>
                 <span className="font-medium text-sm">Processando...</span>
             </div>
@@ -299,7 +299,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Pergunte algo..."
-              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none"
+              className="flex-1 px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none shadow-inner"
               disabled={isProcessing}
             />
           )}
@@ -310,7 +310,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
             <button
               type="button"
               onClick={handleRecordToggle}
-              className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition-colors"
+              className="bg-red-600 hover:bg-red-700 text-white p-3 rounded-xl transition-colors shadow-md"
               title="Parar Gravação e Enviar"
               disabled={isProcessing}
             >
@@ -321,7 +321,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
               {/* Send Text Button */}
               <button
                 type="submit"
-                className="bg-primary hover:bg-blue-600 text-white p-2 rounded-lg transition-colors disabled:bg-slate-400"
+                className="bg-primary hover:bg-blue-600 text-white p-3 rounded-xl transition-colors disabled:bg-slate-400 shadow-md"
                 disabled={input.trim() === '' || isProcessing}
                 title="Enviar Mensagem"
               >
@@ -332,7 +332,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
               <button
                 type="button"
                 onClick={handleRecordToggle}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-lg transition-colors"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white p-3 rounded-xl transition-colors shadow-md"
                 title="Gravar Áudio"
                 disabled={isProcessing}
               >
