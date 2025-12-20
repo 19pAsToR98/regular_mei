@@ -319,7 +319,6 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                                     value={formData.amount} 
                                     onChange={e => setFormData({...formData, amount: e.target.value})} 
                                     className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-300 dark:border-slate-700 outline-none focus:ring-2 focus:ring-cyan-500/50" 
-                                    placeholder="0,00"
                                 />
                             </div>
                         </div>
@@ -953,8 +952,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                     <div 
                         ref={receiptRef} 
                         id="receipt-preview" 
-                        // Removendo a classe 'grayscale' do JSX para que a pré-visualização seja colorida
-                        className={`bg-[#fffbeb] text-slate-800 p-8 rounded-sm shadow-lg border-2 border-dashed border-slate-300 relative font-mono text-sm leading-relaxed`}
+                        // Aplicando a classe grayscale aqui para que a pré-visualização e a exportação sejam P&B
+                        className={`bg-[#fffbeb] text-slate-800 p-8 rounded-sm shadow-lg border-2 border-dashed border-slate-300 relative font-mono text-sm leading-relaxed grayscale`}
                     >
                         {/* Paper Texture Effect */}
                         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
