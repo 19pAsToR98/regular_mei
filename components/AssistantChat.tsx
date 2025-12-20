@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { sendAssistantQuery } from '../utils/assistantUtils';
 import { showError } from '../utils/toastUtils'; // Importando utilitário de erro
 import { ConnectionConfig } from '../types'; // Importando o tipo
+import AssistantMessageContent from './AssistantMessageContent'; // NOVO IMPORT
 
 interface AssistantChatProps {
   onClose: () => void;
@@ -251,7 +252,11 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
                 ? 'bg-blue-500 text-white rounded-br-none' 
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white rounded-tl-none'
             }`}>
-              <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+              {msg.sender === 'assistant' ? (
+                  <AssistantMessageContent text={msg.text} />
+              ) : (
+                  <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+              )}
               
               {msg.action && (
                   <button 
