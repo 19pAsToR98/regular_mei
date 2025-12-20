@@ -95,7 +95,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
       setMessages(prev => prev.slice(0, -1)); 
 
       if (response) {
-          // O formato esperado é um array: [{ resposta: ..., mensagem_transcrita: ..., body: ... }]
+          // O formato esperado é um array: [{ resposta: ..., mensagem_transcrita: ..., action: ... }]
           const responseData = Array.isArray(response) && response.length > 0 ? response[0] : null;
           
           if (responseData) {
@@ -284,6 +284,12 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
                     <span className="font-medium text-sm">Gravando...</span>
                 </div>
                 <span className="font-mono text-sm">{formatTime(recordingTime)}</span>
+            </div>
+          ) : isProcessing ? (
+            // Processing UI
+            <div className="flex-1 flex items-center justify-center px-4 py-2 border border-primary dark:border-blue-400 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-primary dark:text-blue-400">
+                <span className="w-4 h-4 border-2 border-primary dark:border-blue-400 border-t-transparent rounded-full animate-spin mr-2"></span>
+                <span className="font-medium text-sm">Processando...</span>
             </div>
           ) : (
             // Text Input UI
