@@ -27,6 +27,8 @@ export async function sendAssistantQuery(query: string, audioBase64?: string, mi
         showError('Erro de autenticação. Faça login novamente.');
         return null;
     }
+    
+    const messageType = audioBase64 ? 'audio' : 'text';
 
     try {
         const response = await fetch(EDGE_FUNCTION_URL, {
@@ -39,6 +41,7 @@ export async function sendAssistantQuery(query: string, audioBase64?: string, mi
                 query,
                 audioBase64, // Base64 puro
                 mimeType,    // MIME type separado
+                messageType, // NOVO CAMPO
             })
         });
 
