@@ -137,9 +137,35 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
     
     const plateRef = useRef<HTMLDivElement>(null);
 
+    // NEW: Helper para formatar a chave de celular para o padrão EMVCo (+55DDDNumero)
+    const formatPhoneKey = (rawKey: string, keyType: string): string => {
+        if (keyType !== 'celular') {
+            return rawKey;
+        }
+        
+        const cleanKey = rawKey.replace(/[^\d]/g, '');
+        
+        // Se o número já começar com 55, assumimos que o código do país está correto
+        if (cleanKey.startsWith('55')) {
+            return `+${cleanKey}`;
+        }
+        
+        // Se for um número de 10 ou 11 dígitos (DDD + Número), adicionamos +55
+        if (cleanKey.length === 10 || cleanKey.length === 11) {
+            return `+55${cleanKey}`;
+        }
+        
+        // Caso contrário, retornamos a chave original (pode ser inválida, mas evitamos formatar incorretamente)
+        return rawKey;
+    };
+
     const handleGenerate = () => {
         if (!formData.key || !formData.name) return;
-        const p = generatePixPayload(formData.key, formData.name, formData.city, formData.amount);
+        
+        // Pré-processamento da chave
+        const processedKey = formatPhoneKey(formData.key, formData.keyType);
+
+        const p = generatePixPayload(processedKey, formData.name, formData.city, formData.amount);
         setPayload(p);
     };
 
@@ -193,7 +219,10 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
     // Auto-generate on field change if valid
     useMemo(() => {
         if (formData.key.length > 3 && formData.name.length > 2) {
-            const p = generatePixPayload(formData.key, formData.name, formData.city, formData.amount);
+            // Pré-processamento da chave
+            const processedKey = formatPhoneKey(formData.key, formData.keyType);
+            
+            const p = generatePixPayload(processedKey, formData.name, formData.city, formData.amount);
             setPayload(p);
         } else {
             setPayload('');
@@ -246,6 +275,11 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                                 className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-300 dark:border-slate-700 outline-none focus:ring-2 focus:ring-cyan-500/50" 
                                 placeholder={formData.keyType === 'email' ? 'exemplo@email.com' : 'Sua chave pix'} 
                             />
+                            {formData.keyType === 'celular' && (
+                                <p className="text-xs text-slate-500 mt-1">
+                                    Formato esperado: (DDD) 9XXXX-XXXX. Será convertido para o padrão internacional.
+                                </p>
+                            )}
                         </div>
 
                         <div>
@@ -668,8 +702,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                                 <tr className="bg-slate-100 border-y border-slate-300">
                                     <th className="py-2 px-2 text-left text-xs font-bold uppercase text-slate-500">Descrição</th>
                                     <th className="py-2 px-2 text-center text-xs font-bold uppercase text-slate-500 w-16">Qtd</th>
-                                    <th className="py-2 px-2 text-right text-xs font-bold uppercase text-slate-500 w-24">Preço Unit.</th>
-                                    <th className="py-2 px-2 text-right text-xs font-bold uppercase text-slate-500 w-24">Total</th>
+                                    <th className="py-2 px-2 text-right text-xs font-bold uppercase text-slate-500 w-32">Preço Unit.</th>
+                                    <th className="py-2 px-2 text-right text-xs font-bold uppercase text-slate-500 w-32">Total</th>
                                 </tr>
                             </thead>
                             <tbody className="text-sm">
@@ -1408,7 +1442,7 @@ const ToolsPage: React.FC<ToolsPageProps> = ({ user }) => {
       </div>
 
       {filteredTools.length === 0 && (
-         <div className="text-center py-12">
+         <div className="flex flex-col items-center justify-center py-12">
             <span className="material-icons text-4xl text-slate-300 mb-2">search_off</span>
             <p className="text-slate-500">Nenhuma ferramenta encontrada para "{searchTerm}"</p>
          </div>
