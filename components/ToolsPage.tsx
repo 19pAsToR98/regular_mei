@@ -638,7 +638,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
             {/* Assinatura */}
             <div className="mt-12 w-64 mx-auto pt-1">
                 {formData.signatureText ? (
-                    <div className={`w-full h-auto object-contain max-h-20 border-b border-slate-800 pb-1 ${formData.signatureStyle === 'cursive' ? 'font-cursive text-3xl' : 'font-sans text-lg'}`}>
+                    <div className={`w-full h-auto object-contain max-h-20 border-b border-slate-800 pb-1 text-lg ${formData.signatureStyle === 'cursive' ? 'font-cursive' : 'font-sans'}`}>
                         {formData.signatureText}
                     </div>
                 ) : (
@@ -823,7 +823,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                                     type="text" 
                                     value={formattedAmount} 
                                     readOnly
-                                    className="w-full pl-10 pr-4 py-3 text-lg font-bold border rounded-lg bg-slate-100 text-slate-900 border-slate-300 dark:bg-slate-700 dark:text-white dark:border-slate-700 outline-none" 
+                                    className="w-full pl-10 pr-4 py-3 text-lg font-bold border rounded-lg bg-slate-100 text-slate-900 border-slate-300 dark:bg-slate-700 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" 
                                 />
                             </div>
                         </div>
