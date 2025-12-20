@@ -16,6 +16,13 @@ interface Message {
     }
 }
 
+// Função utilitária para simular a geração de Base64
+const generateSimulatedBase64 = (query: string): string => {
+    // Simula uma string Base64 longa baseada no tamanho da query
+    const length = query.length * 10;
+    return `data:audio/wav;base64,${'A'.repeat(length)}`;
+};
+
 const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
@@ -55,14 +62,14 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
   
-  const processQuery = async (query: string, isVoice: boolean = false) => {
+  const processQuery = async (query: string, isVoice: boolean = false, audioBase64?: string) => {
       setIsProcessing(true);
       
       // Adiciona uma mensagem de "digitando" ou "processando"
       const processingMessage: Message = { sender: 'assistant', text: isVoice ? 'Ouvindo e processando...' : 'Digitando...' };
       setMessages(prev => [...prev, processingMessage]);
       
-      const response = await sendAssistantQuery(query);
+      const response = await sendAssistantQuery(query, audioBase64);
       
       // Remove a mensagem de processamento (assumindo que é a última)
       setMessages(prev => prev.slice(0, -1)); 
@@ -86,8 +93,9 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
         // Stop recording
         setIsRecording(false);
         
-        // SIMULAÇÃO: Texto transcrito
-        const simulatedText = "Quero ver o meu fluxo de caixa para este mês.";
+        // SIMULAÇÃO: Texto transcrito e Base64
+        const simulatedText = "Quero adicionar uma despesa de R$ 500 para fornecedores.";
+        const simulatedBase64 = generateSimulatedBase64(simulatedText);
         
         const voiceMessage: Message = { 
             sender: 'user', 
@@ -95,8 +103,8 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
         };
         setMessages(prev => [...prev, voiceMessage]);
         
-        // Process the simulated query via webhook
-        processQuery(simulatedText, true);
+        // Process the simulated query via webhook, enviando o Base64
+        processQuery(simulatedText, true, simulatedBase64);
         
         setRecordingTime(0);
     } else {
@@ -116,6 +124,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
     setMessages(prev => [...prev, newMessage]);
     setInput('');
 
+    // Envia apenas o texto para o webhook
     processQuery(userText);
   };
   

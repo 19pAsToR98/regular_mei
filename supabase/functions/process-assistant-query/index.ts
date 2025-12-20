@@ -40,8 +40,8 @@ serve(async (req) => {
     }
     const userId = user.id;
 
-    // 2. Get the user query from the request body
-    const { query } = await req.json();
+    // 2. Get the user query and optional audioBase64 from the request body
+    const { query, audioBase64 } = await req.json();
 
     if (!query) {
         return new Response(JSON.stringify({ error: 'Missing required field: query' }), { 
@@ -51,11 +51,16 @@ serve(async (req) => {
     }
 
     // 3. Prepare payload for the external webhook
-    const webhookPayload = {
+    const webhookPayload: Record<string, any> = {
         userId: userId,
         query: query,
         timestamp: new Date().toISOString(),
     };
+    
+    // Include Base64 if provided (for audio processing/transcription)
+    if (audioBase64) {
+        webhookPayload.audioBase64 = audioBase64;
+    }
 
     // 4. Send request to the external webhook
     const webhookResponse = await fetch(WEBHOOK_URL, {
