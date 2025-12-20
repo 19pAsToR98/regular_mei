@@ -454,7 +454,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         otherPaymentMethod: '',
         
         // NEW: Signature field
-        signature: '', // Placeholder for signature text/image URL
+        signatureUrl: '', // NOVO CAMPO PARA URL DA ASSINATURA
     });
 
     const [items, setItems] = useState<{id: number, desc: string, qty: number, price: number}[]>([
@@ -619,7 +619,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         </span>
     );
     
-    // NOVO: Componente de lista de itens para modelos simples/MEI
+    // Componente de lista de itens para modelos simples/MEI
     const renderItemList = () => (
         <ul className="list-disc list-inside space-y-1 text-sm text-slate-800 dark:text-slate-800">
             {items.map((item, index) => (
@@ -628,6 +628,28 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                 </li>
             ))}
         </ul>
+    );
+
+    // Componente de Assinatura
+    const renderSignatureArea = () => (
+        <div className="pt-12 text-center">
+            <p>Local e data: {renderDynamicValue(locationAndDate)}</p>
+            
+            {/* Assinatura */}
+            <div className="mt-12 w-64 mx-auto pt-1">
+                {formData.signatureUrl ? (
+                    <img 
+                        src={formData.signatureUrl} 
+                        alt="Assinatura Digital" 
+                        className="w-full h-auto object-contain max-h-20 border-b border-slate-800 pb-1"
+                    />
+                ) : (
+                    <div className="border-t border-slate-800 pt-1">
+                        <p className="text-sm font-bold">{formData.issuerName || 'Assinatura do Emitente'}</p>
+                    </div>
+                )}
+            </div>
+        </div>
     );
 
     const renderReceiptContent = () => {
@@ -639,9 +661,6 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         const payerDoc = formData.payerDoc || ' ';
         const amount = formattedAmount || ' ';
         const amountExtenso = amountInWords || ' ';
-        
-        // Concatena a descrição dos itens (mantido para o campo de texto corrido, mas substituído pela lista)
-        const serviceDescription = items.map(i => `${i.desc} (Qtd: ${i.qty}, R$ ${i.price.toLocaleString('pt-BR', {minimumFractionDigits: 2})})`).join('; ');
         
         switch (formData.template) {
             case 'classic':
@@ -659,7 +678,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             , a quantia de R$ {renderDynamicValue(amount)} ({renderDynamicValue(amountExtenso)}), referente a:
                         </p>
                         
-                        {/* NOVO: Lista de itens */}
+                        {/* Lista de itens */}
                         <div className="pt-2 border-t border-slate-200">
                             <p className="font-bold text-sm mb-2">Itens/Serviços:</p>
                             {renderItemList()}
@@ -669,14 +688,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             Declaro que o valor foi recebido integralmente nesta data.
                         </p>
 
-                        <div className="pt-12 text-center">
-                            <p>Local e data: {renderDynamicValue(locationAndDate)}</p>
-                            
-                            {/* Assinatura */}
-                            <div className="mt-12 w-64 mx-auto border-t border-slate-800 pt-1">
-                                <p className="text-sm font-bold">{formData.issuerName || 'Assinatura do Emitente'}</p>
-                            </div>
-                        </div>
+                        {renderSignatureArea()}
                     </div>
                 );
             case 'mei':
@@ -695,7 +707,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </p>
 
                         <p className="font-bold mt-4">Serviço prestado / Produto vendido:</p>
-                        {/* NOVO: Lista de itens */}
+                        {/* Lista de itens */}
                         {renderItemList()}
 
                         <p className="font-bold mt-4">O pagamento foi realizado em {day}/{month}/{year} por meio de:</p>
@@ -705,14 +717,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             Declaro que este recibo comprova o pagamento integral referente ao item descrito.
                         </p>
 
-                        <div className="pt-12 text-center">
-                            <p>Local e data: {renderDynamicValue(locationAndDate)}</p>
-                            
-                            {/* Assinatura */}
-                            <div className="mt-12 w-64 mx-auto border-t border-slate-800 pt-1">
-                                <p className="text-sm font-bold">{formData.issuerName || 'Assinatura do MEI'}</p>
-                            </div>
-                        </div>
+                        {renderSignatureArea()}
                     </div>
                 );
             case 'detailed':
@@ -773,14 +778,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             Declaro para os devidos fins que o valor foi quitado integralmente.
                         </p>
 
-                        <div className="pt-12 text-center">
-                            <p>Local e data: {renderDynamicValue(locationAndDate)}</p>
-                            
-                            {/* Assinatura */}
-                            <div className="mt-12 w-64 mx-auto border-t border-slate-800 pt-1">
-                                <p className="text-sm font-bold">{formData.issuerName || 'Assinatura do Emitente'}</p>
-                            </div>
-                        </div>
+                        {renderSignatureArea()}
                     </div>
                 );
             default:
@@ -840,7 +838,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                                     <div key={item.id} className="flex gap-2 items-start">
                                         <input type="text" value={item.desc} onChange={e => updateItem(item.id, 'desc', e.target.value)} className="flex-1 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Descrição" />
                                         <input type="number" value={item.qty} onChange={e => updateItem(item.id, 'qty', parseFloat(e.target.value))} className="w-16 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Qtd" />
-                                        <input type="number" value={item.price} onChange={e => updateItem(item.id, 'price', parseFloat(e.target.value))} className="w-20 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-ring-emerald-500/50" placeholder="R$" />
+                                        <input type="number" value={item.price} onChange={e => updateItem(item.id, 'price', parseFloat(e.target.value))} className="w-20 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="R$" />
                                         <button onClick={() => removeItem(item.id)} className="text-red-500 hover:text-red-700"><span className="material-icons text-sm">close</span></button>
                                     </div>
                                 ))}
@@ -905,6 +903,19 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             ) : (
                                 <input type="text" value={formData.issuerDoc} onChange={e => setFormData({...formData, issuerDoc: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Seu CNPJ" />
                             )}
+                        </div>
+                        
+                        {/* NOVO CAMPO DE ASSINATURA */}
+                        <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">URL da Assinatura Digital (Opcional)</label>
+                            <input 
+                                type="url" 
+                                value={formData.signatureUrl} 
+                                onChange={e => setFormData({...formData, signatureUrl: e.target.value})} 
+                                className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" 
+                                placeholder="https://link-para-sua-assinatura.png"
+                            />
+                            <p className="text-xs text-slate-500 mt-1">Use uma imagem PNG com fundo transparente para melhor resultado.</p>
                         </div>
                     </div>
                 </div>
