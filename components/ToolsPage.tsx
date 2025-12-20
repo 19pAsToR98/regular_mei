@@ -431,11 +431,20 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
 };
 
 const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null }) => {
+    // Helper para obter a data local no formato YYYY-MM-DD
+    const getLocalISODate = () => {
+        const now = new Date();
+        const offset = now.getTimezoneOffset() * 60000; // offset em ms
+        const localTime = new Date(now.getTime() - offset);
+        return localTime.toISOString().split('T')[0];
+    };
+
     const [formData, setFormData] = useState({
         template: 'classic' as 'classic' | 'mei' | 'detailed', // New state for template selection
         payerName: '',
         payerDoc: '',
-        date: new Date().toISOString().split('T')[0],
+        date: getLocalISODate(), // CORREÇÃO: Usando data local
+        local: '', // NOVO CAMPO
         issuerName: user?.name || 'Minha Empresa MEI',
         issuerDoc: user?.cnpj || '00.000.000/0001-00',
         issuerCpf: '', // For Simple template
@@ -571,11 +580,14 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
 
     const amountInWords = formatAmountInWords(total);
     const formattedAmount = total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-    const formattedDate = new Date(formData.date).toLocaleDateString('pt-BR');
+    
+    // CORREÇÃO: Usar a data do formulário para formatar
+    const dateObj = new Date(formData.date + 'T12:00:00'); // Adiciona hora para evitar problemas de fuso
+    const formattedDate = dateObj.toLocaleDateString('pt-BR');
     const [day, month, year] = formattedDate.split('/');
     
     // Local e data para preenchimento
-    const locationAndDate = `${formattedDate}`;
+    const locationAndDate = `${formData.local || 'Local não informado'}, ${formattedDate}`;
     
     const paymentOptions = [
         { label: 'Pix', value: 'pix' },
@@ -600,11 +612,22 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         );
     };
 
-    // NEW: Helper para renderizar campos com tamanho dinâmico
+    // Helper para renderizar campos com tamanho dinâmico
     const renderDynamicValue = (content: string, className: string = '') => (
         <span className={`font-bold px-1 inline-block whitespace-normal text-slate-900 dark:text-slate-900 ${className}`}>
             {content || '____________________'}
         </span>
+    );
+    
+    // NOVO: Componente de lista de itens para modelos simples/MEI
+    const renderItemList = () => (
+        <ul className="list-disc list-inside space-y-1 text-sm text-slate-800 dark:text-slate-800">
+            {items.map((item, index) => (
+                <li key={index}>
+                    {item.desc || 'Serviço/Produto'} (R$ {(item.qty * item.price).toLocaleString('pt-BR', {minimumFractionDigits: 2})})
+                </li>
+            ))}
+        </ul>
     );
 
     const renderReceiptContent = () => {
@@ -617,16 +640,9 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         const amount = formattedAmount || ' ';
         const amountExtenso = amountInWords || ' ';
         
-        // Concatena a descrição dos itens
+        // Concatena a descrição dos itens (mantido para o campo de texto corrido, mas substituído pela lista)
         const serviceDescription = items.map(i => `${i.desc} (Qtd: ${i.qty}, R$ ${i.price.toLocaleString('pt-BR', {minimumFractionDigits: 2})})`).join('; ');
         
-        // Helper para renderizar campos com destaque (sem linha de preenchimento)
-        const renderValue = (content: string) => (
-            <span className="font-bold px-1 inline-block whitespace-normal text-slate-900 dark:text-slate-900">
-                {content}
-            </span>
-        );
-
         switch (formData.template) {
             case 'classic':
                 return (
@@ -640,8 +656,14 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             , CPF nº {renderDynamicValue(issuerCpf)}
                             , recebi de {renderDynamicValue(payerName)}
                             , CPF/CNPJ nº {renderDynamicValue(payerDoc)}
-                            , a quantia de R$ {renderDynamicValue(amount)} ({renderDynamicValue(amountExtenso)}), referente a {renderDynamicValue(serviceDescription)}.
+                            , a quantia de R$ {renderDynamicValue(amount)} ({renderDynamicValue(amountExtenso)}), referente a:
                         </p>
+                        
+                        {/* NOVO: Lista de itens */}
+                        <div className="pt-2 border-t border-slate-200">
+                            <p className="font-bold text-sm mb-2">Itens/Serviços:</p>
+                            {renderItemList()}
+                        </div>
 
                         <p>
                             Declaro que o valor foi recebido integralmente nesta data.
@@ -673,7 +695,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         </p>
 
                         <p className="font-bold mt-4">Serviço prestado / Produto vendido:</p>
-                        <p className="border-b border-slate-400 min-h-[1.5em]">{serviceDescription}</p>
+                        {/* NOVO: Lista de itens */}
+                        {renderItemList()}
 
                         <p className="font-bold mt-4">O pagamento foi realizado em {day}/{month}/{year} por meio de:</p>
                         {renderPaymentCheckboxes('mei')}
@@ -817,7 +840,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                                     <div key={item.id} className="flex gap-2 items-start">
                                         <input type="text" value={item.desc} onChange={e => updateItem(item.id, 'desc', e.target.value)} className="flex-1 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Descrição" />
                                         <input type="number" value={item.qty} onChange={e => updateItem(item.id, 'qty', parseFloat(e.target.value))} className="w-16 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Qtd" />
-                                        <input type="number" value={item.price} onChange={e => updateItem(item.id, 'price', parseFloat(e.target.value))} className="w-20 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="R$" />
+                                        <input type="number" value={item.price} onChange={e => updateItem(item.id, 'price', parseFloat(e.target.value))} className="w-20 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-ring-emerald-500/50" placeholder="R$" />
                                         <button onClick={() => removeItem(item.id)} className="text-red-500 hover:text-red-700"><span className="material-icons text-sm">close</span></button>
                                     </div>
                                 ))}
@@ -838,34 +861,40 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                                 <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">CPF/CNPJ (Cliente)</label>
-                                <input type="text" value={formData.payerDoc} onChange={e => setFormData({...formData, payerDoc: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Opcional" />
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Local</label>
+                                <input type="text" value={formData.local} onChange={e => setFormData({...formData, local: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Ex: São Paulo, SP" />
                             </div>
                         </div>
                         
-                        {/* Payment Method (Only for MEI/Detailed) */}
-                        {(formData.template === 'mei' || formData.template === 'detailed') && (
-                            <div className="pt-2 border-t border-slate-100 dark:border-slate-700 animate-in fade-in slide-in-from-top-2">
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Forma de Pagamento</label>
-                                <select 
-                                    value={formData.paymentMethod}
-                                    onChange={e => setFormData({...formData, paymentMethod: e.target.value, otherPaymentMethod: e.target.value === 'outro' ? formData.otherPaymentMethod : ''})}
-                                    className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50"
-                                >
-                                    {paymentOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                    <option value="outro">Outro</option>
-                                </select>
-                                {formData.paymentMethod === 'outro' && (
-                                    <input 
-                                        type="text" 
-                                        value={formData.otherPaymentMethod} 
-                                        onChange={e => setFormData({...formData, otherPaymentMethod: e.target.value})} 
-                                        className="w-full px-3 py-2 border rounded-lg mt-2 bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" 
-                                        placeholder="Especifique a forma de pagamento"
-                                    />
-                                )}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">CPF/CNPJ (Cliente)</label>
+                                <input type="text" value={formData.payerDoc} onChange={e => setFormData({...formData, payerDoc: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Opcional" />
                             </div>
-                        )}
+                            {/* Payment Method (Only for MEI/Detailed) */}
+                            {(formData.template === 'mei' || formData.template === 'detailed') && (
+                                <div className="pt-2 border-t border-slate-100 dark:border-slate-700 animate-in fade-in slide-in-from-top-2">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Forma de Pagamento</label>
+                                    <select 
+                                        value={formData.paymentMethod}
+                                        onChange={e => setFormData({...formData, paymentMethod: e.target.value, otherPaymentMethod: e.target.value === 'outro' ? formData.otherPaymentMethod : ''})}
+                                        className="w-full px-3 py-2 border rounded-lg bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50"
+                                    >
+                                        {paymentOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                        <option value="outro">Outro</option>
+                                    </select>
+                                    {formData.paymentMethod === 'outro' && (
+                                        <input 
+                                            type="text" 
+                                            value={formData.otherPaymentMethod} 
+                                            onChange={e => setFormData({...formData, otherPaymentMethod: e.target.value})} 
+                                            className="w-full px-3 py-2 border rounded-lg mt-2 bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" 
+                                            placeholder="Especifique a forma de pagamento"
+                                        />
+                                    )}
+                                </div>
+                            )}
+                        </div>
 
                         <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Emitente (Você)</label>
