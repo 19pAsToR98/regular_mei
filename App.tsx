@@ -28,6 +28,8 @@ import ExternalTransactionModal from './components/ExternalTransactionModal';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
 import BalanceForecastCard from './components/BalanceForecastCard';
+import VirtualAssistantButton from './components/VirtualAssistantButton'; // NEW IMPORT
+import AssistantChat from './components/AssistantChat'; // NEW IMPORT
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -79,6 +81,9 @@ const App: React.FC = () => {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
+  
+  // --- ASSISTANT STATE ---
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false); // NEW STATE
   
   // --- APP STATE ---
   const [cnpj, setCnpj] = useState('');
@@ -1919,6 +1924,22 @@ const App: React.FC = () => {
               onDeleteTransaction={handleDeleteTransaction}
               onNavigateToCashflow={() => setActiveTab('cashflow')}
           />
+      )}
+      
+      {/* VIRTUAL ASSISTANT UI */}
+      {user && user.isSetupComplete && (
+          <>
+              <VirtualAssistantButton 
+                  isOpen={isAssistantOpen} 
+                  onClick={() => setIsAssistantOpen(true)} 
+              />
+              {isAssistantOpen && (
+                  <AssistantChat 
+                      onClose={() => setIsAssistantOpen(false)} 
+                      // Futuramente, passaremos props de dados aqui
+                  />
+              )}
+          </>
       )}
     </div>
   );
