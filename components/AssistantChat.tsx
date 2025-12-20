@@ -25,7 +25,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed bottom-24 right-6 z-40 w-full max-w-sm h-[80vh] max-h-[600px] bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300 relative">
+    <div className="fixed bottom-[5.5rem] right-6 z-40 w-full max-w-sm h-[80vh] max-h-[600px] bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300">
       
       {/* Balão de fala (Tail) - Aponta para o botão abaixo */}
       <div className="absolute bottom-[-10px] right-4 w-0 h-0 border-x-8 border-x-transparent border-t-[10px] border-t-white dark:border-t-slate-900 shadow-lg"></div>
