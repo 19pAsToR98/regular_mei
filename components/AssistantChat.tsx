@@ -108,7 +108,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, move
       {/* Header */}
       <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-primary rounded-t-xl">
         <div className="flex items-center gap-3">
-          {/* Removido o ícone smart_toy */}
+          <span className="material-icons text-white">smart_toy</span>
           <h3 className="font-bold text-white">Dyad Assistente</h3>
         </div>
         <button onClick={onClose} className="text-white/80 hover:text-white p-1 rounded-full transition-colors">
