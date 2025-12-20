@@ -86,16 +86,16 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
         // Stop recording
         setIsRecording(false);
         
-        // Simulate transcription
-        const simulatedText = "Quero gerar um recibo para o meu cliente.";
+        // SIMULAÇÃO: Texto transcrito
+        const simulatedText = "Quero ver o meu fluxo de caixa para este mês.";
         
         const voiceMessage: Message = { 
             sender: 'user', 
-            text: `(Áudio de ${recordingTime}s) ${simulatedText}` 
+            text: `(Áudio de ${formatTime(recordingTime)}) ${simulatedText}` 
         };
         setMessages(prev => [...prev, voiceMessage]);
         
-        // Process the simulated query
+        // Process the simulated query via webhook
         processQuery(simulatedText, true);
         
         setRecordingTime(0);
