@@ -457,8 +457,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
         signatureStyle: 'standard' as 'standard' | 'cursive',
     });
     
-    // NOVO: Estado para exportação P&B
-    const [isBlackAndWhite, setIsBlackAndWhite] = useState(false);
+    // REMOVIDO: Estado para exportação P&B
+    // const [isBlackAndWhite, setIsBlackAndWhite] = useState(false);
 
     const [items, setItems] = useState<{id: number, desc: string, qty: number, price: number}[]>([
         { id: 1, desc: 'Serviço Exemplo', qty: 1, price: 100.00 }
@@ -504,15 +504,13 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                 scale: 2, 
                 logging: false, 
                 useCORS: true,
-                // Se P&B estiver ativo, forçamos o modo grayscale no html2canvas
-                ...(isBlackAndWhite && { 
-                    onclone: (doc: Document) => {
-                        const receiptElement = doc.getElementById('receipt-preview');
-                        if (receiptElement) {
-                            receiptElement.style.filter = 'grayscale(100%)';
-                        }
+                // FORÇANDO O GRYSCALE (P&B)
+                onclone: (doc: Document) => {
+                    const receiptElement = doc.getElementById('receipt-preview');
+                    if (receiptElement) {
+                        receiptElement.style.filter = 'grayscale(100%)';
                     }
-                })
+                }
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
@@ -951,8 +949,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             </div>
                         </div>
                         
-                        {/* NOVO: Opção P&B */}
-                        <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
+                        {/* REMOVIDO: Opção P&B */}
+                        {/* <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
                             <label className="flex items-center gap-3 cursor-pointer">
                                 <input 
                                     type="checkbox" 
@@ -962,7 +960,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                                 />
                                 <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Exportar em Preto e Branco (Economia de Tinta)</span>
                             </label>
-                        </div>
+                        </div> */}
                     </div>
                 </div>
 
@@ -971,7 +969,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                     <div 
                         ref={receiptRef} 
                         id="receipt-preview" 
-                        className={`bg-[#fffbeb] text-slate-800 p-8 rounded-sm shadow-lg border-2 border-dashed border-slate-300 relative font-mono text-sm leading-relaxed ${isBlackAndWhite ? 'grayscale' : ''}`}
+                        // Aplicando grayscale na pré-visualização para refletir o PDF final
+                        className={`bg-[#fffbeb] text-slate-800 p-8 rounded-sm shadow-lg border-2 border-dashed border-slate-300 relative font-mono text-sm leading-relaxed grayscale`}
                     >
                         {/* Paper Texture Effect */}
                         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -989,7 +988,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2 transition-colors print:hidden"
                     >
                         {isExporting ? <span className="material-icons animate-spin text-sm">refresh</span> : <span className="material-icons">file_download</span>}
-                        Exportar PDF
+                        Exportar PDF (P&B)
                     </button>
                     <p className="text-center text-xs text-slate-400 print:hidden">Gera um arquivo PDF de alta qualidade do seu recibo.</p>
                 </div>
@@ -1366,7 +1365,7 @@ const FeeCalculator = ({ onBack }: { onBack: () => void }) => {
                     <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center mb-4">
                         <span className="material-icons text-2xl">calculate</span>
                     </div>
-                    <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Calculadora de Taxas</h3>
+                    <h3 className="2xl font-bold text-slate-800 dark:text-white mb-2">Calculadora de Taxas</h3>
                     <p className="text-slate-500 mb-6">Descubra exatamente quanto cobrar para descontar a taxa da maquininha e receber o valor cheio.</p>
 
                     <div className="space-y-4">
