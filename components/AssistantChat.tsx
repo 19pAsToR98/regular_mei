@@ -59,8 +59,9 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, move
     if (targetTab) {
         const tab = commandMap[targetTab];
         
-        // Simular movimento para o canto superior esquerdo (ex: para apontar para a sidebar)
-        moveAssistant('80vh', '80vw'); 
+        // Simular movimento para o canto superior esquerdo (longe do chat)
+        // Usando valores em REM (ex: 20rem do bottom, 20rem da direita)
+        moveAssistant('20', '20'); 
         
         assistantResponse = { 
             sender: 'assistant', 
@@ -72,8 +73,8 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, move
             }
         };
     } else if (userText.includes('movimentar')) {
-        // Comando de teste para movimento
-        moveAssistant('50vh', '50vw');
+        // Comando de teste para movimento (Centro da tela)
+        moveAssistant('30', '30');
         assistantResponse = { sender: 'assistant', text: 'Movimento executado! Estou no centro da tela. Diga "resetar" para voltar.' };
     } else if (userText.includes('resetar')) {
         moveAssistant('6', '6'); // Volta para a posição padrão (bottom-6, right-6)
