@@ -69,6 +69,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
       const processingMessage: Message = { sender: 'assistant', text: isVoice ? 'Ouvindo e processando...' : 'Digitando...' };
       setMessages(prev => [...prev, processingMessage]);
       
+      // Se for voz, enviamos o Base64 e o texto é apenas um fallback/identificador
       const response = await sendAssistantQuery(query, audioBase64);
       
       // Remove a mensagem de processamento (assumindo que é a última)
@@ -93,18 +94,21 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
         // Stop recording
         setIsRecording(false);
         
-        // SIMULAÇÃO: Texto transcrito e Base64
-        const simulatedText = "Quero adicionar uma despesa de R$ 500 para fornecedores.";
-        const simulatedBase64 = generateSimulatedBase64(simulatedText);
+        // SIMULAÇÃO: Texto transcrito (para exibição local) e Base64 (para envio)
+        const simulatedTranscription = "Quero adicionar uma despesa de R$ 500 para fornecedores.";
+        const simulatedBase64 = generateSimulatedBase64(simulatedTranscription);
         
         const voiceMessage: Message = { 
             sender: 'user', 
-            text: `(Áudio de ${formatTime(recordingTime)}) ${simulatedText}` 
+            text: `(Áudio de ${formatTime(recordingTime)}) ${simulatedTranscription}` 
         };
         setMessages(prev => [...prev, voiceMessage]);
         
-        // Process the simulated query via webhook, enviando o Base64
-        processQuery(simulatedText, true, simulatedBase64);
+        // Foco no Base64: Enviamos um texto de consulta genérico, pois o webhook fará a transcrição.
+        // O Base64 é o dado principal.
+        const queryForWebhook = `Voz: ${simulatedTranscription}`; 
+        
+        processQuery(queryForWebhook, true, simulatedBase64);
         
         setRecordingTime(0);
     } else {
