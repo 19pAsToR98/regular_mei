@@ -500,13 +500,9 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                 scale: 2, 
                 logging: false, 
                 useCORS: true,
-                // FORÇANDO O GRYSCALE (P&B) no elemento clonado
-                onclone: (doc: Document) => {
-                    const receiptElement = doc.getElementById('receipt-preview');
-                    if (receiptElement) {
-                        receiptElement.style.filter = 'grayscale(100%)';
-                    }
-                }
+                // --- CORREÇÃO: Forçar renderização em preto e branco no html2canvas ---
+                color: false, 
+                // Removendo onclone, pois color: false é mais robusto
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
@@ -952,7 +948,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                     <div 
                         ref={receiptRef} 
                         id="receipt-preview" 
-                        // Aplicando a classe grayscale aqui para que a pré-visualização e a exportação sejam P&B
+                        // Mantendo a classe grayscale no JSX para a pré-visualização
                         className={`bg-[#fffbeb] text-slate-800 p-8 rounded-sm shadow-lg border-2 border-dashed border-slate-300 relative font-mono text-sm leading-relaxed grayscale`}
                     >
                         {/* Paper Texture Effect */}
