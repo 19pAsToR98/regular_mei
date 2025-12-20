@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { sendAssistantQuery } from '../utils/assistantUtils'; // Importando a nova utilidade
 
 interface AssistantChatProps {
   onClose: () => void;
@@ -15,25 +16,13 @@ interface Message {
     }
 }
 
-// Mapeamento de comandos simples para navegação
-const commandMap: Record<string, string> = {
-    'recibo': 'tools',
-    'ferramentas': 'tools',
-    'fluxo de caixa': 'cashflow',
-    'dashboard': 'dashboard',
-    'cnpj': 'cnpj',
-    'calendário': 'calendar',
-    'notícias': 'news',
-    'ofertas': 'offers',
-    'configurações': 'settings',
-};
-
 const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     { sender: 'assistant', text: 'Olá! Eu sou Dyad, seu assistente virtual. Como posso ajudar com suas finanças ou obrigações MEI hoje?' }
   ]);
   const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false); // Novo estado para processamento
   const [recordingTime, setRecordingTime] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<number | null>(null);
@@ -54,7 +43,6 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
             clearInterval(timerRef.current);
             timerRef.current = null;
         }
-        // Note: We reset recordingTime only when starting a new recording, not when stopping.
     }
     return () => {
         if (timerRef.current) clearInterval(timerRef.current);
@@ -66,32 +54,51 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+  
+  const processQuery = async (query: string, isVoice: boolean = false) => {
+      setIsProcessing(true);
+      
+      // Adiciona uma mensagem de "digitando" ou "processando"
+      const processingMessage: Message = { sender: 'assistant', text: isVoice ? 'Ouvindo e processando...' : 'Digitando...' };
+      setMessages(prev => [...prev, processingMessage]);
+      
+      const response = await sendAssistantQuery(query);
+      
+      // Remove a mensagem de processamento (assumindo que é a última)
+      setMessages(prev => prev.slice(0, -1)); 
+
+      if (response) {
+          const assistantResponse: Message = { 
+              sender: 'assistant', 
+              text: response.text,
+              action: response.action
+          };
+          setMessages(prev => [...prev, assistantResponse]);
+      }
+      
+      setIsProcessing(false);
+  };
 
   const handleRecordToggle = () => {
+    if (isProcessing) return;
+
     if (isRecording) {
-        // Stop recording and simulate processing
+        // Stop recording
         setIsRecording(false);
         
-        // Simulate transcription and processing
-        const simulatedText = "Qual é o limite de faturamento do MEI este ano?";
+        // Simulate transcription
+        const simulatedText = "Quero gerar um recibo para o meu cliente.";
         
         const voiceMessage: Message = { 
             sender: 'user', 
             text: `(Áudio de ${recordingTime}s) ${simulatedText}` 
         };
         setMessages(prev => [...prev, voiceMessage]);
-
-        // Simulate AI response
-        const assistantResponse: Message = { 
-            sender: 'assistant', 
-            text: 'O limite de faturamento anual para o MEI em 2024 é de R$ 81.000,00. Se você ultrapassar esse valor, precisará solicitar o desenquadramento.' 
-        };
-
-        setTimeout(() => {
-            setMessages(prev => [...prev, assistantResponse]);
-        }, 1500);
         
-        setRecordingTime(0); // Reset time after processing
+        // Process the simulated query
+        processQuery(simulatedText, true);
+        
+        setRecordingTime(0);
     } else {
         // Start recording
         setRecordingTime(0);
@@ -102,37 +109,14 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    const userText = input.trim().toLowerCase();
-    if (userText === '') return;
+    const userText = input.trim();
+    if (userText === '' || isProcessing) return;
 
-    const newMessage: Message = { sender: 'user', text: input.trim() };
+    const newMessage: Message = { sender: 'user', text: userText };
     setMessages(prev => [...prev, newMessage]);
     setInput('');
 
-    // --- Lógica de Resposta Simples ---
-    let assistantResponse: Message;
-    
-    const targetTab = Object.keys(commandMap).find(key => userText.includes(key));
-
-    if (targetTab) {
-        const tab = commandMap[targetTab];
-        
-        assistantResponse = { 
-            sender: 'assistant', 
-            text: `Claro! O módulo de ${targetTab} fica na barra lateral. Posso te levar até lá.`,
-            action: {
-                type: 'navigate',
-                target: tab,
-                label: `Ir para ${targetTab.charAt(0).toUpperCase() + targetTab.slice(1)}`
-            }
-        };
-    } else {
-        assistantResponse = { sender: 'assistant', text: 'Entendi sua pergunta. No momento, estou apenas simulando uma resposta. Tente perguntar sobre "fluxo de caixa" ou "recibos"!' };
-    }
-
-    setTimeout(() => {
-      setMessages(prev => [...prev, assistantResponse]);
-    }, 1000);
+    processQuery(userText);
   };
   
   const handleActionClick = (action: Message['action']) => {
@@ -209,6 +193,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
               onChange={(e) => setInput(e.target.value)}
               placeholder="Pergunte algo..."
               className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none"
+              disabled={isProcessing}
             />
           )}
 
@@ -220,6 +205,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
               onClick={handleRecordToggle}
               className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition-colors"
               title="Parar Gravação e Enviar"
+              disabled={isProcessing}
             >
               <span className="material-icons">stop</span>
             </button>
@@ -229,7 +215,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
               <button
                 type="submit"
                 className="bg-primary hover:bg-blue-600 text-white p-2 rounded-lg transition-colors disabled:bg-slate-400"
-                disabled={input.trim() === ''}
+                disabled={input.trim() === '' || isProcessing}
                 title="Enviar Mensagem"
               >
                 <span className="material-icons">send</span>
@@ -241,6 +227,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
                 onClick={handleRecordToggle}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-lg transition-colors"
                 title="Gravar Áudio"
+                disabled={isProcessing}
               >
                 <span className="material-icons">mic</span>
               </button>
