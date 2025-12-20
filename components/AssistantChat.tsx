@@ -3,8 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 interface AssistantChatProps {
   onClose: () => void;
   onNavigate: (tab: string) => void;
-  moveAssistant: (bottom: string, right: string) => void;
-  style?: React.CSSProperties;
 }
 
 interface Message {
@@ -30,7 +28,7 @@ const commandMap: Record<string, string> = {
     'configurações': 'settings',
 };
 
-const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, moveAssistant, style }) => {
+const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     { sender: 'assistant', text: 'Olá! Eu sou Dyad, seu assistente virtual. Como posso ajudar com suas finanças ou obrigações MEI hoje?' }
@@ -51,17 +49,13 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, move
     setMessages(prev => [...prev, newMessage]);
     setInput('');
 
-    // --- Lógica de Resposta Simples e Movimento ---
+    // --- Lógica de Resposta Simples ---
     let assistantResponse: Message;
     
     const targetTab = Object.keys(commandMap).find(key => userText.includes(key));
 
     if (targetTab) {
         const tab = commandMap[targetTab];
-        
-        // Simular movimento para o canto superior esquerdo (longe do chat)
-        // Usando valores em REM (ex: 20rem do bottom, 20rem da direita)
-        moveAssistant('20', '20'); 
         
         assistantResponse = { 
             sender: 'assistant', 
@@ -72,13 +66,6 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, move
                 label: `Ir para ${targetTab.charAt(0).toUpperCase() + targetTab.slice(1)}`
             }
         };
-    } else if (userText.includes('movimentar')) {
-        // Comando de teste para movimento (Centro da tela)
-        moveAssistant('30', '30');
-        assistantResponse = { sender: 'assistant', text: 'Movimento executado! Estou no centro da tela. Diga "resetar" para voltar.' };
-    } else if (userText.includes('resetar')) {
-        moveAssistant('6', '6'); // Volta para a posição padrão (bottom-6, right-6)
-        assistantResponse = { sender: 'assistant', text: 'Voltando para a posição padrão. Como posso ajudar mais?' };
     } else {
         assistantResponse = { sender: 'assistant', text: 'Entendi sua pergunta. No momento, estou apenas simulando uma resposta. Tente perguntar sobre "fluxo de caixa" ou "recibos"!' };
     }
@@ -99,8 +86,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, move
 
   return (
     <div 
-        className="fixed z-40 w-full max-w-sm h-[80vh] max-h-[600px] bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300 transition-all ease-in-out"
-        style={style} // Apply dynamic position
+        className="fixed bottom-[6.5rem] right-6 z-40 w-full max-w-sm h-[80vh] max-h-[600px] bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300 transition-all ease-in-out"
     >
       
       {/* Balão de fala (Tail) - Aponta para o botão abaixo */}

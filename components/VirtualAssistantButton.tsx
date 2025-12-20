@@ -3,15 +3,14 @@ import React from 'react';
 interface VirtualAssistantButtonProps {
   isOpen: boolean;
   onClick: () => void;
-  style?: React.CSSProperties;
 }
 
-const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen, onClick, style }) => {
+const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen, onClick }) => {
   return (
     <button
       onClick={onClick}
       className={`
-        fixed z-40 
+        fixed bottom-6 right-6 z-40 
         w-16 h-16 rounded-full 
         bg-primary text-white
         shadow-xl hover:scale-110 
@@ -21,7 +20,6 @@ const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen,
       `}
       aria-label="Abrir Assistente Virtual"
       title="Assistente Virtual"
-      style={style} // <-- APLICAÇÃO DO ESTILO DINÂMICO
     >
       <span className="material-icons text-3xl">smart_toy</span>
       
