@@ -84,6 +84,7 @@ const App: React.FC = () => {
   
   // --- ASSISTANT STATE ---
   const [isAssistantOpen, setIsAssistantOpen] = useState(false); // NEW STATE
+  const [assistantPosition, setAssistantPosition] = useState<{ bottom: string, right: string }>({ bottom: '6', right: '6' }); // NEW STATE: Tailwind classes
   
   // --- APP STATE ---
   const [cnpj, setCnpj] = useState('');
@@ -161,6 +162,15 @@ const App: React.FC = () => {
       enabled: true
     }
   });
+
+  // --- ASSISTANT MOVEMENT LOGIC ---
+  const moveAssistant = (bottom: string, right: string) => {
+      setAssistantPosition({ bottom, right });
+  };
+
+  const resetAssistantPosition = () => {
+      setAssistantPosition({ bottom: '6', right: '6' });
+  };
 
   // --- DATA FETCHING FUNCTIONS ---
 
@@ -1932,11 +1942,16 @@ const App: React.FC = () => {
               <VirtualAssistantButton 
                   isOpen={isAssistantOpen} 
                   onClick={() => setIsAssistantOpen(true)} 
+                  // Pass position state
+                  style={{ bottom: `${assistantPosition.bottom}rem`, right: `${assistantPosition.right}rem` }}
               />
               {isAssistantOpen && (
                   <AssistantChat 
-                      onClose={() => setIsAssistantOpen(false)} 
-                      // Futuramente, passaremos props de dados aqui
+                      onClose={() => { setIsAssistantOpen(false); resetAssistantPosition(); }} 
+                      onNavigate={setActiveTab}
+                      moveAssistant={moveAssistant}
+                      // Pass position state
+                      style={{ bottom: `calc(${assistantPosition.bottom}rem + 4rem + 0.5rem)`, right: `${assistantPosition.right}rem` }}
                   />
               )}
           </>
