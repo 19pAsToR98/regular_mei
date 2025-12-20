@@ -17,11 +17,16 @@ interface Message {
     }
 }
 
-// Helper para converter Blob em Base64
+// Helper para converter Blob em Base64 (retorna apenas a string Base64 pura)
 const blobToBase64 = (blob: Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
+        reader.onloadend = () => {
+            const dataUrl = reader.result as string;
+            // Remove o prefixo "data:mime/type;base64,"
+            const base64 = dataUrl.split(',')[1];
+            resolve(base64);
+        };
         reader.onerror = reject;
         reader.readAsDataURL(blob);
     });
@@ -70,14 +75,15 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
   
-  const processQuery = async (query: string, isVoice: boolean = false, audioBase64?: string) => {
+  const processQuery = async (query: string, isVoice: boolean = false, audioBase64?: string, mimeType?: string) => {
       setIsProcessing(true);
       
       // Adiciona uma mensagem de "processando"
       const processingMessage: Message = { sender: 'assistant', text: isVoice ? 'Ouvindo e processando...' : 'Digitando...' };
       setMessages(prev => [...prev, processingMessage]);
       
-      const response = await sendAssistantQuery(query, audioBase64);
+      // Passa o mimeType para sendAssistantQuery
+      const response = await sendAssistantQuery(query, audioBase64, mimeType);
       
       // Remove a mensagem de processamento (assumindo que é a última)
       setMessages(prev => prev.slice(0, -1)); 
@@ -130,7 +136,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
                 // Cria o Blob final
                 const audioBlob = new Blob(audioChunks.current, { type: mimeType });
                 
-                // Converte para Base64
+                // Converte para Base64 pura
                 const audioBase64 = await blobToBase64(audioBlob);
 
                 // Texto de exibição local (indicando que o áudio foi capturado)
@@ -142,9 +148,8 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate }) =>
                 };
                 setMessages(prev => [...prev, voiceMessage]);
                 
-                // Envia o Base64 real para o webhook
-                // Usamos o texto de placeholder como 'query' para o webhook, pois ele fará a transcrição
-                processQuery(transcriptionPlaceholder, true, audioBase64);
+                // Envia o Base64 real para o webhook, junto com o MIME type
+                processQuery(transcriptionPlaceholder, true, audioBase64, mimeType);
                 
                 // Para as tracks para liberar o microfone
                 stream.getTracks().forEach(track => track.stop());

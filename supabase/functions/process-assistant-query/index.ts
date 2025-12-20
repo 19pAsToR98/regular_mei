@@ -40,8 +40,8 @@ serve(async (req) => {
     }
     const userId = user.id;
 
-    // 2. Get the user query and optional audioBase64 from the request body
-    const { query, audioBase64 } = await req.json();
+    // 2. Get the user query, audioBase64, and mimeType from the request body
+    const { query, audioBase64, mimeType } = await req.json();
 
     if (!query) {
         return new Response(JSON.stringify({ error: 'Missing required field: query' }), { 
@@ -57,9 +57,10 @@ serve(async (req) => {
         timestamp: new Date().toISOString(),
     };
     
-    // Include Base64 if provided (for audio processing/transcription)
+    // Include Base64 and MIME type if provided
     if (audioBase64) {
         webhookPayload.audioBase64 = audioBase64;
+        webhookPayload.mimeType = mimeType; // Repassa o MIME type
     }
 
     // 4. Send request to the external webhook

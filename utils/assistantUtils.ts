@@ -15,10 +15,11 @@ interface WebhookResponse {
 /**
  * Envia a consulta do usuário para a Edge Function, que a repassa ao webhook externo.
  * @param query A mensagem de texto do usuário.
- * @param audioBase64 Opcional: String Base64 do áudio gravado.
+ * @param audioBase64 Opcional: String Base64 do áudio gravado (sem prefixo Data URI).
+ * @param mimeType Opcional: O MIME type do áudio (ex: 'audio/ogg;codecs=opus').
  * @returns A resposta processada do webhook.
  */
-export async function sendAssistantQuery(query: string, audioBase64?: string): Promise<WebhookResponse | null> {
+export async function sendAssistantQuery(query: string, audioBase64?: string, mimeType?: string): Promise<WebhookResponse | null> {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
 
@@ -36,7 +37,8 @@ export async function sendAssistantQuery(query: string, audioBase64?: string): P
             },
             body: JSON.stringify({ 
                 query,
-                audioBase64 // Inclui Base64 se fornecido
+                audioBase64, // Base64 puro
+                mimeType,    // MIME type separado
             })
         });
 
