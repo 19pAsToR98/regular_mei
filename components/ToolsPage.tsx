@@ -137,25 +137,29 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
     
     const plateRef = useRef<HTMLDivElement>(null);
 
-    // NEW: Helper para formatar a chave de celular para o padrão EMVCo (+55DDDNumero)
+    // Helper para formatar a chave de celular para o padrão EMVCo (+55DDDNumero)
     const formatPhoneKey = (rawKey: string, keyType: string): string => {
-        if (keyType !== 'celular') {
-            return rawKey;
-        }
-        
         const cleanKey = rawKey.replace(/[^\d]/g, '');
         
-        // Se o número já começar com 55, assumimos que o código do país está correto
-        if (cleanKey.startsWith('55')) {
-            return `+${cleanKey}`;
+        if (keyType === 'celular') {
+            // Se o número já começar com 55, assumimos que o código do país está correto
+            if (cleanKey.startsWith('55')) {
+                return `+${cleanKey}`;
+            }
+            
+            // Se for um número de 10 ou 11 dígitos (DDD + Número), adicionamos +55
+            if (cleanKey.length === 10 || cleanKey.length === 11) {
+                return `+55${cleanKey}`;
+            }
+            
+            return rawKey; // Retorna a chave original se não for um formato reconhecido
         }
         
-        // Se for um número de 10 ou 11 dígitos (DDD + Número), adicionamos +55
-        if (cleanKey.length === 10 || cleanKey.length === 11) {
-            return `+55${cleanKey}`;
+        // Para CPF, CNPJ e Aleatória, apenas removemos a pontuação
+        if (keyType === 'cpf' || keyType === 'cnpj' || keyType === 'aleatoria') {
+            return cleanKey;
         }
         
-        // Caso contrário, retornamos a chave original (pode ser inválida, mas evitamos formatar incorretamente)
         return rawKey;
     };
 
@@ -278,6 +282,11 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                             {formData.keyType === 'celular' && (
                                 <p className="text-xs text-slate-500 mt-1">
                                     Formato esperado: (DDD) 9XXXX-XXXX. Será convertido para o padrão internacional.
+                                </p>
+                            )}
+                            {(formData.keyType === 'cpf' || formData.keyType === 'cnpj') && (
+                                <p className="text-xs text-slate-500 mt-1">
+                                    A pontuação será removida automaticamente para gerar o QR Code.
                                 </p>
                             )}
                         </div>
