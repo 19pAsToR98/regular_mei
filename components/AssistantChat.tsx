@@ -232,7 +232,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
           // 1. Adiciona a mensagem do usuário (simulando o clique)
           const userMessage: Message = { sender: 'user', text: `Quero ${action.label}` };
           
-          // 2. Adiciona a resposta do assistente com o link
+          // 2. Adiciona a resposta do assistente com o link formatado em Markdown
           const assistantResponse: Message = {
               sender: 'assistant',
               text: `Claro! Para falar com nosso suporte especializado, clique no link abaixo. Você será redirecionado para o WhatsApp.\n\n*Link de Suporte:* [Falar com Suporte](${action.linkUrl})`
