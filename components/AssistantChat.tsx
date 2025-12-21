@@ -228,14 +228,14 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
 
   return (
     <div 
-        className="fixed bottom-[6.5rem] right-6 z-40 w-full max-w-sm h-[80vh] max-h-[600px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300 transition-all ease-in-out"
+        className="fixed inset-0 lg:bottom-[6.5rem] lg:right-6 z-40 w-full lg:max-w-sm h-full lg:h-[80vh] lg:max-h-[600px] bg-white dark:bg-slate-900 lg:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300 transition-all ease-in-out"
     >
       
-      {/* Balão de fala (Tail) - Aponta para o botão abaixo */}
-      <div className="absolute bottom-[-10px] right-4 w-0 h-0 border-x-8 border-x-transparent border-t-[10px] border-t-white dark:border-t-slate-900 shadow-lg"></div>
+      {/* Balão de fala (Tail) - Oculto no mobile */}
+      <div className="hidden lg:block absolute bottom-[-10px] right-4 w-0 h-0 border-x-8 border-x-transparent border-t-[10px] border-t-white dark:border-t-slate-900 shadow-lg"></div>
       
       {/* Header */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-gradient-to-r from-primary to-blue-600 rounded-t-2xl">
+      <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-gradient-to-r from-primary to-blue-600 lg:rounded-t-2xl">
         <div className="flex items-center gap-3">
           <span className="material-icons text-white text-2xl">smart_toy</span>
           <h3 className="font-bold text-white">Dyad Assistente</h3>
