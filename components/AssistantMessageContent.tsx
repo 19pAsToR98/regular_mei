@@ -16,16 +16,18 @@ const AssistantMessageContent: React.FC<AssistantMessageContentProps> = ({ text 
 
   // Regex para encontrar links no formato [Texto](URL)
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  // Regex para encontrar formatação de título *Título:* Valor
+  const titleRegex = /^\*(.*?):\* (.*)$/;
 
   // 1. Dividir o texto por quebras de linha
   const lines = text.split('\n');
 
   const renderedContent = lines.map((line, index) => {
-    // 2. Processar links dentro da linha
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let match;
 
+    // 2. Processar links dentro da linha
     while ((match = linkRegex.exec(line)) !== null) {
       // Adiciona o texto antes do link
       if (match.index > lastIndex) {
@@ -54,23 +56,26 @@ const AssistantMessageContent: React.FC<AssistantMessageContentProps> = ({ text 
       parts.push(line.substring(lastIndex));
     }
 
-    // 3. Processar formatação de título (*Título:* Valor) na linha sem links
+    // 3. Processar formatação de título (*Título:* Valor) na linha
+    // Nota: A regex de título só funciona se a linha inteira (após processamento de links) corresponder ao padrão.
+    // Para simplificar, vamos aplicar a regex de título apenas ao texto puro da linha (sem os elementos <a>).
+    
     const lineText = parts.map(p => (typeof p === 'string' ? p : '')).join('');
-    const matchTitle = lineText.match(/^\*(.*?):\* (.*)$/);
+    const matchTitle = lineText.match(titleRegex);
 
     if (matchTitle) {
       // Se for um item formatado (*Título:* Valor)
       const title = matchTitle[1].trim();
       const value = matchTitle[2].trim();
       
-      // Reconstroi a linha com a formatação de título, mantendo os elementos de link
+      // Se a linha for um título, renderizamos apenas o título e o valor.
       return (
         <p key={index} className="text-sm leading-snug">
           <strong className="font-bold">{title}:</strong> {value}
         </p>
       );
     } else {
-      // Se for texto normal, retorna a linha com os links processados
+      // Se for texto normal ou contiver links, renderizamos as partes (incluindo os elementos <a>)
       return (
         <p key={index} className="text-sm leading-snug">
           {parts}
