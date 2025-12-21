@@ -233,9 +233,10 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
           const userMessage: Message = { sender: 'user', text: `Quero ${action.label}` };
           
           // 2. Adiciona a resposta do assistente com o link formatado em Markdown
+          // Removendo a formatação de título da linha do link para garantir que o link seja processado.
           const assistantResponse: Message = {
               sender: 'assistant',
-              text: `Claro! Para falar com nosso suporte especializado, clique no link abaixo. Você será redirecionado para o WhatsApp.\n\n*Link de Suporte:* [Falar com Suporte](${action.linkUrl})`
+              text: `Claro! Para falar com nosso suporte especializado, clique no link abaixo. Você será redirecionado para o WhatsApp.\n\n[Falar com Suporte](${action.linkUrl})`
           };
           
           setMessages(prev => [...prev, userMessage, assistantResponse]);
