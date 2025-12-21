@@ -4,7 +4,7 @@ import { showError } from '../utils/toastUtils'; // Importando utilitário de er
 import { ConnectionConfig } from '../types'; // Importando o tipo
 import AssistantMessageContent from './AssistantMessageContent'; 
 import AudioWaveIndicator from './AudioWaveIndicator'; 
-import AssistantQuickActions from './AssistantQuickActions'; // NOVO IMPORT
+import AssistantQuickActions from './AssistantQuickActions'; 
 
 interface AssistantChatProps {
   onClose: () => void;
@@ -272,10 +272,14 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
           </div>
         ))}
         <div ref={messagesEndRef} />
+        
+        {/* Quick Actions - Rendered only if it's the initial state */}
+        <AssistantQuickActions 
+            onNavigate={onNavigate} 
+            onClose={onClose} 
+            messageCount={messages.length} 
+        />
       </div>
-      
-      {/* Quick Actions */}
-      <AssistantQuickActions onNavigate={onNavigate} onClose={onClose} />
 
       {/* Input Area */}
       <form onSubmit={handleSend} className="p-4 border-t border-slate-200 dark:border-slate-800">
