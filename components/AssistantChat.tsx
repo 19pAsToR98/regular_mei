@@ -3,7 +3,8 @@ import { sendAssistantQuery } from '../utils/assistantUtils';
 import { showError } from '../utils/toastUtils'; // Importando utilitário de erro
 import { ConnectionConfig } from '../types'; // Importando o tipo
 import AssistantMessageContent from './AssistantMessageContent'; 
-import AudioWaveIndicator from './AudioWaveIndicator'; // NOVO IMPORT
+import AudioWaveIndicator from './AudioWaveIndicator'; 
+import AssistantQuickActions from './AssistantQuickActions'; // NOVO IMPORT
 
 interface AssistantChatProps {
   onClose: () => void;
@@ -272,6 +273,9 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
         ))}
         <div ref={messagesEndRef} />
       </div>
+      
+      {/* Quick Actions */}
+      <AssistantQuickActions onNavigate={onNavigate} onClose={onClose} />
 
       {/* Input Area */}
       <form onSubmit={handleSend} className="p-4 border-t border-slate-200 dark:border-slate-800">
