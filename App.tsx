@@ -162,6 +162,7 @@ const App: React.FC = () => {
     },
     assistantWebhookUrl: 'https://n8nauto.portalmei360.com/webhook-test/d5c69353-a50b-471b-b518-919af0ced726', // NEW DEFAULT URL
     assistantGifUrl: undefined, // NEW FIELD
+    assistantIconSize: 'w-12 h-12', // NEW FIELD
   });
 
   // --- DATA FETCHING FUNCTIONS ---
@@ -1940,6 +1941,7 @@ const App: React.FC = () => {
                   isOpen={isAssistantOpen} 
                   onClick={() => setIsAssistantOpen(true)} 
                   gifUrl={connectionConfig.assistantGifUrl} // PASSING GIF URL
+                  iconSizeClass={connectionConfig.assistantIconSize} // PASSING SIZE CLASS
               />
               {isAssistantOpen && (
                   <AssistantChat 

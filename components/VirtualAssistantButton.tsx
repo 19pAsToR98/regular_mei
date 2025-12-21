@@ -4,9 +4,10 @@ interface VirtualAssistantButtonProps {
   isOpen: boolean;
   onClick: () => void;
   gifUrl?: string; // NOVA PROP
+  iconSizeClass?: string; // NOVA PROP
 }
 
-const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen, onClick, gifUrl }) => {
+const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen, onClick, gifUrl, iconSizeClass = 'w-12 h-12' }) => {
   
   // Usa a URL fornecida ou o fallback estático
   const iconSrc = gifUrl || "/clippy-white-10.gif";
@@ -26,8 +27,8 @@ const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen,
       aria-label="Abrir Assistente Virtual"
       title="Assistente Virtual"
     >
-      {/* Container para o GIF e o indicador, para que o hover funcione no GIF */}
-      <div className="relative w-12 h-12">
+      {/* Container para o GIF e o indicador, usando iconSizeClass para o tamanho */}
+      <div className={`relative ${iconSizeClass}`}>
           <img 
             src={iconSrc} 
             alt="Assistente Dyad" 

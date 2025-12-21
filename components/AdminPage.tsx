@@ -271,6 +271,8 @@ const AdminPage: React.FC<AdminPageProps> = ({
       const payload: User = {
           id: editingUserId || Date.now().toString(),
           name: userForm.name || '',
+          id: editingUserId || Date.now().toString(),
+          name: userForm.name || '',
           email: userForm.email || '',
           phone: userForm.phone,
           cnpj: userForm.cnpj,
@@ -681,6 +683,16 @@ const AdminPage: React.FC<AdminPageProps> = ({
           assistantGifUrl: url // Assuming we add this field to ConnectionConfig
       }));
       // Note: The user must click 'Salvar Configurações' to persist this change to the DB
+  };
+  
+  // NEW: Handler for icon size change
+  const handleIconSizeChange = (value: string) => {
+      // Simple validation for Tailwind classes (e.g., w-12 h-12)
+      const cleanValue = value.trim().toLowerCase();
+      setLocalConnConfig(prev => ({
+          ...prev,
+          assistantIconSize: cleanValue
+      }));
   };
 
   const MappingEditor = ({ mappings, apiType }: { mappings: ApiFieldMapping[], apiType: 'cnpj' | 'diagnostic' }) => (
@@ -1518,6 +1530,19 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                   currentUrl={localConnConfig.assistantGifUrl}
                               />
                               <p className="text-xs text-slate-500 mt-2">O GIF será armazenado no Supabase Storage e usado como ícone flutuante.</p>
+                          </div>
+                          
+                          {/* NEW: Icon Size Field */}
+                          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tamanho do Ícone (Classes Tailwind)</label>
+                              <input 
+                                  type="text" 
+                                  value={localConnConfig.assistantIconSize || ''} 
+                                  onChange={e => handleIconSizeChange(e.target.value)}
+                                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm"
+                                  placeholder="Ex: w-12 h-12 (Padrão)"
+                              />
+                              <p className="text-xs text-slate-500 mt-1">Use classes Tailwind como 'w-10 h-10', 'w-16 h-16', etc.</p>
                           </div>
 
                           <button type="button" onClick={() => { setTestType('assistant'); setTestModalOpen(true); }} className="mt-2 text-sm font-medium text-primary hover:underline flex items-center gap-1">
