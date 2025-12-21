@@ -40,7 +40,7 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
 const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, connectionConfig }) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
-    { sender: 'assistant', text: 'Olá! Eu sou Dyad, seu assistente virtual. Como posso ajudar com suas finanças ou obrigações MEI hoje?' }
+    { sender: 'assistant', text: 'Olá! Eu sou seu assistente virtual. Como posso ajudar com suas finanças ou obrigações MEI hoje?' }
   ]);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -258,7 +258,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
       <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-gradient-to-r from-primary to-blue-600 lg:rounded-t-2xl">
         <div className="flex items-center gap-3">
           <span className="material-icons text-white text-2xl">smart_toy</span>
-          <h3 className="font-bold text-white">Dyad Assistente</h3>
+          <h3 className="font-bold text-white">Assistente Virtual</h3>
         </div>
         <button onClick={onClose} className="text-white/80 hover:text-white p-1 rounded-full transition-colors">
           <span className="material-icons">close</span>
