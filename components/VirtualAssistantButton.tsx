@@ -16,7 +16,7 @@ const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen,
       onClick={onClick}
       className={`
         fixed bottom-6 right-6 z-40 
-        w-16 h-16 rounded-full 
+        w-20 h-20 rounded-full 
         bg-primary
         shadow-xl hover:scale-110 
         transition-all duration-500 ease-in-out
@@ -30,11 +30,11 @@ const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen,
       <img 
         src={iconSrc} 
         alt="Assistente Dyad" 
-        className="w-10 h-10 object-contain"
+        className="w-12 h-12 object-contain"
       />
       
-      {/* Pequeno balão de fala para simular interação */}
-      <div className="absolute top-0 left-0 w-4 h-4 bg-green-400 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></div>
+      {/* Pequeno balão de fala para simular interação (REMOVIDO) */}
+      {/* <div className="absolute top-0 left-0 w-4 h-4 bg-green-400 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></div> */}
     </button>
   );
 };
