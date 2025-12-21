@@ -160,7 +160,8 @@ const App: React.FC = () => {
     ai: {
       enabled: true
     },
-    assistantWebhookUrl: 'https://n8nauto.portalmei360.com/webhook-test/d5c69353-a50b-471b-b518-919af0ced726' // NEW DEFAULT URL
+    assistantWebhookUrl: 'https://n8nauto.portalmei360.com/webhook-test/d5c69353-a50b-471b-b518-919af0ced726', // NEW DEFAULT URL
+    assistantGifUrl: undefined, // NEW FIELD
   });
 
   // --- DATA FETCHING FUNCTIONS ---
@@ -1938,6 +1939,7 @@ const App: React.FC = () => {
               <VirtualAssistantButton 
                   isOpen={isAssistantOpen} 
                   onClick={() => setIsAssistantOpen(true)} 
+                  gifUrl={connectionConfig.assistantGifUrl} // PASSING GIF URL
               />
               {isAssistantOpen && (
                   <AssistantChat 

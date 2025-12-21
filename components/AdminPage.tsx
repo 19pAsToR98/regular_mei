@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Offer, NewsItem, MaintenanceConfig, AppNotification, PollOption, ConnectionConfig, ApiFieldMapping, User } from '../types';
 import NewsEditor from './NewsEditor'; // Importando o novo editor
+import FileUpload from './FileUpload'; // IMPORTANDO O NOVO COMPONENTE
 
 interface AdminPageProps {
   offers: Offer[];
@@ -671,6 +672,15 @@ const AdminPage: React.FC<AdminPageProps> = ({
       const mappings = apiType === 'cnpj' ? newConfig.cnpjApi.mappings : newConfig.diagnosticApi.mappings;
       mappings[index] = { ...mappings[index], [field]: value };
       setLocalConnConfig(newConfig);
+  };
+  
+  // NEW: Handler for successful GIF upload
+  const handleGifUploadSuccess = (url: string) => {
+      setLocalConnConfig(prev => ({
+          ...prev,
+          assistantGifUrl: url // Assuming we add this field to ConnectionConfig
+      }));
+      // Note: The user must click 'Salvar Configurações' to persist this change to the DB
   };
 
   const MappingEditor = ({ mappings, apiType }: { mappings: ApiFieldMapping[], apiType: 'cnpj' | 'diagnostic' }) => (
@@ -1479,7 +1489,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
               <h3 className="text-xl font-bold text-slate-800 dark:text-white">Configuração de Conexões (APIs)</h3>
               <form onSubmit={handleSaveConnection} className="space-y-6">
                   
-                  {/* ASSISTANT WEBHOOK */}
+                  {/* ASSISTANT WEBHOOK & GIF UPLOAD */}
                   <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                       <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                           <span className="material-icons text-primary">smart_toy</span> Webhook do Assistente Dyad
@@ -1496,6 +1506,20 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                   placeholder="https://seu-webhook.com/assistant"
                               />
                           </div>
+                          
+                          {/* NEW: GIF Upload Field */}
+                          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Ícone do Assistente (GIF)</label>
+                              <FileUpload
+                                  bucket="assets"
+                                  path="assistant/icon.gif"
+                                  onUploadSuccess={handleGifUploadSuccess}
+                                  accept="image/gif"
+                                  currentUrl={localConnConfig.assistantGifUrl}
+                              />
+                              <p className="text-xs text-slate-500 mt-2">O GIF será armazenado no Supabase Storage e usado como ícone flutuante.</p>
+                          </div>
+
                           <button type="button" onClick={() => { setTestType('assistant'); setTestModalOpen(true); }} className="mt-2 text-sm font-medium text-primary hover:underline flex items-center gap-1">
                               <span className="material-icons text-sm">science</span> Testar Conexão
                           </button>

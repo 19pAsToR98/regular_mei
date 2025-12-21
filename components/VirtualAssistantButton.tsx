@@ -3,9 +3,14 @@ import React from 'react';
 interface VirtualAssistantButtonProps {
   isOpen: boolean;
   onClick: () => void;
+  gifUrl?: string; // NOVA PROP
 }
 
-const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen, onClick }) => {
+const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen, onClick, gifUrl }) => {
+  
+  // Usa a URL fornecida ou o fallback estático
+  const iconSrc = gifUrl || "/clippy-white-10.gif";
+
   return (
     <button
       onClick={onClick}
@@ -23,7 +28,7 @@ const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen,
     >
       {/* Usando o GIF em vez do Material Icon */}
       <img 
-        src="/clippy-white-10.gif" 
+        src={iconSrc} 
         alt="Assistente Dyad" 
         className="w-10 h-10 object-contain"
       />

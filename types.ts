@@ -115,6 +115,7 @@ export interface ConnectionConfig {
     enabled: boolean;
   };
   assistantWebhookUrl: string; // NEW: URL do webhook do assistente
+  assistantGifUrl?: string; // NEW: URL do GIF do assistente
 }
 
 export interface PollOption {
