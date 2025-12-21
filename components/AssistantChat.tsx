@@ -228,7 +228,10 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
 
   return (
     <div 
-        className="fixed inset-0 lg:bottom-[6.5rem] lg:right-6 z-40 w-full lg:max-w-sm h-full lg:h-[80vh] lg:max-h-[600px] bg-white dark:bg-slate-900 lg:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300 transition-all ease-in-out"
+        className="fixed top-0 left-0 w-full h-full z-40 
+               lg:top-auto lg:left-auto lg:bottom-[6.5rem] lg:right-6 
+               lg:max-w-sm lg:h-[80vh] lg:max-h-[600px] 
+               bg-white dark:bg-slate-900 lg:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300 transition-all ease-in-out"
     >
       
       {/* Balão de fala (Tail) - Oculto no mobile */}
