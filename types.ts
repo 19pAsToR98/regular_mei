@@ -267,6 +267,7 @@ export interface Transaction {
   };
   isRecurring?: boolean;
   externalApi?: boolean; // NEW: True if added via external API
+  createdAt?: string; // NEW: Timestamp de criação do registro
 }
 
 // --- CALENDAR TYPES ---

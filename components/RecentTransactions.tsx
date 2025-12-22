@@ -7,18 +7,26 @@ interface RecentTransactionsProps {
 }
 
 const RecentTransactions: React.FC<RecentTransactionsProps> = ({ transactions, onNavigate }) => {
-  // Sort by date desc and take top 5
+  // Sort by creation date desc and take top 5
   const recent = [...transactions]
     .sort((a, b) => {
-        const dateA = new Date(a.date).getTime();
-        const dateB = new Date(b.date).getTime();
+        const dateA = new Date(a.createdAt || a.date).getTime(); // Fallback to transaction date if createdAt is missing
+        const dateB = new Date(b.createdAt || b.date).getTime();
 
-        // Primary sort: Date descending
+        // Primary sort: Creation Date descending
         if (dateA !== dateB) {
             return dateB - dateA;
         }
         
-        // Secondary sort: ID descending (assuming higher ID means newer creation time)
+        // Secondary sort: Transaction Date descending
+        const tDateA = new Date(a.date).getTime();
+        const tDateB = new Date(b.date).getTime();
+        
+        if (tDateA !== tDateB) {
+            return tDateB - tDateA;
+        }
+
+        // Tertiary sort: ID descending (assuming higher ID means newer creation time if timestamps are identical)
         return b.id - a.id;
     })
     .slice(0, 5);

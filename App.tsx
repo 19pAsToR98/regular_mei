@@ -280,9 +280,9 @@ const App: React.FC = () => {
   const loadTransactions = async (userId: string) => {
     const { data, error } = await supabase
         .from('transactions')
-        .select('*')
+        .select('*, created_at') // Fetch created_at
         .eq('user_id', userId)
-        .order('date', { ascending: false });
+        .order('created_at', { ascending: false }); // Order by creation date
 
     if (error) {
         console.error('Error fetching transactions:', error);
@@ -302,6 +302,7 @@ const App: React.FC = () => {
         installments: t.installments,
         isRecurring: t.is_recurring,
         externalApi: t.external_api || false,
+        createdAt: t.created_at, // Map created_at
     })) as Transaction[];
     
     // Separate transactions added externally that haven't been reviewed yet
@@ -1332,6 +1333,7 @@ const App: React.FC = () => {
         installments: t.installments,
         isRecurring: t.is_recurring,
         externalApi: t.external_api || false,
+        createdAt: t.created_at, // Map created_at
     })) as Transaction[];
     setTransactions(prev => [...newTransactions, ...prev]);
     
