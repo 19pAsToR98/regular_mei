@@ -64,6 +64,87 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
     return matchesType && matchesSearch;
   }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+  // --- CALCULATIONS (NEW MODEL) ---
+  const {
+    caixaAtual,
+    aReceber,
+    aPagar,
+    caixaProjetado,
+    emAtraso,
+    aVencer,
+    totalExpectedRevenue,
+    totalExpectedExpense,
+    realizedRevenue,
+    realizedExpense,
+  } = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // Transactions for the current month
+    const currentMonthTrans = transactions.filter(t => {
+      const tMonth = parseInt(t.date.split('-')[1]) - 1;
+      const tYear = parseInt(t.date.split('-')[0]);
+      return tMonth === currentMonth && tYear === currentYear;
+    });
+
+    // Realized (Paid Only)
+    const realizedRevenue = currentMonthTrans
+      .filter(t => t.type === 'receita' && t.status === 'pago')
+      .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+
+    const realizedExpense = currentMonthTrans
+      .filter(t => t.type === 'despesa' && t.status === 'pago')
+      .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+
+    // 1. Caixa Atual (Realized Balance)
+    const caixaAtual = realizedRevenue - realizedExpense;
+
+    // Pending Transactions
+    const pendingTrans = currentMonthTrans.filter(t => t.status === 'pendente');
+
+    // 2. A Receber (Pending Revenue)
+    const aReceber = pendingTrans
+      .filter(t => t.type === 'receita')
+      .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+
+    // 3. A Pagar (Pending Expense)
+    const aPagar = pendingTrans
+      .filter(t => t.type === 'despesa')
+      .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+
+    // 4. Caixa Projetado do Mês (Expected Balance)
+    const totalExpectedRevenue = realizedRevenue + aReceber;
+    const totalExpectedExpense = realizedExpense + aPagar;
+    const caixaProjetado = totalExpectedRevenue - totalExpectedExpense;
+
+    // 5. Em Atraso (Overdue) & A Vencer (Upcoming) - Only for pending transactions
+    let emAtraso = 0;
+    let aVencer = 0;
+
+    pendingTrans
+      .forEach(t => {
+        if (t.date < todayStr) {
+          // Sum of all overdue pending items (both revenue and expense)
+          emAtraso += t.amount || 0;
+        } else {
+          // Sum of all upcoming pending items (both revenue and expense)
+          aVencer += t.amount || 0;
+        }
+      });
+      
+    return {
+      caixaAtual,
+      aReceber,
+      aPagar,
+      caixaProjetado,
+      emAtraso,
+      aVencer,
+      totalExpectedRevenue,
+      totalExpectedExpense,
+      realizedRevenue,
+      realizedExpense,
+    };
+  }, [transactions, currentMonth, currentYear]);
+
   // --- CHART DATA CALCULATION ---
   const getChartData = (type: 'receita' | 'despesa') => {
       const dataMap: Record<string, number> = {};
@@ -86,31 +167,6 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
 
   const revenueChartData = useMemo(() => getChartData('receita'), [monthlyTransactions]);
   const expenseChartData = useMemo(() => getChartData('despesa'), [monthlyTransactions]);
-
-  // --- CALCULATIONS (SIMPLIFIED LOGIC) ---
-  
-  // Realized (Only Status = 'pago')
-  const totalRevenue = monthlyTransactions
-    .filter(t => t.type === 'receita' && t.status === 'pago')
-    .reduce((acc, curr) => acc + (curr.amount || 0), 0);
-
-  const totalExpense = monthlyTransactions
-    .filter(t => t.type === 'despesa' && t.status === 'pago')
-    .reduce((acc, curr) => acc + (curr.amount || 0), 0);
-    
-  const balance = totalRevenue - totalExpense;
-
-  // Forecast (Everything: Paid + Pending)
-  // Logic: "If I pay/receive everything listed this month, this is the total"
-  const totalExpectedRevenue = monthlyTransactions
-    .filter(t => t.type === 'receita')
-    .reduce((acc, curr) => acc + (curr.amount || 0), 0);
-
-  const totalExpectedExpense = monthlyTransactions
-    .filter(t => t.type === 'despesa')
-    .reduce((acc, curr) => acc + (curr.amount || 0), 0);
-
-  const expectedBalance = totalExpectedRevenue - totalExpectedExpense;
 
   const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -279,10 +335,10 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
   const handleExportCSV = () => {
       const summaryRows = [
           ["RESUMO DO PERÍODO", `${monthNames[currentMonth]} ${currentYear}`],
-          ["Total Receitas (Pago)", totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })],
-          ["Total Despesas (Pago)", totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })],
-          ["Saldo Realizado", balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })],
-          ["Saldo Previsto (Pago + Pendente)", expectedBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })],
+          ["Total Receitas (Pago)", realizedRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })],
+          ["Total Despesas (Pago)", realizedExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })],
+          ["Saldo Realizado", caixaAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })],
+          ["Saldo Previsto (Pago + Pendente)", caixaProjetado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })],
           [],
           ["DETALHAMENTO DE LANÇAMENTOS"]
       ];
@@ -351,15 +407,15 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
             <div class="summary">
                 <div class="card">
                     <div class="card-label">Total Receitas</div>
-                    <div class="card-value value-green">R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                    <div class="card-value value-green">R$ ${realizedRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
                 </div>
                 <div class="card">
                     <div class="card-label">Total Despesas</div>
-                    <div class="card-value value-red">R$ ${totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                    <div class="card-value value-red">R$ ${realizedExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
                 </div>
                 <div class="card">
                     <div class="card-label">Saldo Realizado</div>
-                    <div class="card-value ${balance >= 0 ? 'value-blue' : 'value-red'}">R$ ${balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                    <div class="card-value ${caixaAtual >= 0 ? 'value-blue' : 'value-red'}">R$ ${caixaAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
                 </div>
             </div>
 
@@ -504,57 +560,73 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
          </button>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards (New Model) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {/* Entradas */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden">
+        {/* 1. Caixa Atual */}
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden shadow-sm">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
-              <span className="material-icons text-green-500 dark:text-green-400">arrow_upward</span>
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+              <span className="material-icons text-primary dark:text-blue-400">account_balance_wallet</span>
             </div>
             <div className="min-w-0">
-                 <p className="text-xs font-bold uppercase text-slate-400 truncate">Entradas (Pagos)</p>
-                 <p className="text-xl font-bold text-slate-800 dark:text-white truncate">R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                 <p className="text-xs font-bold uppercase text-slate-400 truncate">Caixa Atual</p>
+                 <p className={`text-xl font-bold truncate ${caixaAtual >= 0 ? 'text-slate-800 dark:text-white' : 'text-red-600'}`}>R$ {caixaAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
             </div>
           </div>
         </div>
         
-        {/* Saídas */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden">
+        {/* 2. A Receber */}
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden shadow-sm">
+           <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
+              <span className="material-icons text-green-500 dark:text-green-400">arrow_upward</span>
+            </div>
+            <div className="min-w-0">
+                <p className="text-xs font-bold uppercase text-slate-400 truncate">A Receber (Previsto)</p>
+                <p className="text-xl font-bold text-green-600 dark:text-green-400 truncate">R$ {aReceber.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. A Pagar */}
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
            <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-red-100 dark:bg-red-900/50 rounded-lg">
               <span className="material-icons text-red-500 dark:text-red-400">arrow_downward</span>
             </div>
             <div className="min-w-0">
-                <p className="text-xs font-bold uppercase text-slate-400 truncate">Saídas (Pagos)</p>
-                <p className="text-xl font-bold text-slate-800 dark:text-white truncate">R$ {totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                <p className="text-xs font-bold uppercase text-slate-400 truncate">A Pagar (Pendente)</p>
+                <p className="text-xl font-bold text-red-600 dark:text-red-400 truncate">R$ {aPagar.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
             </div>
           </div>
         </div>
 
-        {/* Saldo Realizado */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
+        {/* 4. Caixa Projetado do Mês (Destaque) */}
+         <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-4 rounded-lg border border-purple-400 ring-1 ring-purple-300 shadow-lg text-white">
            <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-              <span className="material-icons text-primary">account_balance</span>
+            <div className="p-2 bg-white/20 rounded-lg">
+              <span className="material-icons text-white">query_stats</span>
             </div>
             <div className="min-w-0">
-                <p className="text-xs font-bold uppercase text-slate-400 truncate">Saldo (Realizado)</p>
-                <p className={`text-xl font-bold truncate ${balance >= 0 ? 'text-slate-800 dark:text-white' : 'text-red-600'}`}>R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                <p className="text-xs font-bold uppercase text-purple-200 truncate">Caixa Projetado do Mês</p>
+                <p className={`text-xl font-bold truncate ${caixaProjetado >= 0 ? 'text-white' : 'text-red-300'}`}>R$ {caixaProjetado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
             </div>
           </div>
-        </div>
-
-        {/* Saldo Previsto */}
-         <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-blue-100 dark:border-slate-700 ring-1 ring-blue-50 dark:ring-slate-700/50">
-           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
-              <span className="material-icons text-purple-600 dark:text-purple-400">query_stats</span>
-            </div>
-            <div className="min-w-0">
-                <p className="text-xs font-bold uppercase text-slate-400 truncate">Previsto (Mês Completo)</p>
-                <p className={`text-xl font-bold truncate ${expectedBalance >= 0 ? 'text-purple-700 dark:text-purple-300' : 'text-red-600'}`}>R$ {expectedBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-            </div>
+          
+          {/* Secondary Indicators */}
+          <div className="mt-3 pt-3 border-t border-white/30 space-y-1">
+              <div className="flex justify-between text-xs">
+                  <span className="flex items-center gap-1 text-red-200">
+                      <span className="material-icons text-sm">error</span> Em Atraso
+                  </span>
+                  <span className="font-bold text-red-100">R$ {emAtraso.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                  <span className="flex items-center gap-1 text-yellow-200">
+                      <span className="material-icons text-sm">schedule</span> A Vencer
+                  </span>
+                  <span className="font-bold text-yellow-100">R$ {aVencer.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              </div>
           </div>
         </div>
       </div>
