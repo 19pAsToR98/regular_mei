@@ -6,6 +6,7 @@ import Thermometer from './Thermometer';
 import FinancialScore from './FinancialScore';
 import HeroStats from './HeroStats'; // NEW IMPORT
 import RevenueChart from './RevenueChart'; // NEW IMPORT
+import HealthScoreCard from './HealthScoreCard'; // NEW IMPORT
 
 interface MobileDashboardProps {
   transactions: Transaction[];
@@ -136,21 +137,14 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
         className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide w-full"
         style={{ scrollbarWidth: 'none' }}
       >
-          {/* --- SLIDE 0: SCORE FINANCEIRO --- */}
+          {/* --- SLIDE 0: SAÚDE DO NEGÓCIO (SCORE + TERMÔMETRO) --- */}
           <div className="min-w-full snap-center flex flex-col items-center px-4 py-2">
              <div className="w-full h-full min-h-[300px] flex items-center justify-center">
-                <FinancialScore transactions={transactions} />
+                <HealthScoreCard transactions={transactions} />
              </div>
           </div>
           
-          {/* --- SLIDE 1: TERMÔMETRO MEI --- */}
-          <div className="min-w-full snap-center flex flex-col items-center px-4 py-2">
-             <div className="w-full h-full min-h-[300px] flex items-center justify-center">
-                <Thermometer transactions={transactions} />
-             </div>
-          </div>
-
-          {/* --- SLIDE 2: GRÁFICO (DONUT DE DESPESAS) --- */}
+          {/* --- SLIDE 1: GRÁFICO (DONUT DE DESPESAS) --- */}
           <div className="min-w-full snap-center flex flex-col items-center px-4 py-2">
              <div className="w-full h-full min-h-[300px] flex items-center justify-center">
                 <RevenueChart transactions={transactions} displayMode="expense_donut" />
@@ -160,7 +154,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
 
       {/* PAGINATION DOTS */}
       <div className="flex justify-center gap-2 -mt-4 mb-2">
-          {[0, 1, 2].map(idx => (
+          {[0, 1].map(idx => (
               <button 
                 key={idx}
                 onClick={() => scrollToSlide(idx)}

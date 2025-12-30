@@ -30,6 +30,7 @@ import PrivacyPage from './components/PrivacyPage';
 import VirtualAssistantButton from './components/VirtualAssistantButton';
 import AssistantChat from './components/AssistantChat';
 import HeroStats from './components/HeroStats'; // NEW IMPORT
+import HealthScoreCard from './components/HealthScoreCard'; // NEW IMPORT
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -1739,9 +1740,9 @@ const App: React.FC = () => {
                   {/* BLOCO 1: HERO ABSOLUTO */}
                   <HeroStats transactions={transactions} onNavigate={setActiveTab} />
                   
-                  {/* BLOCO 2: AÇÕES PRIORITÁRIAS (Antigo AlertsBlock + Reminders) */}
+                  {/* BLOCO 2: AÇÕES PRIORITÁRIAS (Largura total) */}
                   <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 xl:col-span-8">
+                    <div className="col-span-12">
                         <Reminders 
                             transactions={transactions} 
                             appointments={appointments} 
@@ -1749,28 +1750,18 @@ const App: React.FC = () => {
                             onNavigate={setActiveTab} 
                         />
                     </div>
-                    <div className="col-span-12 xl:col-span-4">
-                        {/* O BalanceForecastCard foi removido, mas o espaço pode ser usado para o AI Analysis se não estiver no topo */}
-                        {connectionConfig.ai.enabled && (
-                            <AIAnalysis enabled={connectionConfig.ai.enabled} />
-                        )}
-                    </div>
                   </div>
                   
-                  {/* Se o AI Analysis não foi renderizado acima, renderiza aqui (mantendo a estrutura original) */}
-                  {!connectionConfig.ai.enabled && (
+                  {connectionConfig.ai.enabled && (
                       <div className="grid grid-cols-12">
                           <AIAnalysis enabled={connectionConfig.ai.enabled} />
                       </div>
                   )}
                   
                   <div className="grid grid-cols-12 gap-6">
-                    {/* BLOCO 3: SAÚDE DO NEGÓCIO */}
-                    <div className="col-span-12 xl:col-span-4 h-full">
-                        <FinancialScore transactions={transactions} />
-                    </div>
-                    <div className="col-span-12 xl:col-span-4 h-full">
-                        <Thermometer transactions={transactions} />
+                    {/* BLOCO 3: SAÚDE DO NEGÓCIO (HealthScoreCard) */}
+                    <div className="col-span-12 xl:col-span-8 h-full">
+                        <HealthScoreCard transactions={transactions} />
                     </div>
                     
                     {/* BLOCO 4: GRÁFICO SIMPLES (Saldo Diário) */}

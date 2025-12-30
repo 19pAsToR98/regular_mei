@@ -314,14 +314,27 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
 
   }, [fiscalData, transactions, appointments]);
 
+  // Determine if there are critical alerts (Priority 0 or 1)
+  const hasCriticalAlerts = reminders.some(r => (r.priority || 99) <= 1);
+
   return (
-    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col h-full w-full shadow-sm">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-base font-bold text-slate-800 dark:text-white">Ações Prioritárias</h3>
-        <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full">{reminders.length}</span>
+    <div className={`bg-white dark:bg-slate-900 p-6 rounded-2xl border shadow-lg flex flex-col h-full w-full ${
+        hasCriticalAlerts 
+            ? 'border-red-300 dark:border-red-900/50 ring-2 ring-red-100 dark:ring-red-900/30' 
+            : 'border-slate-200 dark:border-slate-800'
+    }`}>
+      <div className="flex justify-between items-center mb-4 border-b border-slate-100 dark:border-slate-800 pb-3">
+        <h3 className={`text-lg font-bold ${hasCriticalAlerts ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-white'}`}>
+            {hasCriticalAlerts ? '🚨 Ações Prioritárias' : '✅ Lembretes & Pendências'}
+        </h3>
+        <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+            hasCriticalAlerts ? 'bg-red-50 text-red-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+        }`}>
+            {reminders.length} {reminders.length === 1 ? 'item' : 'itens'}
+        </span>
       </div>
       
-      <div className="space-y-2 flex-grow overflow-y-auto max-h-[300px] pr-1 custom-scrollbar">
+      <div className="space-y-3 flex-grow overflow-y-auto max-h-[300px] pr-1 custom-scrollbar">
         {reminders.length === 0 ? (
             <div className="text-center py-6 text-slate-400">
                 <span className="material-icons text-3xl mb-2 opacity-30">check_circle</span>
@@ -332,9 +345,11 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
             <div 
                 key={reminder.id} 
                 onClick={() => reminder.actionTab && onNavigate(reminder.actionTab)}
-                className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-slate-700 group"
+                className={`flex items-start gap-3 p-3 rounded-xl transition-colors cursor-pointer border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 group ${
+                    (reminder.priority || 99) <= 1 ? 'bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30' : ''
+                }`}
             >
-                <div className={`p-1.5 rounded-lg ${reminder.bgClass} flex-shrink-0 mt-0.5`}>
+                <div className={`p-2 rounded-lg ${reminder.bgClass} flex-shrink-0 mt-0.5`}>
                 <span className={`material-icons text-lg ${reminder.iconColorClass}`}>
                     {reminder.icon}
                 </span>
