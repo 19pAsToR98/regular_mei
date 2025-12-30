@@ -86,59 +86,8 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
     const list: Reminder[] = [];
     const today = new Date();
     today.setHours(0,0,0,0);
-    const todayStr = today.toISOString().split('T')[0];
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
 
-    // --- 0. ALERTA DE LIQUIDEZ (PRIORITY 0) ---
-    let tempBalance = transactions
-        .filter(t => t.status === 'pago' && t.date <= todayStr)
-        .reduce((acc, t) => acc + (t.type === 'receita' ? t.amount : -t.amount), 0);
-    
-    const pendingTransSorted = transactions
-        .filter(t => t.status === 'pendente' && t.date >= todayStr)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    let isProjectedNegative = false;
-    let negativeDays = 0;
-    let projectionDate = new Date(today);
-    
-    for (let i = 0; i < 30; i++) {
-        projectionDate.setDate(projectionDate.getDate() + 1);
-        const dateStr = projectionDate.toISOString().split('T')[0];
-        
-        if (projectionDate.getMonth() !== currentMonth) break;
-
-        const dailyTrans = pendingTransSorted.filter(t => t.date === dateStr);
-        
-        dailyTrans.forEach(t => {
-            tempBalance += (t.type === 'receita' ? t.amount : -t.amount);
-        });
-        
-        if (tempBalance < 0 && !isProjectedNegative) {
-            isProjectedNegative = true;
-            const diffTime = projectionDate.getTime() - today.getTime();
-            negativeDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            break;
-        }
-    }
-
-    if (isProjectedNegative) {
-        list.push({
-            id: 'negative_cash',
-            title: '⚠️ Risco de Caixa Negativo',
-            subtitle: `Seu saldo pode ficar negativo em ${negativeDays} dia${negativeDays !== 1 ? 's' : ''}.`,
-            icon: 'warning',
-            bgClass: 'bg-red-100 dark:bg-red-900/50',
-            iconColorClass: 'text-red-500 dark:text-red-400',
-            priority: 0,
-            date: todayStr,
-            actionLabel: 'Ver Fluxo',
-            actionTab: 'cashflow',
-        });
-    }
-
-    // --- 1. DASN (Annual Declaration) - Priority 1 ---
+    // 1. DASN (Annual Declaration) - Priority 1
     if (fiscalData && fiscalData.pendingDasnCount > 0) {
        fiscalData.dasnList.forEach(item => {
            if (item.status === 'pendente') {
@@ -158,7 +107,7 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
        });
     }
 
-    // --- 2. DAS (Monthly Guides) - Priority 1 or 2 ---
+    // 2. DAS (Monthly Guides) - Priority 1 or 2
     if (fiscalData) {
         const eligibleDas = fiscalData.dasList
             .filter(item => {
@@ -314,27 +263,14 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
 
   }, [fiscalData, transactions, appointments]);
 
-  // Determine if there are critical alerts (Priority 0 or 1)
-  const hasCriticalAlerts = reminders.some(r => (r.priority || 99) <= 1);
-
   return (
-    <div className={`bg-white dark:bg-slate-900 p-6 rounded-2xl border shadow-lg flex flex-col h-full w-full ${
-        hasCriticalAlerts 
-            ? 'border-red-300 dark:border-red-900/50 ring-2 ring-red-100 dark:ring-red-900/30' 
-            : 'border-slate-200 dark:border-slate-800'
-    }`}>
-      <div className="flex justify-between items-center mb-4 border-b border-slate-100 dark:border-slate-800 pb-3">
-        <h3 className={`text-lg font-bold ${hasCriticalAlerts ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-white'}`}>
-            {hasCriticalAlerts ? '🚨 Ações Prioritárias' : '✅ Lembretes & Pendências'}
-        </h3>
-        <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-            hasCriticalAlerts ? 'bg-red-50 text-red-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-        }`}>
-            {reminders.length} {reminders.length === 1 ? 'item' : 'itens'}
-        </span>
+    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col h-full w-full shadow-sm">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-base font-bold text-slate-800 dark:text-white">Lembretes & Pendências</h3>
+        <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full">{reminders.length}</span>
       </div>
       
-      <div className="space-y-3 flex-grow overflow-y-auto max-h-[300px] pr-1 custom-scrollbar">
+      <div className="space-y-2 flex-grow overflow-y-auto max-h-[300px] pr-1 custom-scrollbar">
         {reminders.length === 0 ? (
             <div className="text-center py-6 text-slate-400">
                 <span className="material-icons text-3xl mb-2 opacity-30">check_circle</span>
@@ -345,11 +281,9 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
             <div 
                 key={reminder.id} 
                 onClick={() => reminder.actionTab && onNavigate(reminder.actionTab)}
-                className={`flex items-start gap-3 p-3 rounded-xl transition-colors cursor-pointer border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 group ${
-                    (reminder.priority || 99) <= 1 ? 'bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30' : ''
-                }`}
+                className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-slate-700 group"
             >
-                <div className={`p-2 rounded-lg ${reminder.bgClass} flex-shrink-0 mt-0.5`}>
+                <div className={`p-1.5 rounded-lg ${reminder.bgClass} flex-shrink-0 mt-0.5`}>
                 <span className={`material-icons text-lg ${reminder.iconColorClass}`}>
                     {reminder.icon}
                 </span>
