@@ -1,205 +1,149 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Transaction } from '../types';
 
 interface RevenueChartProps {
   transactions: Transaction[];
+  displayMode: 'daily_balance' | 'expense_donut'; // Novo modo de exibição
 }
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
 
-const RevenueChart: React.FC<RevenueChartProps> = ({ transactions }) => {
-  const [viewMode, setViewMode] = useState<'evolution' | 'distribution' | 'general'>('general');
-  const [distributionType, setDistributionType] = useState<'despesa' | 'receita'>('despesa');
+const RevenueChart: React.FC<RevenueChartProps> = ({ transactions, displayMode }) => {
+  
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
 
-  // Helper para filtrar transações realizadas e não recorrentes/parceladas
-  const filterRealizedNonRecurring = (t: Transaction) => {
-    return t.status === 'pago' && !t.isRecurring && !t.installments;
-  };
+  // Helper para filtrar transações realizadas (Status = Pago)
+  const filterRealized = (t: Transaction) => t.status === 'pago';
 
-  // --- PROCESS DATA FOR BAR CHART (EVOLUTION - LAST 6 MONTHS) ---
-  // Here we show only REALIZED values (Status = Pago) AND exclude recurring/installments
-  const barData = useMemo(() => {
-    const last6Months = [];
+  // --- PROCESS DATA FOR DAILY BALANCE (DESKTOP) ---
+  const dailyBalanceData = useMemo(() => {
     const today = new Date();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const dailyData: { name: string, saldo: number }[] = [];
     
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const monthKey = d.getMonth();
-      const yearKey = d.getFullYear();
-      
-      const monthTrans = transactions.filter(t => {
-        const tDate = new Date(t.date);
-        return tDate.getMonth() === monthKey && tDate.getFullYear() === yearKey && filterRealizedNonRecurring(t);
-      });
+    // Calculate realized balance up to the start of the month
+    let initialBalance = transactions
+        .filter(t => {
+            const tDate = new Date(t.date);
+            return tDate.getFullYear() < currentYear || (tDate.getFullYear() === currentYear && tDate.getMonth() < currentMonth);
+        })
+        .filter(filterRealized)
+        .reduce((acc, t) => acc + (t.type === 'receita' ? t.amount : -t.amount), 0);
 
-      const receita = monthTrans.filter(t => t.type === 'receita').reduce((acc, t) => acc + t.amount, 0);
-      const despesa = monthTrans.filter(t => t.type === 'despesa').reduce((acc, t) => acc + t.amount, 0);
-
-      last6Months.push({
-        name: d.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase(),
-        receita,
-        despesa
-      });
+    let runningBalance = initialBalance;
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        
+        const dailyTrans = transactions.filter(t => t.date === dateStr && filterRealized(t));
+        
+        dailyTrans.forEach(t => {
+            runningBalance += (t.type === 'receita' ? t.amount : -t.amount);
+        });
+        
+        dailyData.push({
+            name: String(day),
+            saldo: runningBalance
+        });
+        
+        // Stop calculating if we pass today
+        if (day === today.getDate() && today.getMonth() === currentMonth && today.getFullYear() === currentYear) {
+            break;
+        }
     }
-    return last6Months;
-  }, [transactions]);
+    return dailyData;
+  }, [transactions, currentMonth, currentYear]);
 
-  // --- PROCESS DATA FOR PIE CHART (DISTRIBUTION) ---
-  // Here we include ALL values (Paid + Pending) for budget distribution, including recurring/installments
-  const pieData = useMemo(() => {
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-
+  // --- PROCESS DATA FOR EXPENSE DONUT (MOBILE) ---
+  const expenseDonutData = useMemo(() => {
     const relevantTrans = transactions.filter(t => {
       const tDate = new Date(t.date);
       return tDate.getMonth() === currentMonth && 
              tDate.getFullYear() === currentYear && 
-             t.type === distributionType;
+             t.type === 'despesa';
     });
 
     const categoryTotals: Record<string, number> = {};
     relevantTrans.forEach(t => {
-      // Use standard amount for everything
       const val = t.amount || 0;
       categoryTotals[t.category] = (categoryTotals[t.category] || 0) + val;
     });
 
     return Object.keys(categoryTotals)
       .map(key => ({ name: key, value: categoryTotals[key] }))
-      .sort((a, b) => b.value - a.value); 
-  }, [transactions, distributionType]);
-
-  // --- PROCESS DATA FOR GENERAL OVERVIEW (FULL YEAR JAN-DEC) ---
-  // Show Realized values AND exclude recurring/installments
-  const fullYearData = useMemo(() => {
-    const yearData = [];
-    const currentYear = new Date().getFullYear();
-    const monthNames = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
-
-    for (let i = 0; i < 12; i++) {
-        const monthTrans = transactions.filter(t => {
-            const tDate = new Date(t.date);
-            return tDate.getMonth() === i && tDate.getFullYear() === currentYear && filterRealizedNonRecurring(t);
-        });
-
-        const receita = monthTrans.filter(t => t.type === 'receita').reduce((acc, t) => acc + t.amount, 0);
-        const despesa = monthTrans.filter(t => t.type === 'despesa').reduce((acc, t) => acc + t.amount, 0);
-
-        yearData.push({
-            name: monthNames[i],
-            receita,
-            despesa
-        });
-    }
-    return yearData;
-  }, [transactions]);
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5); // Top 5
+  }, [transactions, currentMonth, currentYear]);
   
+  const totalExpense = expenseDonutData.reduce((acc, curr) => acc + curr.value, 0);
+
   // Custom formatter for YAxis to handle 'k' notation without long decimals
   const formatKilo = (value: number) => {
       if (value === 0) return 'R$0';
       const kValue = value / 1000;
-      // Use toLocaleString to format the number with max 1 decimal place, removing trailing zero if integer
       return `R$${kValue.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}k`;
   };
 
-  return (
-    <div className="bg-white dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col h-full shadow-sm w-full">
-      
-      {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div>
-            <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Análise Financeira</h3>
-            <p className="text-xs text-slate-500">Visão detalhada do seu negócio</p>
-        </div>
-        
-        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg overflow-x-auto max-w-full">
-          <button 
-            onClick={() => setViewMode('general')}
-            className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap ${viewMode === 'general' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
-          >
-            <span className="material-icons text-sm">calendar_today</span> Anual (Geral)
-          </button>
-          <button 
-            onClick={() => setViewMode('evolution')}
-            className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap ${viewMode === 'evolution' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
-          >
-            <span className="material-icons text-sm">history</span> Últimos 6 Meses
-          </button>
-          <button 
-            onClick={() => setViewMode('distribution')}
-            className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap ${viewMode === 'distribution' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
-          >
-            <span className="material-icons text-sm">pie_chart</span> Categorias
-          </button>
-        </div>
-      </div>
-
-      {/* Chart Area */}
-      <div className="flex-1 w-full min-h-[300px]" style={{ minWidth: 0 }}>
-        {/* VIEW: EVOLUTION (LAST 6 MONTHS) */}
-        {viewMode === 'evolution' && (
-            <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={barData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }} barGap={8}>
+  // --- RENDER LOGIC ---
+  
+  const renderDailyBalanceChart = () => (
+    <div className="h-full w-full min-h-[300px]">
+        <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Saldo Diário Realizado</h3>
+        <ResponsiveContainer width="100%" height="90%">
+            <BarChart data={dailyBalanceData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }} barGap={2}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} dy={10} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }} dy={10} />
                 <YAxis 
                     axisLine={false} 
                     tickLine={false} 
                     tick={{ fill: '#94a3b8', fontSize: 11 }} 
                     tickFormatter={formatKilo} 
                 />
-                <Tooltip cursor={{ fill: '#F1F5F9', opacity: 0.5 }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, '']} />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                <Bar dataKey="receita" name="Receitas" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={20} />
-                <Bar dataKey="despesa" name="Despesas" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={20} />
+                <Tooltip 
+                    cursor={{ fill: '#F1F5F9', opacity: 0.5 }} 
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} 
+                    formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 'Saldo']} 
+                />
+                <Bar dataKey="saldo" name="Saldo" fill="#3B82F6" radius={[2, 2, 0, 0]} barSize={12} />
             </BarChart>
-            </ResponsiveContainer>
-        )}
+        </ResponsiveContainer>
+    </div>
+  );
 
-        {/* VIEW: DISTRIBUTION (PIE CHART) */}
-        {viewMode === 'distribution' && (
-            <div className="h-full flex flex-col">
-                <div className="flex justify-center gap-2 mb-4">
-                    <button onClick={() => setDistributionType('despesa')} className={`text-xs px-3 py-1 rounded-full border transition-colors ${distributionType === 'despesa' ? 'bg-red-50 text-red-600 border-red-200 font-bold' : 'text-slate-500 border-transparent hover:bg-slate-50'}`}>Despesas</button>
-                    <button onClick={() => setDistributionType('receita')} className={`text-xs px-3 py-1 rounded-full border transition-colors ${distributionType === 'receita' ? 'bg-green-50 text-green-600 border-green-200 font-bold' : 'text-slate-500 border-transparent hover:bg-slate-50'}`}>Receitas</button>
+  const renderExpenseDonutChart = () => (
+    <div className="h-full flex flex-col items-center justify-center">
+        <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Top 5 Despesas por Categoria</h3>
+        {expenseDonutData.length > 0 ? (
+            <div className="h-64 w-full relative">
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                        <Pie data={expenseDonutData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                            {expenseDonutData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} strokeWidth={0} />)}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                        <Legend layout="vertical" verticalAlign="middle" align="right" iconType="circle" formatter={(value) => <span className="text-slate-600 dark:text-slate-300 text-xs font-medium ml-1">{value}</span>} />
+                    </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="text-center">
+                        <span className="font-bold text-slate-700 dark:text-slate-200 text-xs">
+                            Total: R$ {totalExpense.toLocaleString('pt-BR', { notation: 'compact', compactDisplay: 'short' })}
+                        </span>
+                    </div>
                 </div>
-                {pieData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                                {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} strokeWidth={0} />)}
-                            </Pie>
-                            <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                            <Legend layout="vertical" verticalAlign="middle" align="right" iconType="circle" formatter={(value) => <span className="text-slate-600 dark:text-slate-300 text-xs font-medium ml-1">{value}</span>} />
-                        </PieChart>
-                    </ResponsiveContainer>
-                ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-400"><span className="material-icons text-3xl mb-2 opacity-50">pie_chart</span><p className="text-sm">Sem dados nesta categoria.</p></div>
-                )}
             </div>
+        ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-400"><span className="material-icons text-3xl mb-2 opacity-50">pie_chart</span><p className="text-sm">Sem dados de despesas este mês.</p></div>
         )}
+    </div>
+  );
 
-        {/* VIEW: GENERAL (FULL YEAR BAR CHART) */}
-        {viewMode === 'general' && (
-            <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={fullYearData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }} barGap={2}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }} dy={10} />
-                    <YAxis 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fill: '#94a3b8', fontSize: 11 }} 
-                        tickFormatter={formatKilo} 
-                    />
-                    <Tooltip cursor={{ fill: '#F1F5F9', opacity: 0.5 }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, '']} />
-                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                    <Bar dataKey="receita" name="Receitas" fill="#10B981" radius={[2, 2, 0, 0]} barSize={12} />
-                    <Bar dataKey="despesa" name="Despesas" fill="#EF4444" radius={[2, 2, 0, 0]} barSize={12} />
-                </BarChart>
-            </ResponsiveContainer>
-        )}
-      </div>
+  return (
+    <div className="bg-white dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col h-full shadow-sm w-full">
+      {displayMode === 'daily_balance' && renderDailyBalanceChart()}
+      {displayMode === 'expense_donut' && renderExpenseDonutChart()}
     </div>
   );
 };
