@@ -108,6 +108,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
     const totals: Record<string, number> = {};
     relevantTrans.forEach(t => {
       // Only count if paid for category chart on mobile? Or expected? 
+      // Usually category breakdown is better with "all intended spend"
       // Let's use all amounts for categories
       totals[t.category] = (totals[t.category] || 0) + (t.amount || 0);
     });
@@ -255,7 +256,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
                                 dataKey="value"
                             >
                                 {categoryData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} strokeWidth={0} />
                                 ))}
                             </Pie>
                             <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
@@ -283,7 +284,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
              </div>
           </div>
           
-          {/* --- SLIDE 5: PROJEÇÃO DE SALDO (O NOVO CARD DE DESTAQUE) --- */}
+          {/* --- SLIDE 5: PROJEÇÃO DE SALDO --- */}
           <div className="min-w-full snap-center flex flex-col items-center px-4 py-2">
              <div className="w-full h-full min-h-[300px] flex items-center justify-center">
                 <BalanceForecastCard transactions={transactions} />
@@ -304,9 +305,10 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
           ))}
       </div>
 
-      {/* STATS LIST (Global) - REMOVIDOS PARA EVITAR DUPLICAÇÃO COM O CARROSSEL */}
-      {/* <div className="flex flex-col gap-3 px-2">
+      {/* STATS LIST (Global) */}
+      <div className="flex flex-col gap-3 px-2">
         
+        {/* Income */}
         <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
            <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600">
@@ -319,6 +321,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
            </div>
         </div>
 
+        {/* Expenses */}
         <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
            <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600">
@@ -331,6 +334,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
            </div>
         </div>
 
+        {/* Forecast */}
         <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
            <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600">
@@ -345,7 +349,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
            </div>
         </div>
 
-      </div> */}
+      </div>
 
       {/* REMINDERS SECTION */}
       <div className="px-2">
