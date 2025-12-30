@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Transaction, Appointment, FiscalData, NewsItem, ConnectionConfig } from '../types';
 import HeroStatCard from './HeroStatCard';
 import AlertsCard from './AlertsCard';
