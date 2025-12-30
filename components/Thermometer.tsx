@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Transaction } from '../types';
 
@@ -22,13 +21,11 @@ const Thermometer: React.FC<ThermometerProps> = ({ transactions }) => {
     const percentage = Math.min((revenue / maxLimit) * 100, 100);
 
     // 2. Calculate Pro-Rata (Ideal Pace)
-    // How many days have passed in the year?
     const today = new Date();
     const startOfYear = new Date(currentYear, 0, 1);
     const dayOfYear = Math.floor((today.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
     const daysInYear = 365; // Simplified
     
-    // The "Safe" percentage based on time passed
     const timePercentage = (dayOfYear / daysInYear) * 100;
     
     // Status
@@ -36,7 +33,6 @@ const Thermometer: React.FC<ThermometerProps> = ({ transactions }) => {
     let statusColor = 'text-slate-500';
     let message = 'Seu faturamento está dentro do esperado para o período.';
 
-    // If Revenue % is more than 10% higher than Time %
     if (percentage > (timePercentage + 10)) {
         status = 'Acelerado';
         statusColor = 'text-yellow-600';
@@ -51,24 +47,20 @@ const Thermometer: React.FC<ThermometerProps> = ({ transactions }) => {
   }, [transactions, currentYear]);
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col justify-between shadow-sm w-full h-full">
-      <div>
-        <div className="flex justify-between items-start mb-2">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-            Limite MEI {currentYear}
-            </h3>
-            <span className={`text-xs font-bold px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 ${metrics.statusColor}`}>
-                {metrics.status}
-            </span>
-        </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-snug">
-          {metrics.message}
-        </p>
+    <div className="flex flex-col justify-between w-full">
+      
+      <div className="flex justify-between items-center mb-2">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+          Limite MEI {currentYear}
+          </h3>
+          <span className={`text-xs font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 ${metrics.statusColor}`}>
+              {metrics.status}
+          </span>
       </div>
 
       <div>
         {/* Progress Bar Container */}
-        <div className="relative w-full h-6 bg-slate-100 dark:bg-slate-700 rounded-full mb-2 overflow-hidden">
+        <div className="relative w-full h-3 bg-slate-100 dark:bg-slate-700 rounded-full mb-2 overflow-hidden">
           {/* Revenue Bar */}
           <div 
             className={`h-full rounded-full transition-all duration-1000 ease-out relative z-10 ${
@@ -89,15 +81,12 @@ const Thermometer: React.FC<ThermometerProps> = ({ transactions }) => {
         
         <div className="flex justify-between items-end mt-2">
           <div>
-            <p className="font-bold text-xl text-slate-800 dark:text-white">R$ {metrics.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-            <div className="flex items-center gap-1.5 mt-1">
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Acumulado</p>
-            </div>
+            <p className="font-bold text-sm text-slate-800 dark:text-white">R$ {metrics.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Acumulado</p>
           </div>
           <div className="text-right">
-            <p className="font-bold text-slate-600 dark:text-slate-300 text-lg">{metrics.percentage.toFixed(1)}%</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">utilizado de R$ {maxLimit.toLocaleString('pt-BR')}</p>
+            <p className="font-bold text-slate-600 dark:text-slate-300 text-sm">{metrics.percentage.toFixed(1)}%</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">de R$ {maxLimit.toLocaleString('pt-BR')}</p>
           </div>
         </div>
       </div>

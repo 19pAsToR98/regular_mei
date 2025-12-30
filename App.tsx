@@ -28,8 +28,9 @@ import ExternalTransactionModal from './components/ExternalTransactionModal';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
 import BalanceForecastCard from './components/BalanceForecastCard';
-import VirtualAssistantButton from './components/VirtualAssistantButton'; // NEW IMPORT
-import AssistantChat from './components/AssistantChat'; // NEW IMPORT
+import VirtualAssistantButton from './components/VirtualAssistantButton';
+import AssistantChat from './components/AssistantChat';
+import DashboardOverview from './components/DashboardOverview'; // NEW IMPORT
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -197,7 +198,7 @@ const App: React.FC = () => {
           .eq('id', 1);
 
       if (error) {
-          console.error('Error updating maintenance config:', error);
+          console.error('Error ao salvar configuração de manutenção:', error);
           showError('Erro ao salvar configuração de manutenção.');
           return;
       }
@@ -1774,50 +1775,18 @@ const App: React.FC = () => {
                 </div>
 
                 {/* --- DESKTOP LAYOUT --- */}
-                <div className="hidden md:block space-y-6">
-                  {/* STAT CARDS MOVED HERE */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                    {dashboardStats.map((stat, index) => (
-                      <StatCard key={index} data={stat as StatData} />
-                    ))}
-                  </div>
-                  
-                  {connectionConfig.ai.enabled && (
-                      <div className="grid grid-cols-12">
-                          <AIAnalysis enabled={connectionConfig.ai.enabled} />
-                      </div>
-                  )}
-                  
-                  <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 xl:col-span-8 h-full">
-                      <RevenueChart transactions={transactions} />
-                    </div>
-                    <div className="col-span-12 xl:col-span-4 h-full">
-                        <Reminders transactions={transactions} appointments={appointments} fiscalData={fiscalData} onNavigate={setActiveTab} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 xl:col-span-4 h-full">
-                        <FinancialScore transactions={transactions} />
-                    </div>
-                    <div className="col-span-12 xl:col-span-4 h-full">
-                        <Thermometer transactions={transactions} />
-                    </div>
-                    <div className="col-span-12 xl:col-span-4 h-full">
-                        <BalanceForecastCard transactions={transactions} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 h-full">
-                        <RecentTransactions transactions={transactions} onNavigate={setActiveTab} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-12">
-                    <NewsSlider news={news} onViewNews={handleViewNews} />
-                  </div>
+                <div className="hidden md:block">
+                    <DashboardOverview 
+                        transactions={transactions}
+                        appointments={appointments}
+                        fiscalData={fiscalData}
+                        news={news}
+                        notifications={notifications}
+                        user={user}
+                        onNavigate={setActiveTab}
+                        onViewNews={handleViewNews}
+                        connectionConfig={connectionConfig}
+                    />
                 </div>
               </>
               );
