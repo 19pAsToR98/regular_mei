@@ -5,16 +5,6 @@ export interface NavItem {
   href: string;
 }
 
-export interface StatData {
-  label: string;
-  value: string;
-  icon: string;
-  trend?: 'up' | 'down' | 'neutral';
-  colorClass: string;
-  iconBgClass: string;
-  iconColorClass: string;
-}
-
 export interface Reminder {
   id: number | string;
   title: string;

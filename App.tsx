@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import StatCard from './components/StatCard';
+import DashboardSummaryCards from './components/DashboardSummaryCards';
 import RevenueChart from './components/RevenueChart';
 import Reminders from './components/Reminders';
 import Thermometer from './components/Thermometer';
@@ -28,12 +28,12 @@ import ExternalTransactionModal from './components/ExternalTransactionModal';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
 import BalanceForecastCard from './components/BalanceForecastCard';
-import VirtualAssistantButton from './components/VirtualAssistantButton'; // NEW IMPORT
-import AssistantChat from './components/AssistantChat'; // NEW IMPORT
-import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
+import VirtualAssistantButton from './components/VirtualAssistantButton';
+import AssistantChat from './components/AssistantChat';
+import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
-import { scheduleTransactionReminder, scheduleAppointmentReminder, deleteScheduledReminder } from './utils/whatsappUtils'; // UPDATED IMPORT
+import { scheduleTransactionReminder, scheduleAppointmentReminder, deleteScheduledReminder } from './utils/whatsappUtils';
 
 // --- CATEGORIAS PADRÃO ---
 const defaultRevenueCats: Category[] = [
@@ -83,7 +83,7 @@ const App: React.FC = () => {
   const [showIntro, setShowIntro] = useState(false);
   
   // --- ASSISTANT STATE ---
-  const [isAssistantOpen, setIsAssistantOpen] = useState(false); // NEW STATE
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   
   // --- APP STATE ---
   const [cnpj, setCnpj] = useState('');
@@ -272,7 +272,7 @@ const App: React.FC = () => {
           status: p.status as 'active' | 'inactive' | 'suspended',
           joinedAt: p.joined_at,
           lastActive: p.last_active,
-          receiveWeeklySummary: p.receive_weekly_summary ?? true // NEW FIELD
+          receiveWeeklySummary: p.receive_weekly_summary ?? true
       }));
       setAllUsers(mappedUsers);
   };
@@ -280,9 +280,9 @@ const App: React.FC = () => {
   const loadTransactions = async (userId: string) => {
     const { data, error } = await supabase
         .from('transactions')
-        .select('*, created_at') // Fetch created_at
+        .select('*, created_at')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false }); // Order by creation date
+        .order('created_at', { ascending: false });
 
     if (error) {
         console.error('Error fetching transactions:', error);
@@ -302,7 +302,7 @@ const App: React.FC = () => {
         installments: t.installments,
         isRecurring: t.is_recurring,
         externalApi: t.external_api || false,
-        createdAt: t.created_at, // Map created_at
+        createdAt: t.created_at,
     })) as Transaction[];
     
     // Separate transactions added externally that haven't been reviewed yet
@@ -384,8 +384,8 @@ const App: React.FC = () => {
             imageUrl: n.image_url,
             readTime: n.read_time,
             status: n.status as 'published' | 'draft',
-            sourceUrl: n.source_url, // NEW
-            sourceName: n.source_name, // NEW
+            sourceUrl: n.source_url,
+            sourceName: n.source_name,
         }));
         setNews(mappedNews);
     } else {
@@ -586,7 +586,7 @@ const App: React.FC = () => {
         status: profileData.status as 'active' | 'inactive' | 'suspended',
         joinedAt: profileData.joined_at,
         lastActive: profileData.last_active, // Keep existing last_active from DB
-        receiveWeeklySummary: profileData.receive_weekly_summary ?? true // NEW FIELD
+        receiveWeeklySummary: profileData.receive_weekly_summary ?? true
     };
 
     setUser(appUser);
@@ -599,73 +599,74 @@ const App: React.FC = () => {
     }
   };
 
-  // --- CALCULATE DASHBOARD STATS (Remains the same) ---
-  const dashboardStats = useMemo(() => {
+  // --- CALCULATE DASHBOARD METRICS ---
+  const dashboardMetrics = useMemo(() => {
     const today = new Date();
     const cMonth = today.getMonth();
     const cYear = today.getFullYear();
+    const todayStr = today.toISOString().split('T')[0];
 
     const monthlyTransactions = transactions.filter(t => {
       const [y, m] = t.date.split('-').map(Number);
       return (m - 1) === cMonth && y === cYear;
     });
 
-    // Realized (Only Status = 'pago')
-    const totalRevenue = monthlyTransactions
+    // Realized (Paid Only)
+    const realizedRevenue = monthlyTransactions
       .filter(t => t.type === 'receita' && t.status === 'pago')
       .reduce((acc, t) => acc + (t.amount || 0), 0);
 
-    const totalExpense = monthlyTransactions
+    const realizedExpense = monthlyTransactions
       .filter(t => t.type === 'despesa' && t.status === 'pago')
       .reduce((acc, t) => acc + (t.amount || 0), 0);
 
-    const currentBalance = totalRevenue - totalExpense;
+    const caixaAtual = realizedRevenue - realizedExpense;
 
-    // Expected (Total amount from all transactions in month, assuming pending will be paid)
-    const expectedRevenue = monthlyTransactions
+    // Pending Transactions
+    const pendingTrans = monthlyTransactions.filter(t => t.status === 'pendente');
+
+    // A Receber (Pending Revenue)
+    const aReceber = pendingTrans
       .filter(t => t.type === 'receita')
-      .reduce((acc, t) => acc + (t.amount || 0), 0);
+      .reduce((acc, curr) => acc + (curr.amount || 0), 0);
 
-    const expectedExpense = monthlyTransactions
+    // A Pagar (Pending Expense)
+    const aPagar = pendingTrans
       .filter(t => t.type === 'despesa')
-      .reduce((acc, t) => acc + (t.amount || 0), 0);
+      .reduce((acc, curr) => acc + (curr.amount || 0), 0);
 
-    const expectedBalance = expectedRevenue - expectedExpense;
+    // Caixa Projetado do Mês (Expected Balance)
+    const totalExpectedRevenue = realizedRevenue + aReceber;
+    const totalExpectedExpense = realizedExpense + aPagar;
+    const caixaProjetado = totalExpectedRevenue - totalExpectedExpense;
 
-    return [
-      {
-        label: 'Receita',
-        value: `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        icon: 'arrow_upward',
-        colorClass: 'text-green-500',
-        iconBgClass: 'bg-green-100 dark:bg-green-900/50',
-        iconColorClass: 'text-green-500 dark:text-green-400'
-      },
-      {
-        label: 'Despesas',
-        value: `R$ ${totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        icon: 'arrow_downward',
-        colorClass: 'text-red-500',
-        iconBgClass: 'bg-red-100 dark:bg-red-900/50',
-        iconColorClass: 'text-red-500 dark:text-red-400'
-      },
-      {
-        label: 'Saldo',
-        value: `R$ ${currentBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        icon: 'account_balance_wallet',
-        colorClass: currentBalance >= 0 ? 'text-blue-500' : 'text-red-500',
-        iconBgClass: 'bg-blue-100 dark:bg-blue-900/50',
-        iconColorClass: currentBalance >= 0 ? 'text-primary' : 'text-red-500'
-      },
-      {
-        label: 'Saldo Previsto',
-        value: `R$ ${expectedBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        icon: 'query_stats',
-        colorClass: expectedBalance >= 0 ? 'text-purple-600' : 'text-red-500',
-        iconBgClass: 'bg-purple-100 dark:bg-purple-900/50',
-        iconColorClass: 'text-purple-600 dark:text-purple-400'
-      }
-    ];
+    // Em Atraso (Overdue) & A Vencer (Upcoming) - Only for pending transactions
+    let emAtraso = 0;
+    let aVencer = 0;
+
+    pendingTrans
+      .forEach(t => {
+        if (t.date < todayStr) {
+          // Sum of all overdue pending items (both revenue and expense)
+          emAtraso += t.amount || 0;
+        } else {
+          // Sum of all upcoming pending items (both revenue and expense)
+          aVencer += t.amount || 0;
+        }
+      });
+
+    return {
+      caixaAtual,
+      aReceber,
+      aPagar,
+      caixaProjetado,
+      emAtraso,
+      aVencer,
+      realizedRevenue,
+      realizedExpense,
+      totalExpectedRevenue,
+      totalExpectedExpense,
+    };
   }, [transactions]);
 
   // --- AUTH MONITORING ---
@@ -750,7 +751,7 @@ const App: React.FC = () => {
               name: companyName || user.name, 
               is_setup_complete: true,
               last_active: now, // Set last_active on completion
-              receive_weekly_summary: receiveWeeklySummary // SAVE NEW FIELD
+              receive_weekly_summary: receiveWeeklySummary
           })
           .eq('id', user.id);
 
@@ -766,8 +767,8 @@ const App: React.FC = () => {
           isSetupComplete: true, 
           cnpj: newCnpj,
           name: companyName || user.name,
-          lastActive: now, // Use the same timestamp for local state
-          receiveWeeklySummary: receiveWeeklySummary // NEW FIELD
+          lastActive: now,
+          receiveWeeklySummary: receiveWeeklySummary
       };
       setCnpj(newCnpj);
       setUser(updatedUser);
@@ -797,7 +798,7 @@ const App: React.FC = () => {
               cnpj: updatedUser.cnpj,
               role: updatedUser.role,
               status: updatedUser.status,
-              receive_weekly_summary: updatedUser.receiveWeeklySummary // SAVE NEW FIELD
+              receive_weekly_summary: updatedUser.receiveWeeklySummary
           })
           .eq('id', updatedUser.id);
 
@@ -827,7 +828,7 @@ const App: React.FC = () => {
           .from('profiles')
           .select('id')
           .eq('phone', cleanPhone)
-          .neq('id', userId) // Exclude current user
+          .neq('id', userId)
           .maybeSingle();
 
       if (phoneCheckError) {
@@ -1012,7 +1013,7 @@ const App: React.FC = () => {
         category: newOffer.category,
         code: newOffer.code,
         link: newOffer.link,
-        expiry_text: expiryValue, // CORRECTED COLUMN NAME
+        expiry_text: expiryValue,
         is_exclusive: newOffer.isExclusive,
         is_featured: newOffer.isFeatured,
     };
@@ -1047,7 +1048,7 @@ const App: React.FC = () => {
         category: updatedOffer.category,
         code: updatedOffer.code,
         link: updatedOffer.link,
-        expiry_text: expiryValue, // CORRECTED COLUMN NAME
+        expiry_text: expiryValue,
         is_exclusive: updatedOffer.isExclusive,
         is_featured: updatedOffer.isFeatured,
     };
@@ -1101,8 +1102,8 @@ const App: React.FC = () => {
         image_url: newItem.imageUrl,
         read_time: newItem.readTime,
         status: newItem.status,
-        source_url: newItem.sourceUrl || null, // NEW
-        source_name: newItem.sourceName || null, // NEW
+        source_url: newItem.sourceUrl || null,
+        source_name: newItem.sourceName || null,
     };
 
     const { error } = await supabase
@@ -1129,8 +1130,8 @@ const App: React.FC = () => {
         image_url: updatedItem.imageUrl,
         read_time: updatedItem.readTime,
         status: updatedItem.status,
-        source_url: updatedItem.sourceUrl || null, // NEW
-        source_name: updatedItem.sourceName || null, // NEW
+        source_url: updatedItem.sourceUrl || null,
+        source_name: updatedItem.sourceName || null,
     };
 
     const { error } = await supabase
@@ -1333,7 +1334,7 @@ const App: React.FC = () => {
         installments: t.installments,
         isRecurring: t.is_recurring,
         externalApi: t.external_api || false,
-        createdAt: t.created_at, // Map created_at
+        createdAt: t.created_at,
     })) as Transaction[];
     setTransactions(prev => [...newTransactions, ...prev]);
     
@@ -1357,14 +1358,14 @@ const App: React.FC = () => {
         status: t.status,
         installments: t.installments,
         is_recurring: t.isRecurring,
-        external_api: t.externalApi || false, // Preserve or set to false if updated internally
+        external_api: t.externalApi || false,
     };
 
     const { error } = await supabase
         .from('transactions')
         .update(payload)
         .eq('id', t.id)
-        .eq('user_id', user.id); // Ensure RLS compliance
+        .eq('user_id', user.id);
 
     if (error) {
         console.error('Error updating transaction:', error);
@@ -1387,7 +1388,7 @@ const App: React.FC = () => {
         .from('transactions')
         .delete()
         .eq('id', id)
-        .eq('user_id', user.id); // Ensure RLS compliance
+        .eq('user_id', user.id);
 
     if (error) {
         console.error('Error deleting transaction:', error);
@@ -1776,11 +1777,7 @@ const App: React.FC = () => {
                 {/* --- DESKTOP LAYOUT --- */}
                 <div className="hidden md:block space-y-6">
                   {/* STAT CARDS MOVED HERE */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                    {dashboardStats.map((stat, index) => (
-                      <StatCard key={index} data={stat as StatData} />
-                    ))}
-                  </div>
+                  <DashboardSummaryCards metrics={dashboardMetrics} />
                   
                   {connectionConfig.ai.enabled && (
                       <div className="grid grid-cols-12">
@@ -1844,7 +1841,7 @@ const App: React.FC = () => {
                 onAddAppointment={handleAddAppointment}
                 onUpdateAppointment={handleUpdateAppointment}
                 onDeleteAppointment={handleDeleteAppointment}
-                userId={user.id} // PASSING USER ID
+                userId={user.id}
             />;
           case 'cnpj': return <CNPJPage cnpj={cnpj} fiscalData={fiscalData} onUpdateFiscalData={setFiscalData} />;
           case 'tools': return <ToolsPage user={user} />;
@@ -1877,7 +1874,7 @@ const App: React.FC = () => {
             return <SettingsPage 
               user={user}
               onUpdateUser={handleUpdateUser}
-              onUpdateUserPhone={handleUpdateUserPhone} // NEW PROP
+              onUpdateUserPhone={handleUpdateUserPhone}
               cnpj={cnpj} 
               onCnpjChange={setCnpj}
               revenueCats={revenueCats}
@@ -1942,14 +1939,14 @@ const App: React.FC = () => {
               <VirtualAssistantButton 
                   isOpen={isAssistantOpen} 
                   onClick={() => setIsAssistantOpen(true)} 
-                  gifUrl={connectionConfig.assistantGifUrl} // PASSING GIF URL
-                  iconSizeClass={connectionConfig.assistantIconSize} // PASSING SIZE CLASS
+                  gifUrl={connectionConfig.assistantGifUrl}
+                  iconSizeClass={connectionConfig.assistantIconSize}
               />
               {isAssistantOpen && (
                   <AssistantChat 
                       onClose={() => setIsAssistantOpen(false)} 
                       onNavigate={setActiveTab}
-                      connectionConfig={connectionConfig} // PASSING CONFIG
+                      connectionConfig={connectionConfig}
                   />
               )}
           </>
