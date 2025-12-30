@@ -5,7 +5,6 @@ import Reminders from './Reminders';
 import Thermometer from './Thermometer';
 import FinancialScore from './FinancialScore';
 import HeroStats from './HeroStats'; // NEW IMPORT
-import AlertsBlock from './AlertsBlock'; // NEW IMPORT
 import RevenueChart from './RevenueChart'; // NEW IMPORT
 
 interface MobileDashboardProps {
@@ -117,16 +116,16 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
   return (
     <div className="flex flex-col gap-6 pb-20">
       
-      {/* BLOCO 1: HERO ABSOLUTO (Substitui o primeiro slide do carrossel) */}
+      {/* BLOCO 1: HERO ABSOLUTO */}
       <HeroStats transactions={transactions} onNavigate={onNavigate} />
       
-      {/* BLOCO 2: ALERTAS */}
+      {/* BLOCO 2: AÇÕES PRIORITÁRIAS (AlertsBlock + Reminders) */}
       <div className="px-2">
-        <AlertsBlock 
-            transactions={transactions} 
-            appointments={appointments} 
-            fiscalData={fiscalData} 
-            onNavigate={onNavigate} 
+        <Reminders 
+            transactions={transactions}
+            appointments={appointments}
+            fiscalData={fiscalData}
+            onNavigate={onNavigate}
         />
       </div>
 
@@ -169,16 +168,6 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
                 aria-label={`Ir para gráfico ${idx + 1}`}
               />
           ))}
-      </div>
-
-      {/* REMINDERS SECTION */}
-      <div className="px-2">
-        <Reminders 
-            transactions={transactions}
-            appointments={appointments}
-            fiscalData={fiscalData}
-            onNavigate={onNavigate}
-        />
       </div>
 
       {/* Quick Access / Footer */}

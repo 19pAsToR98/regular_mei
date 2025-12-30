@@ -86,8 +86,59 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
     const list: Reminder[] = [];
     const today = new Date();
     today.setHours(0,0,0,0);
+    const todayStr = today.toISOString().split('T')[0];
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
 
-    // 1. DASN (Annual Declaration) - Priority 1
+    // --- 0. ALERTA DE LIQUIDEZ (PRIORITY 0) ---
+    let tempBalance = transactions
+        .filter(t => t.status === 'pago' && t.date <= todayStr)
+        .reduce((acc, t) => acc + (t.type === 'receita' ? t.amount : -t.amount), 0);
+    
+    const pendingTransSorted = transactions
+        .filter(t => t.status === 'pendente' && t.date >= todayStr)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    let isProjectedNegative = false;
+    let negativeDays = 0;
+    let projectionDate = new Date(today);
+    
+    for (let i = 0; i < 30; i++) {
+        projectionDate.setDate(projectionDate.getDate() + 1);
+        const dateStr = projectionDate.toISOString().split('T')[0];
+        
+        if (projectionDate.getMonth() !== currentMonth) break;
+
+        const dailyTrans = pendingTransSorted.filter(t => t.date === dateStr);
+        
+        dailyTrans.forEach(t => {
+            tempBalance += (t.type === 'receita' ? t.amount : -t.amount);
+        });
+        
+        if (tempBalance < 0 && !isProjectedNegative) {
+            isProjectedNegative = true;
+            const diffTime = projectionDate.getTime() - today.getTime();
+            negativeDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            break;
+        }
+    }
+
+    if (isProjectedNegative) {
+        list.push({
+            id: 'negative_cash',
+            title: '⚠️ Risco de Caixa Negativo',
+            subtitle: `Seu saldo pode ficar negativo em ${negativeDays} dia${negativeDays !== 1 ? 's' : ''}.`,
+            icon: 'warning',
+            bgClass: 'bg-red-100 dark:bg-red-900/50',
+            iconColorClass: 'text-red-500 dark:text-red-400',
+            priority: 0,
+            date: todayStr,
+            actionLabel: 'Ver Fluxo',
+            actionTab: 'cashflow',
+        });
+    }
+
+    // --- 1. DASN (Annual Declaration) - Priority 1 ---
     if (fiscalData && fiscalData.pendingDasnCount > 0) {
        fiscalData.dasnList.forEach(item => {
            if (item.status === 'pendente') {
@@ -107,7 +158,7 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
        });
     }
 
-    // 2. DAS (Monthly Guides) - Priority 1 or 2
+    // --- 2. DAS (Monthly Guides) - Priority 1 or 2 ---
     if (fiscalData) {
         const eligibleDas = fiscalData.dasList
             .filter(item => {
@@ -266,7 +317,7 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
   return (
     <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col h-full w-full shadow-sm">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-base font-bold text-slate-800 dark:text-white">Lembretes & Pendências</h3>
+        <h3 className="text-base font-bold text-slate-800 dark:text-white">Ações Prioritárias</h3>
         <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full">{reminders.length}</span>
       </div>
       

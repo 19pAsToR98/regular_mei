@@ -27,11 +27,9 @@ import InstallPrompt from './components/InstallPrompt';
 import ExternalTransactionModal from './components/ExternalTransactionModal';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
-import BalanceForecastCard from './components/BalanceForecastCard';
 import VirtualAssistantButton from './components/VirtualAssistantButton';
 import AssistantChat from './components/AssistantChat';
 import HeroStats from './components/HeroStats'; // NEW IMPORT
-import AlertsBlock from './components/AlertsBlock'; // NEW IMPORT
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -1631,7 +1629,6 @@ const App: React.FC = () => {
 
   // Handle public pages (Terms and Privacy) when not logged in
   if (!user && (activeTab === 'terms' || activeTab === 'privacy')) {
-      // ... (Public page logic remains the same) ...
       return (
           <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
               <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 h-[72px] flex items-center justify-between px-6">
@@ -1742,10 +1739,10 @@ const App: React.FC = () => {
                   {/* BLOCO 1: HERO ABSOLUTO */}
                   <HeroStats transactions={transactions} onNavigate={setActiveTab} />
                   
-                  {/* BLOCO 2: ALERTAS E PROJEÇÃO NEGATIVA */}
+                  {/* BLOCO 2: AÇÕES PRIORITÁRIAS (Antigo AlertsBlock + Reminders) */}
                   <div className="grid grid-cols-12 gap-6">
                     <div className="col-span-12 xl:col-span-8">
-                        <AlertsBlock 
+                        <Reminders 
                             transactions={transactions} 
                             appointments={appointments} 
                             fiscalData={fiscalData} 
@@ -1753,11 +1750,15 @@ const App: React.FC = () => {
                         />
                     </div>
                     <div className="col-span-12 xl:col-span-4">
-                        <BalanceForecastCard transactions={transactions} />
+                        {/* O BalanceForecastCard foi removido, mas o espaço pode ser usado para o AI Analysis se não estiver no topo */}
+                        {connectionConfig.ai.enabled && (
+                            <AIAnalysis enabled={connectionConfig.ai.enabled} />
+                        )}
                     </div>
                   </div>
                   
-                  {connectionConfig.ai.enabled && (
+                  {/* Se o AI Analysis não foi renderizado acima, renderiza aqui (mantendo a estrutura original) */}
+                  {!connectionConfig.ai.enabled && (
                       <div className="grid grid-cols-12">
                           <AIAnalysis enabled={connectionConfig.ai.enabled} />
                       </div>
@@ -1779,11 +1780,8 @@ const App: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 xl:col-span-8 h-full">
+                    <div className="col-span-12 h-full">
                         <RecentTransactions transactions={transactions} onNavigate={setActiveTab} />
-                    </div>
-                    <div className="col-span-12 xl:col-span-4 h-full">
-                        <Reminders transactions={transactions} appointments={appointments} fiscalData={fiscalData} onNavigate={setActiveTab} />
                     </div>
                   </div>
 
