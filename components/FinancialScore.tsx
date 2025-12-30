@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { ResponsiveContainer, RadialBarChart, RadialBar, PolarAngleAxis } from 'recharts';
 import { Transaction } from '../types';
@@ -96,17 +97,27 @@ const FinancialScore: React.FC<FinancialScoreProps> = ({ transactions }) => {
   ];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="bg-white dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col h-full">
+      <div className="flex justify-between items-start mb-4">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white">Saúde Financeira</h3>
+          <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${
+              analysis.status === 'Excelente' ? 'bg-green-100 text-green-700' :
+              analysis.status === 'Bom' ? 'bg-blue-100 text-blue-700' :
+              analysis.status === 'Atenção' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+          }`}>
+              {analysis.status}
+          </span>
+      </div>
       
       {/* Chart Section */}
-      <div className="relative h-24 w-full -mt-4" style={{ minWidth: 0 }}>
+      <div className="relative h-40 w-full -mt-4" style={{ minWidth: 0 }}>
         <ResponsiveContainer width="100%" height="100%">
           <RadialBarChart 
             cx="50%" 
             cy="70%" 
             innerRadius="70%" 
             outerRadius="100%" 
-            barSize={15} // Reduced bar size
+            barSize={20} 
             data={chartData} 
             startAngle={180} 
             endAngle={0}
@@ -120,29 +131,43 @@ const FinancialScore: React.FC<FinancialScoreProps> = ({ transactions }) => {
           </RadialBarChart>
         </ResponsiveContainer>
         
-        <div className="absolute inset-0 flex flex-col items-center justify-end pb-2 pointer-events-none">
-            <span className="text-3xl font-black tracking-tighter" style={{ color: analysis.color }}>
+        <div className="absolute inset-0 flex flex-col items-center justify-end pb-4 pointer-events-none">
+            <span className="text-5xl font-black tracking-tighter" style={{ color: analysis.color }}>
                 {analysis.score}
             </span>
-            <span className="text-xs text-slate-400 uppercase font-medium">Score Atual</span>
+            <span className="text-xs text-slate-400 uppercase font-medium">Pontuação Atual</span>
         </div>
       </div>
 
-      {/* Feedback Section (Simplified for Dashboard) */}
+      {/* Feedback Section */}
       <div className="mt-2 pt-4 border-t border-slate-100 dark:border-slate-800 flex-1">
-          <div className="flex items-center gap-3">
-              <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${
-                  analysis.status === 'Excelente' ? 'bg-green-100 text-green-700' :
-                  analysis.status === 'Bom' ? 'bg-blue-100 text-blue-700' :
-                  analysis.status === 'Atenção' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
-              }`}>
-                  {analysis.status}
-              </span>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {analysis.status === 'Excelente' ? 'Ótimo desempenho financeiro.' :
-                   analysis.status === 'Bom' ? 'Situação estável, mas pode melhorar.' :
-                   analysis.status === 'Atenção' ? 'Risco alto, requer atenção imediata.' : 'Análise regular.'}
-              </p>
+          <h4 className="text-xs font-bold text-slate-500 uppercase mb-3">Análise Detalhada</h4>
+          <div className="space-y-3">
+              {analysis.factors.length > 0 ? (
+                  analysis.factors.map((factor, idx) => (
+                    <div key={idx} className="flex items-start gap-3 text-sm">
+                        <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            factor.type === 'positive' ? 'bg-green-100 text-green-600' :
+                            factor.type === 'negative' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                            <span className="material-icons text-[10px]">
+                                {factor.type === 'positive' ? 'check' : factor.type === 'negative' ? 'close' : 'remove'}
+                            </span>
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-slate-700 dark:text-slate-300 leading-tight">{factor.label}</p>
+                        </div>
+                        <span className={`text-xs font-bold ${
+                            factor.type === 'positive' ? 'text-green-600' : 
+                            factor.type === 'negative' ? 'text-red-500' : 'text-slate-400'
+                        }`}>
+                            {factor.impact}
+                        </span>
+                    </div>
+                  ))
+              ) : (
+                  <p className="text-xs text-slate-400 text-center italic">Adicione mais transações para gerar feedbacks.</p>
+              )}
           </div>
       </div>
     </div>
