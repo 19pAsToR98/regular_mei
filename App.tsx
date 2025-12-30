@@ -4,7 +4,6 @@ import Header from './components/Header';
 import StatCard from './components/StatCard';
 import RevenueChart from './components/RevenueChart';
 import Reminders from './components/Reminders';
-import Thermometer from './components/Thermometer';
 import RecentTransactions from './components/RecentTransactions';
 import AIAnalysis from './components/AIAnalysis';
 import NewsSlider from './components/NewsSlider';
@@ -21,7 +20,6 @@ import MaintenanceOverlay from './components/MaintenanceOverlay';
 import AuthPage from './components/AuthPage';
 import OnboardingPage from './components/OnboardingPage';
 import IntroWalkthrough from './components/IntroWalkthrough';
-import FinancialScore from './components/FinancialScore';
 import MobileDashboard from './components/MobileDashboard';
 import InstallPrompt from './components/InstallPrompt';
 import ExternalTransactionModal from './components/ExternalTransactionModal';
@@ -1758,20 +1756,33 @@ const App: React.FC = () => {
                       </div>
                   )}
                   
+                  {/* NOVO BLOCO 3: Saldo Diário (8 col) + Lembretes (4 col) */}
                   <div className="grid grid-cols-12 gap-6">
-                    {/* BLOCO 3: SAÚDE DO NEGÓCIO (HealthScoreCard) */}
+                    {/* Saldo Diário Realizado (RevenueChart) - Aumentado para 8 colunas */}
                     <div className="col-span-12 xl:col-span-8 h-full">
-                        <HealthScoreCard transactions={transactions} />
+                        <RevenueChart transactions={transactions} displayMode="daily_balance" />
                     </div>
                     
-                    {/* BLOCO 4: GRÁFICO SIMPLES (Saldo Diário) */}
+                    {/* Lembretes & Pendências (Reminders) - Reduzido para 4 colunas */}
                     <div className="col-span-12 xl:col-span-4 h-full">
-                        <RevenueChart transactions={transactions} displayMode="daily_balance" />
+                        <Reminders 
+                            transactions={transactions} 
+                            appointments={appointments} 
+                            fiscalData={fiscalData} 
+                            onNavigate={setActiveTab} 
+                        />
                     </div>
                   </div>
 
+                  {/* NOVO BLOCO 4: Saúde Financeira (6 col) + Últimas Movimentações (6 col) */}
                   <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 h-full">
+                    {/* Saúde Financeira (HealthScoreCard) - 6 colunas */}
+                    <div className="col-span-12 xl:col-span-6 h-full">
+                        <HealthScoreCard transactions={transactions} />
+                    </div>
+                    
+                    {/* Últimas Movimentações (RecentTransactions) - 6 colunas */}
+                    <div className="col-span-12 xl:col-span-6 h-full">
                         <RecentTransactions transactions={transactions} onNavigate={setActiveTab} />
                     </div>
                   </div>
