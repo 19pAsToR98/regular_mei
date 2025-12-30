@@ -536,14 +536,20 @@ const App: React.FC = () => {
           promises.push(loadAllUsers() as any);
       }
 
-      const [trans, appts] = await Promise.all(promises);
+      try {
+          const [trans, appts] = await Promise.all(promises);
 
-      setTransactions(trans as Transaction[]);
-      setAppointments(appts as Appointment[]);
-      setLoadingAuth(false);
-      
-      // Call updateLastActive after all data is loaded and user is confirmed active
-      updateLastActive(userId); 
+          setTransactions(trans as Transaction[]);
+          setAppointments(appts as Appointment[]);
+          
+          // Call updateLastActive after all data is loaded and user is confirmed active
+          updateLastActive(userId); 
+      } catch (e) {
+          console.error("Error loading all user data:", e);
+          showError("Erro ao carregar dados do usuário. Tente recarregar.");
+      } finally {
+          setLoadingAuth(false);
+      }
   };
 
   const loadUserProfile = async (supabaseUser: any) => {
@@ -573,7 +579,7 @@ const App: React.FC = () => {
             status: 'active'
         };
         setUser(appUser);
-        setLoadingAuth(false);
+        setLoadingAuth(false); // IMPORTANT: Stop loading here if profile fails
         return;
     }
 
@@ -595,8 +601,10 @@ const App: React.FC = () => {
     setCnpj(appUser.cnpj || '');
     
     if (appUser.isSetupComplete) {
+        // If setup is complete, load all data (which calls setLoadingAuth(false) at the end)
         loadAllUserData(appUser.id, appUser.role || 'user');
     } else {
+        // If setup is NOT complete, stop loading here to show OnboardingPage
         setLoadingAuth(false);
     }
   };
@@ -607,8 +615,63 @@ const App: React.FC = () => {
 
   // --- AUTH MONITORING ---
   useEffect(() => {
-    // ... (Auth logic remains the same) ...
-  }, []); 
+    // 0. Check for public route access before anything else
+    if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const articleIdParam = params.get('articleId');
+        
+        if (params.get('page') === 'news') {
+            setIsPublicView(true);
+            setLoadingAuth(false);
+            // Set readingNewsId if provided in URL
+            if (articleIdParam) {
+                setReadingNewsId(parseInt(articleIdParam));
+            }
+            // Ensure public data is loaded
+            loadNewsAndOffers();
+            return () => {}; // Return empty cleanup function
+        }
+    }
+
+    // Load maintenance config first, as it affects rendering
+    loadMaintenanceConfig();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      const currentUser = userRef.current; 
+      const isUserAlreadyLoaded = currentUser && currentUser.id === session?.user?.id;
+
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+        if (!isUserAlreadyLoaded) {
+            loadUserProfile(session.user);
+        } else {
+            setLoadingAuth(false);
+            // If user is already loaded and setup is complete, update last active time on refresh
+            if (currentUser.isSetupComplete) {
+                updateLastActive(currentUser.id);
+            }
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setLoadingAuth(false);
+        // Clear persisted tab on sign out
+        localStorage.removeItem('activeTab');
+        setActiveTabState('login'); // Explicitly navigate to login view
+      } else if (event === 'INITIAL_SESSION' && session?.user) {
+        loadUserProfile(session.user);
+      } else if (event === 'INITIAL_SESSION' && !session) {
+        setLoadingAuth(false);
+      }
+    });
+
+    // Load public data (News/Offers) even if not logged in
+    loadNewsAndOffers();
+    loadNotifications(); // Load public notifications (without user context)
+
+    // Cleanup listener
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []); // Dependency array remains empty
 
   // --- AUTH HANDLERS ---
   const handleLogin = (userData: User) => {
@@ -669,7 +732,6 @@ const App: React.FC = () => {
   // --- USER MANAGEMENT HANDLERS (Admin & Settings) ---
   
   const handleUpdateUser = async (updatedUser: User) => {
-      // ... (User update logic remains the same) ...
       // 1. Update Supabase Profile (only mutable fields)
       const { error } = await supabase
           .from('profiles')
@@ -1531,7 +1593,6 @@ const App: React.FC = () => {
   }
 
   if (isPublicView) {
-      // ... (Public view logic remains the same) ...
       return (
           <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
               <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 h-[72px] flex items-center justify-between px-6">
