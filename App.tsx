@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import StatCard from './components/StatCard'; // Still used for old KPIs in some contexts, but removed from dashboard
-import RevenueChart from './components/RevenueChart'; // Removed from dashboard, kept for potential future use
+import StatCard from './components/StatCard';
+import RevenueChart from './components/RevenueChart';
 import Reminders from './components/Reminders';
 import Thermometer from './components/Thermometer';
 import RecentTransactions from './components/RecentTransactions';
-import AIAnalysis from './components/AIAnalysis'; // Replaced by WeeklyInsightCard
+import AIAnalysis from './components/AIAnalysis';
 import NewsSlider from './components/NewsSlider';
 import CashFlowPage from './components/CashFlowPage';
 import InvoicesPage from './components/InvoicesPage';
@@ -28,9 +28,8 @@ import ExternalTransactionModal from './components/ExternalTransactionModal';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
 import BalanceForecastCard from './components/BalanceForecastCard';
-import VirtualAssistantButton from './components/VirtualAssistantButton';
-import AssistantChat from './components/AssistantChat';
-import Dashboard from './components/Dashboard'; // NEW IMPORT
+import VirtualAssistantButton from './components/VirtualAssistantButton'; // NEW IMPORT
+import AssistantChat from './components/AssistantChat'; // NEW IMPORT
 import { StatData, Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -600,56 +599,73 @@ const App: React.FC = () => {
     }
   };
 
-  // --- CALCULATE DASHBOARD STATS (REMOVED OLD KPIs, KEPT NEW HERO CALCS) ---
-  const { caixaAtual, aReceber, aPagar, caixaProjetado, emAtraso, aVencer } = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
+  // --- CALCULATE DASHBOARD STATS (Remains the same) ---
+  const dashboardStats = useMemo(() => {
     const today = new Date();
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
+    const cMonth = today.getMonth();
+    const cYear = today.getFullYear();
 
-    const currentMonthTrans = transactions.filter(t => {
-        const tMonth = parseInt(t.date.split('-')[1]) - 1;
-        const tYear = parseInt(t.date.split('-')[0]);
-        return tMonth === currentMonth && tYear === currentYear;
+    const monthlyTransactions = transactions.filter(t => {
+      const [y, m] = t.date.split('-').map(Number);
+      return (m - 1) === cMonth && y === cYear;
     });
 
-    // Realized (Paid Only)
-    const realizedRevenue = currentMonthTrans
-        .filter(t => t.type === 'receita' && t.status === 'pago')
-        .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+    // Realized (Only Status = 'pago')
+    const totalRevenue = monthlyTransactions
+      .filter(t => t.type === 'receita' && t.status === 'pago')
+      .reduce((acc, t) => acc + (t.amount || 0), 0);
 
-    const realizedExpense = currentMonthTrans
-        .filter(t => t.type === 'despesa' && t.status === 'pago')
-        .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+    const totalExpense = monthlyTransactions
+      .filter(t => t.type === 'despesa' && t.status === 'pago')
+      .reduce((acc, t) => acc + (t.amount || 0), 0);
 
-    const caixaAtual = realizedRevenue - realizedExpense;
+    const currentBalance = totalRevenue - totalExpense;
 
-    // Pending Transactions (30 days from now, simplified to current month for consistency)
-    const pendingTrans = currentMonthTrans.filter(t => t.status === 'pendente');
+    // Expected (Total amount from all transactions in month, assuming pending will be paid)
+    const expectedRevenue = monthlyTransactions
+      .filter(t => t.type === 'receita')
+      .reduce((acc, t) => acc + (t.amount || 0), 0);
 
-    const aReceber = pendingTrans
-        .filter(t => t.type === 'receita')
-        .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+    const expectedExpense = monthlyTransactions
+      .filter(t => t.type === 'despesa')
+      .reduce((acc, t) => acc + (t.amount || 0), 0);
 
-    const aPagar = pendingTrans
-        .filter(t => t.type === 'despesa')
-        .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+    const expectedBalance = expectedRevenue - expectedExpense;
 
-    const caixaProjetado = caixaAtual + aReceber - aPagar;
-
-    let emAtraso = 0;
-    let aVencer = 0;
-
-    pendingTrans
-        .forEach(t => {
-            if (t.date < todayStr) {
-                emAtraso += t.amount || 0;
-            } else {
-                aVencer += t.amount || 0;
-            }
-        });
-
-    return { caixaAtual, aReceber, aPagar, caixaProjetado, emAtraso, aVencer };
+    return [
+      {
+        label: 'Receita',
+        value: `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        icon: 'arrow_upward',
+        colorClass: 'text-green-500',
+        iconBgClass: 'bg-green-100 dark:bg-green-900/50',
+        iconColorClass: 'text-green-500 dark:text-green-400'
+      },
+      {
+        label: 'Despesas',
+        value: `R$ ${totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        icon: 'arrow_downward',
+        colorClass: 'text-red-500',
+        iconBgClass: 'bg-red-100 dark:bg-red-900/50',
+        iconColorClass: 'text-red-500 dark:text-red-400'
+      },
+      {
+        label: 'Saldo',
+        value: `R$ ${currentBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        icon: 'account_balance_wallet',
+        colorClass: currentBalance >= 0 ? 'text-blue-500' : 'text-red-500',
+        iconBgClass: 'bg-blue-100 dark:bg-blue-900/50',
+        iconColorClass: currentBalance >= 0 ? 'text-primary' : 'text-red-500'
+      },
+      {
+        label: 'Saldo Previsto',
+        value: `R$ ${expectedBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        icon: 'query_stats',
+        colorClass: expectedBalance >= 0 ? 'text-purple-600' : 'text-red-500',
+        iconBgClass: 'bg-purple-100 dark:bg-purple-900/50',
+        iconColorClass: 'text-purple-600 dark:text-purple-400'
+      }
+    ];
   }, [transactions]);
 
   // --- AUTH MONITORING ---
@@ -1732,13 +1748,17 @@ const App: React.FC = () => {
                 <>
                 {/* --- MOBILE LAYOUT --- */}
                 <div className="md:hidden">
+                   {connectionConfig.ai.enabled && (
+                       <div className="grid grid-cols-12 mb-6">
+                           <AIAnalysis enabled={connectionConfig.ai.enabled} />
+                       </div>
+                   )}
                    <MobileDashboard 
                         transactions={transactions} 
                         user={user} 
                         appointments={appointments}
                         fiscalData={fiscalData}
                         onNavigate={setActiveTab}
-                        connectionConfig={connectionConfig} // PASSING CONFIG
                    />
                    
                    <div className="mt-6">
@@ -1754,16 +1774,50 @@ const App: React.FC = () => {
                 </div>
 
                 {/* --- DESKTOP LAYOUT --- */}
-                <div className="hidden md:block">
-                    <Dashboard 
-                        transactions={transactions}
-                        appointments={appointments}
-                        fiscalData={fiscalData}
-                        news={news}
-                        connectionConfig={connectionConfig}
-                        onNavigate={setActiveTab}
-                        onViewNews={handleViewNews}
-                    />
+                <div className="hidden md:block space-y-6">
+                  {/* STAT CARDS MOVED HERE */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    {dashboardStats.map((stat, index) => (
+                      <StatCard key={index} data={stat as StatData} />
+                    ))}
+                  </div>
+                  
+                  {connectionConfig.ai.enabled && (
+                      <div className="grid grid-cols-12">
+                          <AIAnalysis enabled={connectionConfig.ai.enabled} />
+                      </div>
+                  )}
+                  
+                  <div className="grid grid-cols-12 gap-6">
+                    <div className="col-span-12 xl:col-span-8 h-full">
+                      <RevenueChart transactions={transactions} />
+                    </div>
+                    <div className="col-span-12 xl:col-span-4 h-full">
+                        <Reminders transactions={transactions} appointments={appointments} fiscalData={fiscalData} onNavigate={setActiveTab} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-6">
+                    <div className="col-span-12 xl:col-span-4 h-full">
+                        <FinancialScore transactions={transactions} />
+                    </div>
+                    <div className="col-span-12 xl:col-span-4 h-full">
+                        <Thermometer transactions={transactions} />
+                    </div>
+                    <div className="col-span-12 xl:col-span-4 h-full">
+                        <BalanceForecastCard transactions={transactions} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-6">
+                    <div className="col-span-12 h-full">
+                        <RecentTransactions transactions={transactions} onNavigate={setActiveTab} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12">
+                    <NewsSlider news={news} onViewNews={handleViewNews} />
+                  </div>
                 </div>
               </>
               );
