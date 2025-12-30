@@ -599,7 +599,7 @@ const App: React.FC = () => {
     }
   };
 
-  // --- CALCULATE DASHBOARD STATS (Remains the same) ---
+  // --- CALCULATE DASHBOARD STATS (UPDATED FOR NEW MODEL) ---
   const dashboardStats = useMemo(() => {
     const today = new Date();
     const cMonth = today.getMonth();
@@ -620,51 +620,43 @@ const App: React.FC = () => {
       .reduce((acc, t) => acc + (t.amount || 0), 0);
 
     const currentBalance = totalRevenue - totalExpense;
-
-    // Expected (Total amount from all transactions in month, assuming pending will be paid)
-    const expectedRevenue = monthlyTransactions
-      .filter(t => t.type === 'receita')
+    
+    // Pending (Only Status = 'pendente')
+    const pendingRevenue = monthlyTransactions
+      .filter(t => t.type === 'receita' && t.status === 'pendente')
       .reduce((acc, t) => acc + (t.amount || 0), 0);
 
-    const expectedExpense = monthlyTransactions
-      .filter(t => t.type === 'despesa')
+    const pendingExpense = monthlyTransactions
+      .filter(t => t.type === 'despesa' && t.status === 'pendente')
       .reduce((acc, t) => acc + (t.amount || 0), 0);
 
-    const expectedBalance = expectedRevenue - expectedExpense;
 
     return [
       {
-        label: 'Receita',
-        value: `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        label: 'Caixa Atual',
+        value: `R$ ${currentBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        icon: 'account_balance_wallet',
+        colorClass: currentBalance >= 0 ? 'text-blue-500' : 'text-red-500',
+        iconBgClass: 'bg-blue-100 dark:bg-blue-900/50',
+        iconColorClass: 'text-primary dark:text-blue-400'
+      },
+      {
+        label: 'A Receber',
+        value: `R$ ${pendingRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
         icon: 'arrow_upward',
         colorClass: 'text-green-500',
         iconBgClass: 'bg-green-100 dark:bg-green-900/50',
         iconColorClass: 'text-green-500 dark:text-green-400'
       },
       {
-        label: 'Despesas',
-        value: `R$ ${totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        label: 'A Pagar',
+        value: `R$ ${pendingExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
         icon: 'arrow_downward',
         colorClass: 'text-red-500',
         iconBgClass: 'bg-red-100 dark:bg-red-900/50',
         iconColorClass: 'text-red-500 dark:text-red-400'
       },
-      {
-        label: 'Saldo',
-        value: `R$ ${currentBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        icon: 'account_balance_wallet',
-        colorClass: currentBalance >= 0 ? 'text-blue-500' : 'text-red-500',
-        iconBgClass: 'bg-blue-100 dark:bg-blue-900/50',
-        iconColorClass: currentBalance >= 0 ? 'text-primary' : 'text-red-500'
-      },
-      {
-        label: 'Saldo Previsto',
-        value: `R$ ${expectedBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        icon: 'query_stats',
-        colorClass: expectedBalance >= 0 ? 'text-purple-600' : 'text-red-500',
-        iconBgClass: 'bg-purple-100 dark:bg-purple-900/50',
-        iconColorClass: 'text-purple-600 dark:text-purple-400'
-      }
+      // O quarto card (Caixa Projetado) será renderizado separadamente usando BalanceForecastCard
     ];
   }, [transactions]);
 
@@ -1775,11 +1767,13 @@ const App: React.FC = () => {
 
                 {/* --- DESKTOP LAYOUT --- */}
                 <div className="hidden md:block space-y-6">
-                  {/* STAT CARDS MOVED HERE */}
+                  {/* STAT CARDS - Now 3 cards + 1 BalanceForecastCard */}
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     {dashboardStats.map((stat, index) => (
                       <StatCard key={index} data={stat as StatData} />
                     ))}
+                    {/* Card 4: Caixa Projetado do Mês (using the dedicated component) */}
+                    <BalanceForecastCard transactions={transactions} />
                   </div>
                   
                   {connectionConfig.ai.enabled && (
@@ -1804,9 +1798,7 @@ const App: React.FC = () => {
                     <div className="col-span-12 xl:col-span-4 h-full">
                         <Thermometer transactions={transactions} />
                     </div>
-                    <div className="col-span-12 xl:col-span-4 h-full">
-                        <BalanceForecastCard transactions={transactions} />
-                    </div>
+                    {/* Removed BalanceForecastCard here as it's now in the top row */}
                   </div>
 
                   <div className="grid grid-cols-12 gap-6">
