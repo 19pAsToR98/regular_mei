@@ -59,24 +59,16 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
 
   // --- 2. DATA FOR HALF PIE (SLIDE 0) ---
   const halfPieData = useMemo(() => {
-    if (stats.revenue > 0) {
-      // Calculate the total realized flow (revenue + expense magnitude)
-      const totalFlow = stats.revenue + stats.expense;
-      
-      // If balance is positive, show expense vs balance
-      if (stats.balance >= 0) {
-          return [
-              { name: 'Despesas', value: stats.expense, color: '#EF4444' },
-              { name: 'Saldo', value: stats.balance, color: '#10B981' },
-          ];
-      } 
-      // If balance is negative, show revenue vs deficit
-      else {
-         return [
-          { name: 'Receita', value: stats.revenue, color: '#10B981' },
-          { name: 'Déficit', value: Math.abs(stats.balance), color: '#EF4444' }, 
-         ];
-      }
+    if (stats.balance >= 0 && stats.revenue > 0) {
+      return [
+        { name: 'Despesas', value: stats.expense, color: '#EF4444' },
+        { name: 'Saldo', value: stats.balance, color: '#10B981' },
+      ];
+    } else if (stats.balance < 0) {
+       return [
+        { name: 'Receita', value: stats.revenue, color: '#10B981' },
+        { name: 'Déficit', value: Math.abs(stats.balance), color: '#EF4444' }, 
+       ];
     }
     return [{ name: 'Sem dados', value: 1, color: '#E2E8F0' }];
   }, [stats]);
@@ -110,12 +102,14 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
       const tDate = new Date(t.date);
       return tDate.getMonth() === currentMonth && 
              tDate.getFullYear() === currentYear && 
-             t.type === categoryType;
+             t.type === categoryType; // Include pending for better planning view? Or strictly paid? Let's stick to Paid for consistency in analysis
     });
 
     const totals: Record<string, number> = {};
     relevantTrans.forEach(t => {
-      // Use all amounts for categories
+      // Only count if paid for category chart on mobile? Or expected? 
+      // Usually category breakdown is better with "all intended spend"
+      // Let's use all amounts for categories
       totals[t.category] = (totals[t.category] || 0) + (t.amount || 0);
     });
 
@@ -262,10 +256,10 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ transactions, user, a
                                 dataKey="value"
                             >
                                 {categoryData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} strokeWidth={0} />
                                 ))}
                             </Pie>
-                            <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                            <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                         </PieChart>
                     </ResponsiveContainer>
                 ) : (

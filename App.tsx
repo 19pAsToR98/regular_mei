@@ -30,7 +30,6 @@ import PrivacyPage from './components/PrivacyPage';
 import BalanceForecastCard from './components/BalanceForecastCard';
 import VirtualAssistantButton from './components/VirtualAssistantButton';
 import AssistantChat from './components/AssistantChat';
-import DashboardPage from './components/DashboardPage';
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -1777,15 +1776,45 @@ const App: React.FC = () => {
 
                 {/* --- DESKTOP LAYOUT --- */}
                 <div className="hidden md:block space-y-6">
-                  <DashboardPage 
-                    transactions={transactions}
-                    appointments={appointments}
-                    fiscalData={fiscalData}
-                    onNavigate={setActiveTab}
-                    news={news}
-                    onViewNews={handleViewNews}
-                    aiEnabled={connectionConfig.ai.enabled}
-                  />
+                  {/* STAT CARDS MOVED HERE */}
+                  <DashboardSummaryCards metrics={dashboardMetrics} />
+                  
+                  {connectionConfig.ai.enabled && (
+                      <div className="grid grid-cols-12">
+                          <AIAnalysis enabled={connectionConfig.ai.enabled} />
+                      </div>
+                  )}
+                  
+                  <div className="grid grid-cols-12 gap-6">
+                    <div className="col-span-12 xl:col-span-8 h-full">
+                      <RevenueChart transactions={transactions} />
+                    </div>
+                    <div className="col-span-12 xl:col-span-4 h-full">
+                        <Reminders transactions={transactions} appointments={appointments} fiscalData={fiscalData} onNavigate={setActiveTab} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-6">
+                    <div className="col-span-12 xl:col-span-4 h-full">
+                        <FinancialScore transactions={transactions} />
+                    </div>
+                    <div className="col-span-12 xl:col-span-4 h-full">
+                        <Thermometer transactions={transactions} />
+                    </div>
+                    <div className="col-span-12 xl:col-span-4 h-full">
+                        <BalanceForecastCard transactions={transactions} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-6">
+                    <div className="col-span-12 h-full">
+                        <RecentTransactions transactions={transactions} onNavigate={setActiveTab} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12">
+                    <NewsSlider news={news} onViewNews={handleViewNews} />
+                  </div>
                 </div>
               </>
               );
