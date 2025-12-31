@@ -71,14 +71,20 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
 
   // Helper to calculate difference in days (normalized to midnight)
   const getDaysDifference = (targetDate: Date): number => {
+      // 1. Normalize Today to local midnight
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      const target = new Date(targetDate);
-      target.setHours(0, 0, 0, 0);
+      // 2. Normalize Target Date to local midnight
+      // We must ensure the target date is created using local time components (YYYY, MM, DD)
+      // If targetDate is already a Date object created from YYYY-MM-DD string, it might be UTC midnight.
+      // We recreate it using its local components to ensure it aligns with local 'today'.
+      const target = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
       
       const diffTime = target.getTime() - today.getTime();
-      return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      // Use Math.round to handle potential daylight saving time shifts (though unlikely for full days)
+      return Math.round(diffTime / (1000 * 60 * 60 * 24));
   };
 
   // --- GENERATE REMINDERS ---
@@ -116,6 +122,7 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
                 let dueDate: Date;
                 if (item.vencimento) {
                     const [d, m, y] = item.vencimento.split('/').map(Number);
+                    // Create date using local components to avoid UTC shift issues
                     dueDate = new Date(y, m - 1, d);
                 } else {
                     // Fallback logic
@@ -190,32 +197,10 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
 
     // 3. Appointments & Transactions - Priority 3
     
-    appointments.forEach(appt => {
-        if (!appt.date) return;
-        const [y, m, d] = appt.date.split('-').map(Number);
-        const apptDate = new Date(y, m - 1, d);
-        
-        const diffDays = getDaysDifference(apptDate);
-
-        // Show today (0) and upcoming up to 3 days
-        if (diffDays >= 0 && diffDays <= 3) {
-            list.push({
-                id: `appt-${appt.id}`,
-                title: appt.title,
-                subtitle: diffDays === 0 ? `Hoje às ${appt.time}` : `Em ${diffDays} dia${diffDays !== 1 ? 's' : ''}`,
-                icon: 'event',
-                bgClass: 'bg-blue-100 dark:bg-blue-900/50',
-                iconColorClass: 'text-blue-500 dark:text-blue-400',
-                priority: 3,
-                date: appt.date,
-                actionTab: 'calendar', // Navigate to Calendar page
-            });
-        }
-    });
-
     transactions.forEach(t => {
         if (t.status === 'pendente') {
             const [y, m, d] = t.date.split('-').map(Number);
+            // Create date using local components to avoid UTC shift issues
             const tDate = new Date(y, m - 1, d);
             
             const diffDays = getDaysDifference(tDate);
@@ -250,6 +235,29 @@ const Reminders: React.FC<RemindersProps> = ({ transactions = [], appointments =
                     actionTab: 'cashflow', // Navigate to Cashflow page
                 });
             }
+        }
+    });
+    
+    appointments.forEach(appt => {
+        if (!appt.date) return;
+        const [y, m, d] = appt.date.split('-').map(Number);
+        const apptDate = new Date(y, m - 1, d);
+        
+        const diffDays = getDaysDifference(apptDate);
+
+        // Show today (0) and upcoming up to 3 days
+        if (diffDays >= 0 && diffDays <= 3) {
+            list.push({
+                id: `appt-${appt.id}`,
+                title: appt.title,
+                subtitle: diffDays === 0 ? `Hoje às ${appt.time}` : `Em ${diffDays} dia${diffDays !== 1 ? 's' : ''}`,
+                icon: 'event',
+                bgClass: 'bg-blue-100 dark:bg-blue-900/50',
+                iconColorClass: 'text-blue-500 dark:text-blue-400',
+                priority: 3,
+                date: appt.date,
+                actionTab: 'calendar', // Navigate to Calendar page
+            });
         }
     });
 
