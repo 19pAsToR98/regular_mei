@@ -7,16 +7,18 @@ import Reminders from './Reminders';
 import NewsSlider from './NewsSlider';
 import RecentTransactions from './RecentTransactions';
 import AIAnalysis from './AIAnalysis';
-import QuickActions from './QuickActions'; // Mantendo QuickActions para a barra de botões
+import QuickActions from './QuickActions';
+import DashboardChartSlider from './DashboardChartSlider'; // NEW IMPORT
+import BalanceForecastCard from './BalanceForecastCard'; // Keep import for internal use
 
 interface DashboardPageProps {
   transactions: Transaction[];
   appointments: Appointment[];
   fiscalData: FiscalData | null;
   onNavigate: (tab: string) => void;
-  news: any[]; // Adicionando news para o slider
-  onViewNews: (id: number) => void; // Adicionando handler para o slider
-  aiEnabled: boolean; // Para controlar o card de AI
+  news: any[];
+  onViewNews: (id: number) => void;
+  aiEnabled: boolean;
 }
 
 // --- UTILS ---
@@ -67,7 +69,9 @@ const useDashboardMetrics = (transactions: Transaction[]) => {
     };
 };
 
-// --- CHART DATA (SIMULATED DAILY BALANCE) ---
+// --- CHART DATA CALCULATIONS ---
+
+// 1. Daily Balance Data (Current Month)
 const useDailyBalanceData = (transactions: Transaction[]) => {
     const today = new Date();
     const cMonth = today.getMonth();
@@ -77,15 +81,13 @@ const useDailyBalanceData = (transactions: Transaction[]) => {
     const dailyData: { name: string, saldo: number }[] = [];
     let runningBalance = 0; 
 
-    // For simplicity in this visualization, we'll focus on the monthly flow
-    
     for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${cYear}-${String(cMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         
         const dayTrans = transactions.filter(t => t.date === dateStr);
         
         const netFlow = dayTrans
-            .filter(t => t.status === 'pago') // Only realized flow affects the daily balance line
+            .filter(t => t.status === 'pago')
             .reduce((acc, t) => acc + (t.type === 'receita' ? t.amount : -t.amount), 0);
         
         runningBalance += netFlow;
@@ -100,21 +102,69 @@ const useDailyBalanceData = (transactions: Transaction[]) => {
     return dailyData.slice(0, today.getDate());
 };
 
+// 2. Monthly Evolution Data (Last 6 Months)
+const useMonthlyEvolutionData = (transactions: Transaction[]) => {
+    const last6Months = [];
+    const today = new Date();
+    
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const monthKey = d.getMonth();
+      const yearKey = d.getFullYear();
+      
+      const monthTrans = transactions.filter(t => {
+        const tDate = new Date(t.date);
+        // Only include realized transactions (status = pago)
+        return tDate.getMonth() === monthKey && tDate.getFullYear() === yearKey && t.status === 'pago';
+      });
+
+      const receita = monthTrans.filter(t => t.type === 'receita').reduce((acc, t) => acc + t.amount, 0);
+      const despesa = monthTrans.filter(t => t.type === 'despesa').reduce((acc, t) => acc + t.amount, 0);
+
+      last6Months.push({
+        name: d.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase(),
+        receita,
+        despesa
+      });
+    }
+    return last6Months;
+};
+
+// 3. Category Distribution Data (Current Month - All types combined for simplicity in slider)
+const useCategoryDistributionData = (transactions: Transaction[]) => {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    const relevantTrans = transactions.filter(t => {
+      const tDate = new Date(t.date);
+      return tDate.getMonth() === currentMonth && 
+             tDate.getFullYear() === currentYear;
+    });
+
+    const categoryTotals: Record<string, number> = {};
+    relevantTrans.forEach(t => {
+      const key = `${t.type === 'receita' ? 'R: ' : 'D: '}${t.category}`;
+      const val = t.amount || 0;
+      categoryTotals[key] = (categoryTotals[key] || 0) + val;
+    });
+
+    return Object.keys(categoryTotals)
+      .map(key => ({ name: key, value: categoryTotals[key] }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8); // Top 8 categories
+};
+
+
 // --- COMPONENT ---
 const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointments, fiscalData, onNavigate, news, onViewNews, aiEnabled }) => {
   const metrics = useDashboardMetrics(transactions);
   const dailyBalanceData = useDailyBalanceData(transactions);
+  const monthlyEvolutionData = useMonthlyEvolutionData(transactions);
+  const categoryDistributionData = useCategoryDistributionData(transactions);
   
   const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
   const currentMonthName = monthNames[new Date().getMonth()];
   const currentYear = new Date().getFullYear();
-
-  // Placeholder for AI Insight (simulated data)
-  const aiInsight = {
-    text: "Para evitar o fluxo de caixa negativo previsto para o final do mês, considere antecipar o recebimento de R$ 1.500,00 ou renegociar o prazo de pagamento de despesas fixas.",
-    actionLabel: "Ver Detalhes",
-    actionTab: "cashflow"
-  };
 
   // Determine the number of critical alerts (DASN pending + overdue DAS/transactions)
   const criticalAlertCount = (fiscalData?.pendingDasnCount || 0) + 
@@ -192,37 +242,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointment
         </div>
       </div>
 
-      {/* ROW 2: CHART & AI ANALYSIS */}
+      {/* ROW 2: CHART SLIDER (Full Width) */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         
-        {/* CARD 4: SALDO DIÁRIO (BAR CHART) - AGORA OCUPA 3/3 */}
-        <div className="md:col-span-1 xl:col-span-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg p-6 flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-                <h3 className="text-slate-800 dark:text-white font-bold text-lg">Saldo diário em {currentMonthName}</h3>
-                <button onClick={() => onNavigate('cashflow')} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors text-slate-500">
-                    <span className="material-icons text-[20px]">more_horiz</span>
-                </button>
-            </div>
-            
-            <div className="flex-1 w-full h-[200px] relative">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dailyBalanceData} margin={{ top: 10, right: 0, left: -20, bottom: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                        <XAxis 
-                            dataKey="name" 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }} 
-                            dy={10} 
-                        />
-                        <RechartsTooltip 
-                            formatter={(value: number) => [formatCurrency(value), 'Saldo']}
-                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                        />
-                        <Bar dataKey="saldo" name="Saldo" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
+        {/* CARD 4: CHART SLIDER - AGORA OCUPA 3/3 */}
+        <div className="md:col-span-1 xl:col-span-3 h-[350px]">
+            <DashboardChartSlider 
+                dailyBalanceData={dailyBalanceData}
+                monthlyEvolutionData={monthlyEvolutionData}
+                categoryDistributionData={categoryDistributionData}
+                transactions={transactions}
+                onNavigate={onNavigate}
+            />
         </div>
       </div>
       
