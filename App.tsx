@@ -147,7 +147,7 @@ const App: React.FC = () => {
     whatsappApi: { // NEW: WhatsApp API Configuration
         sendTextUrl: 'https://regularmei.uazapi.com/send/text',
         token: 'b201c8c5-08fb-4d7e-adef-f9d4113922b5',
-        enabled: true, // NEW: Default to enabled
+        enabled: true, // NEW: Global toggle for WhatsApp integration
     },
     smtp: {
       host: 'smtp.example.com',
