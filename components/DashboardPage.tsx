@@ -77,17 +77,7 @@ const useDailyBalanceData = (transactions: Transaction[]) => {
     const dailyData: { name: string, saldo: number }[] = [];
     let runningBalance = 0; 
 
-    // Calculate realized balance up to the start of the month
-    const realizedBeforeMonth = transactions
-        .filter(t => {
-            const tDate = new Date(t.date);
-            return tDate.getFullYear() < cYear || (tDate.getFullYear() === cYear && tDate.getMonth() < cMonth);
-        })
-        .filter(t => t.status === 'pago')
-        .reduce((acc, t) => acc + (t.type === 'receita' ? t.amount : -t.amount), 0);
-    
     // For simplicity in this visualization, we'll focus on the monthly flow
-    // and start the running balance from the beginning of the month.
     
     for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${cYear}-${String(cMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -118,6 +108,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointment
   const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
   const currentMonthName = monthNames[new Date().getMonth()];
   const currentYear = new Date().getFullYear();
+
+  // Placeholder for AI Insight (simulated data)
+  const aiInsight = {
+    text: "Para evitar o fluxo de caixa negativo previsto para o final do mês, considere antecipar o recebimento de R$ 1.500,00 ou renegociar o prazo de pagamento de despesas fixas.",
+    actionLabel: "Ver Detalhes",
+    actionTab: "cashflow"
+  };
 
   // Determine the number of critical alerts (DASN pending + overdue DAS/transactions)
   const criticalAlertCount = (fiscalData?.pendingDasnCount || 0) + 
@@ -195,20 +192,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointment
         </div>
       </div>
 
-      {/* ROW 2: SCORE, CHART & AI ANALYSIS */}
+      {/* ROW 2: CHART & AI INSIGHT */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        
-        {/* CARD 3: SAÚDE DO NEGÓCIO (SCORE & THERMOMETER) - 1/3 */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg p-6 flex flex-col justify-between">
-            <h3 className="text-slate-800 dark:text-white font-bold text-lg mb-4">Saúde do Negócio</h3>
-            <div className="flex flex-col gap-4">
-                {/* Financial Score (Radial Chart) */}
-                <FinancialScore transactions={transactions} />
-                
-                {/* Thermometer (MEI Limit) */}
-                <Thermometer transactions={transactions} />
-            </div>
-        </div>
         
         {/* CARD 4: SALDO DIÁRIO (BAR CHART) - 2/3 */}
         <div className="md:col-span-1 xl:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg p-6 flex flex-col">
@@ -240,10 +225,32 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointment
             </div>
         </div>
         
-        {/* CARD 5: INSIGHT DA SEMANA (REMOVIDO) */}
+        {/* CARD 5: AI INSIGHT */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-primary/30 shadow-lg p-6 flex flex-col relative overflow-hidden">
+            <span className="material-icons absolute -bottom-4 -right-4 text-[120px] text-primary/5 rotate-12 select-none">auto_awesome</span>
+            <div className="flex items-center gap-2 mb-4">
+                <div className="size-8 rounded-full bg-primary flex items-center justify-center text-white shadow-md shadow-primary/30">
+                    <span className="material-icons text-[18px]">auto_awesome</span>
+                </div>
+                <h3 className="text-primary font-bold text-lg">Insight da Semana</h3>
+            </div>
+            <div className="flex-1 flex flex-col justify-center">
+                <p className="text-slate-800 dark:text-white text-lg font-medium leading-relaxed italic">
+                    {aiInsight.text}
+                </p>
+            </div>
+            <div className="mt-6 flex justify-end">
+                <button 
+                    onClick={() => onNavigate(aiInsight.actionTab)}
+                    className="text-primary text-sm font-bold hover:text-blue-700 flex items-center gap-1 transition-colors"
+                >
+                    {aiInsight.actionLabel} <span className="material-icons text-[16px]">arrow_forward</span>
+                </button>
+            </div>
+        </div>
       </div>
       
-      {/* ROW 3: RECENT TRANSACTIONS & AI ANALYSIS */}
+      {/* ROW 3: RECENT TRANSACTIONS & SAÚDE DO NEGÓCIO */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* CARD 6: TRANSAÇÕES RECENTES - 2/3 */}
@@ -251,19 +258,30 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointment
             <RecentTransactions transactions={transactions} onNavigate={onNavigate} />
         </div>
         
-        {/* CARD 7: AI ANALYSIS - 1/3 */}
-        {aiEnabled && (
-            <div className="lg:col-span-1">
-                <AIAnalysis enabled={aiEnabled} />
+        {/* CARD 3: SAÚDE DO NEGÓCIO (SCORE & THERMOMETER) - 1/3 */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg p-6 flex flex-col justify-between">
+            <h3 className="text-slate-800 dark:text-white font-bold text-lg mb-4">Saúde do Negócio</h3>
+            <div className="flex flex-col gap-4">
+                {/* Financial Score (Radial Chart) */}
+                <FinancialScore transactions={transactions} />
+                
+                {/* Thermometer (MEI Limit) */}
+                <Thermometer transactions={transactions} />
             </div>
-        )}
-        {!aiEnabled && <div className="lg:col-span-1"></div>}
+        </div>
       </div>
       
       {/* ROW 4: NEWS SLIDER (Full Width) */}
       <div className="grid grid-cols-12">
         <NewsSlider news={news} onViewNews={onViewNews} />
       </div>
+      
+      {/* ROW 5: AI ANALYSIS (Full Width) */}
+      {aiEnabled && (
+          <div className="grid grid-cols-12">
+              <AIAnalysis enabled={aiEnabled} />
+          </div>
+      )}
     </div>
   );
 };
