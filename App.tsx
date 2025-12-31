@@ -30,6 +30,7 @@ import PrivacyPage from './components/PrivacyPage';
 import BalanceForecastCard from './components/BalanceForecastCard';
 import VirtualAssistantButton from './components/VirtualAssistantButton';
 import AssistantChat from './components/AssistantChat';
+import ExecutiveDashboard from './components/ExecutiveDashboard'; // NOVO IMPORT
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -1818,6 +1819,14 @@ const App: React.FC = () => {
                 </div>
               </>
               );
+          case 'executive': // NOVO CASE
+              return <ExecutiveDashboard 
+                  transactions={transactions}
+                  appointments={appointments}
+                  fiscalData={fiscalData}
+                  user={user}
+                  onNavigate={setActiveTab}
+              />;
           case 'cashflow': 
             return <CashFlowPage 
                 transactions={transactions}

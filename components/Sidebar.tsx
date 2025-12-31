@@ -3,6 +3,7 @@ import { NavItem } from '../types';
 
 const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', href: '#' },
+  { id: 'executive', label: 'Dashboard Executivo', icon: 'analytics', href: '#' }, // NOVO ITEM
   { id: 'cashflow', label: 'Fluxo de Caixa', icon: 'swap_horiz', href: '#' },
   { id: 'invoices', label: 'Notas Fiscais', icon: 'receipt', href: '#' },
   { id: 'calendar', label: 'Calendário', icon: 'calendar_today', href: '#' },
