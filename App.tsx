@@ -1747,12 +1747,47 @@ const App: React.FC = () => {
       switch (activeTab) {
           case 'dashboard':
               return (
-                <DashboardPage 
+                <>
+                {/* --- MOBILE LAYOUT --- */}
+                <div className="md:hidden">
+                   {connectionConfig.ai.enabled && (
+                       <div className="grid grid-cols-12 mb-6">
+                           <AIAnalysis enabled={connectionConfig.ai.enabled} />
+                       </div>
+                   )}
+                   <MobileDashboard 
+                        transactions={transactions} 
+                        user={user} 
+                        appointments={appointments}
+                        fiscalData={fiscalData}
+                        onNavigate={setActiveTab}
+                   />
+                   
+                   <div className="mt-6">
+                      <h3 className="text-sm font-bold text-slate-500 uppercase mb-4 px-2">Últimas Movimentações</h3>
+                      <div className="h-[400px]">
+                         <RecentTransactions transactions={transactions} onNavigate={setActiveTab} />
+                      </div>
+                   </div>
+
+                   <div className="mt-8 mb-4">
+                      <NewsSlider news={news} onViewNews={handleViewNews} />
+                   </div>
+                </div>
+
+                {/* --- DESKTOP LAYOUT --- */}
+                <div className="hidden md:block space-y-6">
+                  <DashboardPage 
                     transactions={transactions}
                     appointments={appointments}
                     fiscalData={fiscalData}
                     onNavigate={setActiveTab}
-                />
+                    news={news}
+                    onViewNews={handleViewNews}
+                    aiEnabled={connectionConfig.ai.enabled}
+                  />
+                </div>
+              </>
               );
           case 'cashflow': 
             return <CashFlowPage 

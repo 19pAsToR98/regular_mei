@@ -4,12 +4,19 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, CartesianGrid, Tooltip as Re
 import FinancialScore from './FinancialScore';
 import Thermometer from './Thermometer';
 import Reminders from './Reminders';
+import NewsSlider from './NewsSlider';
+import RecentTransactions from './RecentTransactions';
+import AIAnalysis from './AIAnalysis';
+import QuickActions from './QuickActions'; // Mantendo QuickActions para a barra de botões
 
 interface DashboardPageProps {
   transactions: Transaction[];
   appointments: Appointment[];
   fiscalData: FiscalData | null;
   onNavigate: (tab: string) => void;
+  news: any[]; // Adicionando news para o slider
+  onViewNews: (id: number) => void; // Adicionando handler para o slider
+  aiEnabled: boolean; // Para controlar o card de AI
 }
 
 // --- UTILS ---
@@ -68,19 +75,9 @@ const useDailyBalanceData = (transactions: Transaction[]) => {
     const daysInMonth = new Date(cYear, cMonth + 1, 0).getDate();
     
     const dailyData: { name: string, saldo: number }[] = [];
-    let runningBalance = 0; // Start from 0 for the chart visualization
+    let runningBalance = 0; 
 
-    // Calculate realized balance up to the start of the month
-    const realizedBeforeMonth = transactions
-        .filter(t => {
-            const tDate = new Date(t.date);
-            return tDate.getFullYear() < cYear || (tDate.getFullYear() === cYear && tDate.getMonth() < cMonth);
-        })
-        .filter(t => t.status === 'pago')
-        .reduce((acc, t) => acc + (t.type === 'receita' ? t.amount : -t.amount), 0);
-    
     // For simplicity in this visualization, we'll focus on the monthly flow
-    // and start the running balance from the beginning of the month.
     
     for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${cYear}-${String(cMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -104,7 +101,7 @@ const useDailyBalanceData = (transactions: Transaction[]) => {
 };
 
 // --- COMPONENT ---
-const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointments, fiscalData, onNavigate }) => {
+const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointments, fiscalData, onNavigate, news, onViewNews, aiEnabled }) => {
   const metrics = useDashboardMetrics(transactions);
   const dailyBalanceData = useDailyBalanceData(transactions);
   
@@ -112,20 +109,33 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointment
   const currentMonthName = monthNames[new Date().getMonth()];
   const currentYear = new Date().getFullYear();
 
-  // Placeholder for AI Insight (since we don't have the full AI component logic here)
+  // Placeholder for AI Insight (simulated data)
   const aiInsight = {
     text: "Para evitar o fluxo de caixa negativo previsto para o final do mês, considere antecipar o recebimento de R$ 1.500,00 ou renegociar o prazo de pagamento de despesas fixas.",
     actionLabel: "Ver Detalhes",
     actionTab: "cashflow"
   };
 
+  // Determine the number of critical alerts (DASN pending + overdue DAS/transactions)
+  const criticalAlertCount = (fiscalData?.pendingDasnCount || 0) + 
+                             (metrics.emAtraso > 0 ? 1 : 0) + 
+                             (appointments.filter(a => {
+                                 const diff = (new Date(a.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24);
+                                 return diff >= -5 && diff <= 0; // Overdue or today
+                             }).length > 0 ? 1 : 0);
+
   return (
     <div className="flex flex-col gap-6">
       
+      {/* ROW 0: QUICK ACTIONS (Mobile/Tablet) */}
+      <div className="md:hidden">
+        <QuickActions />
+      </div>
+
       {/* ROW 1: MAIN BALANCE & ALERTS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* CARD 1: CAIXA DISPONÍVEL (DESTAQUE) */}
+        {/* CARD 1: CAIXA DISPONÍVEL (DESTAQUE) - LG: 2/3 */}
         <div className="lg:col-span-2 flex flex-col bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800 shadow-lg">
           <div className="flex justify-between items-start mb-4">
             <h2 className="text-slate-800 dark:text-white text-xl font-bold tracking-tight">Caixa disponível agora</h2>
@@ -159,7 +169,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointment
           </div>
         </div>
         
-        {/* CARD 2: ALERTAS CRÍTICOS (REMINDERS) */}
+        {/* CARD 2: ALERTAS CRÍTICOS (REMINDERS) - LG: 1/3 */}
         <div className="lg:col-span-1 flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-red-50 dark:bg-red-900/20">
                 <h3 className="text-red-700 dark:text-red-400 font-bold text-lg flex items-center gap-2">
@@ -167,7 +177,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointment
                     Alertas Críticos
                 </h3>
                 <span className="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                    {fiscalData?.pendingDasnCount || 0}
+                    {criticalAlertCount}
                 </span>
             </div>
             {/* Reusing Reminders component for the list content */}
@@ -197,7 +207,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointment
             </div>
         </div>
         
-        {/* CARD 4: SALDO DIÁRIO (LINE CHART) */}
+        {/* CARD 4: SALDO DIÁRIO (BAR CHART) */}
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg p-6 flex flex-col">
             <div className="flex justify-between items-center mb-6">
                 <h3 className="text-slate-800 dark:text-white font-bold text-lg">Saldo diário em {currentMonthName}</h3>
@@ -262,12 +272,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointment
         
         {/* CARD 7: NEWS SLIDER */}
         <div className="lg:col-span-1">
-            {/* Placeholder for NewsSlider - App.tsx will pass the actual component */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg h-full flex items-center justify-center">
-                <p className="text-slate-500">Notícias e Dicas (Slider)</p>
-            </div>
+            <NewsSlider news={news} onViewNews={onViewNews} />
         </div>
       </div>
+      
+      {/* ROW 4: AI ANALYSIS (Full Width) */}
+      {aiEnabled && (
+          <div className="grid grid-cols-12">
+              <AIAnalysis enabled={aiEnabled} />
+          </div>
+      )}
     </div>
   );
 };
