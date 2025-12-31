@@ -57,7 +57,7 @@ const AIAnalysis: React.FC<AIAnalysisProps> = ({ enabled }) => {
 
   if (!expanded) {
     return (
-      <div className="col-span-12 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-800/80 p-6 rounded-lg border border-indigo-100 dark:border-slate-700 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 transition-all">
+      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-800/80 p-6 rounded-lg border border-indigo-100 dark:border-slate-700 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 transition-all">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-white dark:bg-slate-700 rounded-full shadow-sm">
             <span className="material-icons text-indigo-600 dark:text-indigo-400">auto_awesome</span>
@@ -79,7 +79,7 @@ const AIAnalysis: React.FC<AIAnalysisProps> = ({ enabled }) => {
   }
 
   return (
-    <div className="col-span-12 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-800/80 p-6 rounded-lg border border-indigo-100 dark:border-slate-700 relative overflow-hidden shadow-sm animate-in fade-in zoom-in-95 duration-300">
+    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-800/80 p-6 rounded-lg border border-indigo-100 dark:border-slate-700 relative overflow-hidden shadow-sm animate-in fade-in zoom-in-95 duration-300">
       <div className="absolute top-0 right-0 p-4 opacity-5 dark:opacity-10 pointer-events-none">
         <span className="material-icons text-9xl text-indigo-600 dark:text-indigo-400">auto_awesome</span>
       </div>

@@ -147,7 +147,7 @@ const App: React.FC = () => {
     whatsappApi: { // NEW: WhatsApp API Configuration
         sendTextUrl: 'https://regularmei.uazapi.com/send/text',
         token: 'b201c8c5-08fb-4d7e-adef-f9d4113922b5',
-        enabled: true, // NEW: Global toggle for WhatsApp integration
+        enabled: true, // NEW: Default to enabled
     },
     smtp: {
       host: 'smtp.example.com',
@@ -1774,46 +1774,55 @@ const App: React.FC = () => {
                    </div>
                 </div>
 
-                {/* --- DESKTOP LAYOUT --- */}
+                {/* --- DESKTOP LAYOUT (REFORMULADO) --- */}
                 <div className="hidden md:block space-y-6">
-                  {/* STAT CARDS MOVED HERE */}
+                  
+                  {/* 1. Summary Cards (4 columns) */}
                   <DashboardSummaryCards metrics={dashboardMetrics} />
                   
-                  {connectionConfig.ai.enabled && (
-                      <div className="grid grid-cols-12">
-                          <AIAnalysis enabled={connectionConfig.ai.enabled} />
+                  {/* 2. Main Grid: Financials (8/12) + Status/Health (4/12) */}
+                  <div className="grid grid-cols-12 gap-6">
+                      
+                      {/* LEFT COLUMN (8/12) - Charts & AI */}
+                      <div className="col-span-12 xl:col-span-8 space-y-6">
+                          {/* Revenue Chart (Main Visualization) */}
+                          <RevenueChart transactions={transactions} />
+                          
+                          {/* AI Analysis (Integrated below chart) */}
+                          {connectionConfig.ai.enabled && (
+                              <AIAnalysis enabled={connectionConfig.ai.enabled} />
+                          )}
                       </div>
-                  )}
+                      
+                      {/* RIGHT COLUMN (4/12) - Status & Health */}
+                      <div className="col-span-12 xl:col-span-4 space-y-6">
+                          {/* MEI Limit Thermometer (Top Priority Status) */}
+                          <Thermometer transactions={transactions} />
+                          
+                          {/* Financial Score */}
+                          <FinancialScore transactions={transactions} />
+                          
+                          {/* Balance Forecast */}
+                          <BalanceForecastCard transactions={transactions} />
+                      </div>
+                  </div>
+
+                  {/* 3. Bottom Row: Reminders, Transactions, News */}
+                  <div className="grid grid-cols-12 gap-6">
+                      {/* Reminders (6/12) */}
+                      <div className="col-span-12 lg:col-span-6 h-full">
+                          <Reminders transactions={transactions} appointments={appointments} fiscalData={fiscalData} onNavigate={setActiveTab} />
+                      </div>
+                      
+                      {/* Recent Transactions (6/12) */}
+                      <div className="col-span-12 lg:col-span-6 h-full">
+                          <RecentTransactions transactions={transactions} onNavigate={setActiveTab} />
+                      </div>
+                  </div>
                   
-                  <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 xl:col-span-8 h-full">
-                      <RevenueChart transactions={transactions} />
-                    </div>
-                    <div className="col-span-12 xl:col-span-4 h-full">
-                        <Reminders transactions={transactions} appointments={appointments} fiscalData={fiscalData} onNavigate={setActiveTab} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 xl:col-span-4 h-full">
-                        <FinancialScore transactions={transactions} />
-                    </div>
-                    <div className="col-span-12 xl:col-span-4 h-full">
-                        <Thermometer transactions={transactions} />
-                    </div>
-                    <div className="col-span-12 xl:col-span-4 h-full">
-                        <BalanceForecastCard transactions={transactions} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 h-full">
-                        <RecentTransactions transactions={transactions} onNavigate={setActiveTab} />
-                    </div>
-                  </div>
-
+                  {/* News Slider (Full Width) */}
                   <div className="grid grid-cols-12">
-                    <NewsSlider news={news} onViewNews={handleViewNews} />
+                      <NewsSlider news={news} onViewNews={handleViewNews} />
                   </div>
                 </div>
               </>
