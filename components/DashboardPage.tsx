@@ -180,8 +180,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointment
                     {criticalAlertCount}
                 </span>
             </div>
-            {/* Reusing Reminders component for the list content */}
-            <div className="flex-1 overflow-y-auto">
+            {/* Aumentando a altura máxima do container do Reminders */}
+            <div className="flex-1 overflow-y-auto max-h-[400px] lg:max-h-[500px]">
                 <Reminders 
                     transactions={transactions}
                     appointments={appointments}
@@ -192,11 +192,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointment
         </div>
       </div>
 
-      {/* ROW 2: CHART & AI INSIGHT */}
+      {/* ROW 2: CHART & AI ANALYSIS */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         
-        {/* CARD 4: SALDO DIÁRIO (BAR CHART) - 2/3 */}
-        <div className="md:col-span-1 xl:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg p-6 flex flex-col">
+        {/* CARD 4: SALDO DIÁRIO (BAR CHART) - AGORA OCUPA 3/3 */}
+        <div className="md:col-span-1 xl:col-span-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg p-6 flex flex-col">
             <div className="flex justify-between items-center mb-6">
                 <h3 className="text-slate-800 dark:text-white font-bold text-lg">Saldo diário em {currentMonthName}</h3>
                 <button onClick={() => onNavigate('cashflow')} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors text-slate-500">
@@ -222,30 +222,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ transactions, appointment
                         <Bar dataKey="saldo" name="Saldo" fill="#3B82F6" radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>
-            </div>
-        </div>
-        
-        {/* CARD 5: AI INSIGHT */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-primary/30 shadow-lg p-6 flex flex-col relative overflow-hidden">
-            <span className="material-icons absolute -bottom-4 -right-4 text-[120px] text-primary/5 rotate-12 select-none">auto_awesome</span>
-            <div className="flex items-center gap-2 mb-4">
-                <div className="size-8 rounded-full bg-primary flex items-center justify-center text-white shadow-md shadow-primary/30">
-                    <span className="material-icons text-[18px]">auto_awesome</span>
-                </div>
-                <h3 className="text-primary font-bold text-lg">Insight da Semana</h3>
-            </div>
-            <div className="flex-1 flex flex-col justify-center">
-                <p className="text-slate-800 dark:text-white text-lg font-medium leading-relaxed italic">
-                    {aiInsight.text}
-                </p>
-            </div>
-            <div className="mt-6 flex justify-end">
-                <button 
-                    onClick={() => onNavigate(aiInsight.actionTab)}
-                    className="text-primary text-sm font-bold hover:text-blue-700 flex items-center gap-1 transition-colors"
-                >
-                    {aiInsight.actionLabel} <span className="material-icons text-[16px]">arrow_forward</span>
-                </button>
             </div>
         </div>
       </div>
