@@ -5,6 +5,7 @@ import Reminders from './Reminders';
 import Thermometer from './Thermometer';
 import FinancialScore from './FinancialScore';
 import BalanceForecastCard from './BalanceForecastCard';
+import NewsSlider from './NewsSlider'; // IMPORT FALTANTE
 
 interface ExecutiveDashboardProps {
   transactions: Transaction[];
