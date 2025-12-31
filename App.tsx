@@ -1509,8 +1509,16 @@ const App: React.FC = () => {
         showError('Erro ao adicionar compromisso.');
         return;
     }
+    
+    const newAppointment = (data as Appointment[])[0];
+    
+    // NEW: Schedule reminder if notify is true
+    if (newAppointment.notify) {
+        await scheduleAppointmentReminder(user.id, newAppointment);
+    }
+    
     showSuccess('Compromisso adicionado!');
-    setAppointments(prev => [...(data as Appointment[]), ...prev]);
+    setAppointments(prev => [newAppointment, ...prev]);
   };
 
   const handleUpdateAppointment = async (a: Appointment) => {
