@@ -189,9 +189,6 @@ export async function deleteScheduledReminder(appointmentId: number): Promise<bo
     // Como não temos uma Edge Function específica para exclusão por ID de compromisso,
     // vamos usar o cliente Supabase diretamente (requer RLS configurado para DELETE em scheduled_reminders).
     
-    // RLS para DELETE em scheduled_reminders: Users can manage own reminders.
-    // A exclusão deve ser feita pelo user_id e pelo conteúdo da mensagem (que contém o ID do compromisso).
-    
     const searchPattern = `[APPT_ID:${appointmentId}]%`; // Busca mensagens que começam com o padrão
     
     const { error } = await supabase
@@ -214,7 +211,6 @@ export async function deleteScheduledReminder(appointmentId: number): Promise<bo
 
 /**
  * Gera e envia uma notificação de lembrete para uma transação pendente.
- * Mantemos o envio imediato para transações, pois o lembrete é mais sobre a confirmação de registro.
  * @param userId ID do usuário logado.
  * @param t A transação pendente.
  */
@@ -223,6 +219,16 @@ export async function scheduleTransactionReminder(userId: string, t: Transaction
     const [year, month, day] = t.date.split('-').map(Number);
     const date = new Date(year, month - 1, day, 12, 0, 0);
     
+    // NOVO: Verifica se a data da transação já passou (hoje ou futuro)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const transactionDateOnly = new Date(year, month - 1, day, 0, 0, 0);
+
+    if (transactionDateOnly < today) {
+        console.log(`Lembrete de transação ignorado: Data ${t.date} é pretérita.`);
+        return false;
+    }
+
     const formattedDate = date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
     
     const typeLabel = t.type === 'receita' ? 'Recebimento' : 'Pagamento';

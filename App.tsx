@@ -1340,7 +1340,16 @@ const App: React.FC = () => {
     
     // NEW: Schedule reminder for the first pending transaction if it's not recurring/installment
     if (user.id && newTransactions.length === 1 && newTransactions[0].status === 'pendente' && !newTransactions[0].isRecurring && !newTransactions[0].installments) {
-        scheduleTransactionReminder(user.id, newTransactions[0]);
+        
+        // Adicionando verificação de data aqui também, embora a função scheduleTransactionReminder também verifique
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const [y, m, d] = newTransactions[0].date.split('-').map(Number);
+        const transactionDateOnly = new Date(y, m - 1, d, 0, 0, 0);
+
+        if (transactionDateOnly >= today) {
+            scheduleTransactionReminder(user.id, newTransactions[0]);
+        }
     }
   };
 
@@ -1659,7 +1668,7 @@ const App: React.FC = () => {
                   </button>
               </header>
               <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8">
-                  <NewsPage news={news} readingId={readingNewsId} onSelectNews={setReadingNewsId} />
+                  <NewsPage news={news} readingNewsId={readingNewsId} onSelectNews={setReadingNewsId} />
               </main>
               <footer className="mt-8 text-center text-sm text-slate-400 pb-8">
                 <p>&copy; {new Date().getFullYear()} Regular MEI. Todos os direitos reservados.</p>
@@ -1845,7 +1854,7 @@ const App: React.FC = () => {
             />;
           case 'cnpj': return <CNPJPage cnpj={cnpj} fiscalData={fiscalData} onUpdateFiscalData={setFiscalData} />;
           case 'tools': return <ToolsPage user={user} />;
-          case 'news': return <NewsPage news={news} readingId={readingNewsId} onSelectNews={(id) => setReadingNewsId(id)} />;
+          case 'news': return <NewsPage news={news} readingNewsId={readingNewsId} onSelectNews={(id) => setReadingNewsId(id)} />;
           case 'offers': return <OffersPage offers={offers} />;
           case 'admin':
             return <AdminPage 
