@@ -60,15 +60,23 @@ export async function sendImmediateNotification(userId: string, message: string)
             })
         });
 
-        const data = await response.json();
+        let data: any = {};
+        try {
+            data = await response.json();
+        } catch (e) {
+            // Ignora erro de parsing JSON se a resposta for OK, mas não for JSON puro
+        }
+        
         dismissToast(toastId);
 
-        if (response.ok && data.success) {
+        if (response.ok) {
+            // Assume sucesso se o status HTTP for OK (2xx)
             showSuccess('Notificação enviada com sucesso!');
             return true;
         } else {
+            // Se o status HTTP não for OK, mostra a mensagem de erro do corpo da resposta, se disponível.
             console.error('WhatsApp API Error:', data);
-            showError(`Falha ao enviar notificação: ${data.message || 'Erro desconhecido.'}`);
+            showError(`Falha ao enviar notificação: ${data.message || data.error || 'Erro desconhecido.'}`);
             return false;
         }
     } catch (e) {
@@ -121,24 +129,6 @@ export async function scheduleAppointmentReminder(userId: string, appt: Appointm
     }
 
     // 3. Chamar a Edge Function para registrar o lembrete
-    // Nota: Usamos o ID do compromisso como parte da mensagem ou metadado para identificação futura,
-    // mas a tabela scheduled_reminders não tem uma coluna para appointment_id.
-    // Para simplificar, vamos usar a coluna 'message' para armazenar o ID do compromisso
-    // temporariamente, mas o ideal é adicionar uma coluna 'related_id' na tabela.
-    // Como não posso alterar o schema, vamos confiar na exclusão por ID do compromisso.
-    
-    // Para garantir que o lembrete seja único para este compromisso, vamos incluir o ID no payload
-    // e criar uma função de exclusão que use o ID do compromisso.
-    
-    // A Edge Function schedule-whatsapp-reminder não tem como saber o ID do compromisso.
-    // Vamos criar uma nova Edge Function para gerenciar lembretes de compromissos.
-    // Por enquanto, vamos usar a função de exclusão localmente no App.tsx.
-    
-    // A Edge Function schedule-whatsapp-reminder não tem como saber o ID do compromisso.
-    // Vamos usar a função de exclusão localmente no App.tsx.
-    
-    // Para que a exclusão funcione, precisamos que o ID do compromisso esteja na tabela scheduled_reminders.
-    // Como não posso alterar o schema, vou simular a exclusão no App.tsx.
     
     // Vamos usar a coluna 'message' para armazenar o ID do compromisso
     const reminderMessage = `[APPT_ID:${appt.id}] ${message}`;
@@ -229,7 +219,10 @@ export async function deleteScheduledReminder(appointmentId: number): Promise<bo
  * @param t A transação pendente.
  */
 export async function scheduleTransactionReminder(userId: string, t: Transaction): Promise<boolean> {
-    const date = new Date(t.date);
+    // FIX: Criar a data explicitamente ao meio-dia local para evitar problemas de fuso horário
+    const [year, month, day] = t.date.split('-').map(Number);
+    const date = new Date(year, month - 1, day, 12, 0, 0);
+    
     const formattedDate = date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
     
     const typeLabel = t.type === 'receita' ? 'Recebimento' : 'Pagamento';
