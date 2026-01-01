@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Transaction, Category } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import RecurrenceDeleteModal from './RecurrenceDeleteModal';
-import PendingMetricsCard from './PendingMetricsCard'; // NEW IMPORT
+import PendingMetricsCard from './PendingMetricsCard'; // IMPORTED
 import { showSuccess, showLoading, dismissToast } from '../utils/toastUtils';
 
 interface CashFlowPageProps {
@@ -701,7 +701,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
           </div>
         </div>
 
-        {/* 4. Caixa Projetado do Mês (Destaque) - REVISADO */}
+        {/* 4. Caixa Projetado do Mês (Destaque) */}
          <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-4 rounded-lg border border-slate-600 ring-1 ring-slate-500 shadow-lg text-white flex flex-col justify-between">
            <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-white/20 rounded-lg">
@@ -713,7 +713,21 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
             </div>
           </div>
           
-          {/* Secondary Indicators REMOVED FROM HERE */}
+          {/* Placeholder para manter a altura */}
+          <div className="mt-3 pt-3 border-t border-white/30 space-y-1 opacity-0 pointer-events-none">
+              <div className="flex justify-between text-xs">
+                  <span className="flex items-center gap-1 text-red-300">
+                      <span className="material-icons text-sm">error</span> Em Atraso
+                  </span>
+                  <span className="font-bold text-red-200">R$ 0,00</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                  <span className="flex items-center gap-1 text-yellow-300">
+                      <span className="material-icons text-sm">schedule</span> A Vencer
+                  </span>
+                  <span className="font-bold text-yellow-200">R$ 0,00</span>
+              </div>
+          </div>
         </div>
       </div>
 
@@ -966,6 +980,10 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
 
         {/* CHART SECTION (RIGHT - Col Span 1) */}
         <div className="lg:col-span-1 flex flex-col order-2 gap-6">
+            
+            {/* NEW: Pending Metrics Card (Now separate) */}
+            <PendingMetricsCard emAtraso={emAtraso} aVencer={aVencer} />
+
             <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-5 shadow-sm flex flex-col max-h-[800px] overflow-y-auto custom-scrollbar">
                 <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
                     Análise Visual
@@ -1015,9 +1033,6 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                     </div>
                 </div>
             </div>
-            
-            {/* NEW: Pending Metrics Card */}
-            <PendingMetricsCard emAtraso={emAtraso} aVencer={aVencer} />
         </div>
 
       </div>
