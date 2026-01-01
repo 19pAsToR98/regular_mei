@@ -38,6 +38,9 @@ importers:
       '@tiptap/starter-kit':
         specifier: ^3.13.0
         version: 3.13.0
+      '@typebot.io/react':
+        specifier: ^0.9.17
+        version: 0.9.17(react@19.2.1)
       jodit:
         specifier: ^4.7.9
         version: 4.7.9
@@ -676,6 +679,14 @@ packages:
 
   '@tiptap/starter-kit@3.13.0':
     resolution: {integrity: sha512-Ojn6sRub04CRuyQ+9wqN62JUOMv+rG1vXhc2s6DCBCpu28lkCMMW+vTe7kXJcEdbot82+5swPbERw9vohswFzg==}
+
+  '@typebot.io/js@0.9.17':
+    resolution: {integrity: sha512-SSYjagTjkszYRY3d4dPggADlnbRkBJQBtc5n0gJMTvBGP4OZBsLlotIE4ET/WjkVA0ahr69xCAJcauir15YGOg==}
+
+  '@typebot.io/react@0.9.17':
+    resolution: {integrity: sha512-YwjHmMgABtSW5BS/ck1/B9TzF0gzR4d4qFge7JwRxJy/cbtpk2e/1ycdTOoxXegtHeXL6YfCjrzsC4dZIyv5zg==}
+    peerDependencies:
+      react: ^16.0.0 || ^17.0.0 || ^18.0.0
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -1966,6 +1977,13 @@ snapshots:
       '@tiptap/extension-underline': 3.13.0(@tiptap/core@3.13.0(@tiptap/pm@3.13.0))
       '@tiptap/extensions': 3.13.0(@tiptap/core@3.13.0(@tiptap/pm@3.13.0))(@tiptap/pm@3.13.0)
       '@tiptap/pm': 3.13.0
+
+  '@typebot.io/js@0.9.17': {}
+
+  '@typebot.io/react@0.9.17(react@19.2.1)':
+    dependencies:
+      '@typebot.io/js': 0.9.17
+      react: 19.2.1
 
   '@types/babel__core@7.20.5':
     dependencies:

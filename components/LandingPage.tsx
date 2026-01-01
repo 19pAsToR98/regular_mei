@@ -6,6 +6,18 @@ interface LandingPageProps {
   onViewBlog: () => void;
 }
 
+// Mapeamento dos Typebot IDs
+const TYPEBOT_IDS: Record<string, string> = {
+    'declaracao': 'declara-o-anual-1-pjfolf7',
+    'cancelamento': 'cancelar-mei-yljnmeh',
+    'parcelamento': 'parcelamento-de-d-bitos-c1b6oco',
+    'abertura': 'abrir-mei-43ty0i4',
+    'alterar': 'alterar-mei-o1ryxif',
+    'consulta': 'consulta-dasn-extens-o-449s48j'
+};
+const TYPEBOT_API_HOST = "https://typebotapi.portalmei360.com";
+
+
 const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onViewBlog }) => {
   const [activeMessageIndex, setActiveMessageIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
@@ -48,9 +60,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
   useEffect(() => {
     if (activeTypebot && (window as any).Typebot) {
       const timer = setTimeout(() => {
+        // Remove qualquer Typebot existente antes de inicializar um novo
+        const existingTypebot = document.querySelector('typebot-standard');
+        if (existingTypebot) {
+            existingTypebot.remove();
+        }
+        
+        // Inicializa o Typebot com o ID correto
         (window as any).Typebot.initStandard({
           typebot: activeTypebot,
-          apiHost: "https://typebotapi.portalmei360.com",
+          apiHost: TYPEBOT_API_HOST,
         });
       }, 100);
       return () => clearTimeout(timer);
@@ -74,12 +93,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
     }
   };
 
-  const handleOpenTypebot = (id: string = "declara-o-anual-cl1wie5") => {
-    setActiveTypebot(id);
+  const handleOpenTypebot = (serviceKey: keyof typeof TYPEBOT_IDS = 'consulta') => {
+    setActiveTypebot(TYPEBOT_IDS[serviceKey]);
   };
 
   const mainServices = [
     {
+      key: 'declaracao',
       title: 'Declaração Anual do MEI',
       desc: 'Entrega da DASN-SIMEI obrigatória para manter seu CNPJ regular e evitar multas.',
       icon: 'assignment',
@@ -87,6 +107,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
       bg: 'bg-blue-50 dark:bg-blue-900/20'
     },
     {
+      key: 'cancelamento',
       title: 'Cancelamento de CNPJ',
       desc: 'Baixa definitiva do registro MEI com orientação sobre pendências e obrigações.',
       icon: 'cancel',
@@ -94,6 +115,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
       bg: 'bg-red-50 dark:bg-red-900/20'
     },
     {
+      key: 'parcelamento',
       title: 'Parcelamento de Débitos',
       desc: 'Regularização de guias DAS atrasadas com opções de parcelamento em até 60x.',
       icon: 'account_balance_wallet',
@@ -101,6 +123,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
       bg: 'bg-orange-50 dark:bg-orange-900/20'
     },
     {
+      key: 'abertura',
       title: 'Abertura MEI',
       desc: 'Criação do seu novo CNPJ MEI de forma rápida, segura e com suporte especializado.',
       icon: 'rocket_launch',
@@ -108,11 +131,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
       bg: 'bg-emerald-50 dark:bg-emerald-900/20'
     },
     {
+      key: 'alterar',
       title: 'Alterar CNPJ MEI',
       desc: 'Atualização de endereço, nome fantasia, atividades (CNAE) ou capital social.',
       icon: 'edit_note',
       color: 'text-indigo-500',
       bg: 'bg-indigo-50 dark:bg-indigo-900/20'
+    },
+    {
+      key: 'consulta',
+      title: 'Consulta de Débitos',
+      desc: 'Verifique pendências no CNPJ e receba orientação sobre os próximos passos.',
+      icon: 'search',
+      color: 'text-purple-500',
+      bg: 'bg-purple-50 dark:bg-purple-900/20'
     }
   ];
 
@@ -253,10 +285,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
             </p>
             
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
-              <button onClick={() => handleOpenTypebot()} className="bg-primary hover:bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-base shadow-xl shadow-blue-500/30 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+              <button onClick={() => handleOpenTypebot('consulta')} className="bg-primary hover:bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-base shadow-xl shadow-blue-500/30 transition-all transform active:scale-95 flex items-center justify-center gap-2">
                 Consultar CNPJ Grátis <span className="material-icons">search</span>
               </button>
-              <button onClick={() => handleOpenTypebot()} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 px-8 py-4 rounded-2xl font-bold text-base hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
+              <button onClick={() => handleOpenTypebot('declaracao')} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 px-8 py-4 rounded-2xl font-bold text-base hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
                 DASN 2025 <span className="material-icons text-sm">assignment</span>
               </button>
             </div>
@@ -289,7 +321,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
 
               {/* Floating Gadget: Search/Consulta (Hidden on tiny screens) */}
               <div className="absolute -top-6 -right-2 md:-right-12 z-20 animate-bounce-slow hidden sm:block">
-                <button onClick={() => handleOpenTypebot()} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-3 md:p-4 rounded-3xl shadow-2xl border border-white/20 flex items-center gap-3 md:gap-4 hover:scale-105 transition-transform">
+                <button onClick={() => handleOpenTypebot('consulta')} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-3 md:p-4 rounded-3xl shadow-2xl border border-white/20 flex items-center gap-3 md:gap-4 hover:scale-105 transition-transform">
                   <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-lg">
                     <span className="material-icons text-xl md:text-2xl">verified</span>
                   </div>
@@ -330,7 +362,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
               <div 
                 key={i} 
                 className="group p-6 md:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 cursor-pointer"
-                onClick={() => handleOpenTypebot()}
+                onClick={() => handleOpenTypebot(service.key as keyof typeof TYPEBOT_IDS)}
               >
                 <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl ${service.bg} ${service.color} flex items-center justify-center mb-5 md:mb-6 group-hover:scale-110 transition-transform`}>
                   <span className="material-icons text-2xl md:text-3xl">{service.icon}</span>
@@ -351,7 +383,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
                <span className="material-icons text-4xl md:text-5xl">help_outline</span>
                <h3 className="text-xl md:text-2xl font-bold">Precisa de ajuda?</h3>
                <p className="text-blue-100 text-xs md:text-sm opacity-90">Nossos consultores estão prontos para te orientar em qualquer processo.</p>
-               <button onClick={() => handleOpenTypebot()} className="bg-white text-primary px-6 py-3 rounded-xl font-black text-sm hover:bg-blue-50 transition-colors w-full">
+               <button onClick={() => handleOpenTypebot('consulta')} className="bg-white text-primary px-6 py-3 rounded-xl font-black text-sm hover:bg-blue-50 transition-colors w-full">
                   Falar com Consultor
                </button>
             </div>
@@ -522,7 +554,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
               </div>
               <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">{tool.title}</h3>
               <p className="text-slate-400 text-sm md:text-base leading-relaxed mb-6 md:mb-8">{tool.desc}</p>
-              <button onClick={() => handleOpenTypebot()} className="text-white font-bold flex items-center gap-2 hover:gap-3 transition-all mt-auto">
+              <button onClick={() => handleOpenTypebot('consulta')} className="text-white font-bold flex items-center gap-2 hover:gap-3 transition-all mt-auto">
                  Acessar Agora <span className="material-icons text-sm">arrow_forward</span>
               </button>
             </div>
@@ -590,8 +622,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
               </button>
             </div>
             <div className="bg-white flex-1 md:flex-none">
-              {/* @ts-ignore */}
-              <typebot-standard style={{ width: '100%', height: window.innerWidth < 768 ? '100%' : '600px' }}></typebot-standard>
+              {/* O Typebot será injetado aqui pelo script global */}
+              <div id="typebot-container" style={{ width: '100%', height: window.innerWidth < 768 ? '100%' : '600px' }}>
+                {/* O componente Typebot.io/react não é usado diretamente, mas sim o script global */}
+              </div>
             </div>
           </div>
         </div>
