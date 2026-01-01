@@ -981,13 +981,16 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
         {/* CHART SECTION (RIGHT - Col Span 1) */}
         <div className="lg:col-span-1 flex flex-col order-2 gap-6">
             
-            {/* NEW: Pending Metrics Card (Now separate) */}
-            <PendingMetricsCard emAtraso={emAtraso} aVencer={aVencer} />
-
             <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-5 shadow-sm flex flex-col max-h-[800px] overflow-y-auto custom-scrollbar">
-                <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
-                    Análise Visual
-                </h3>
+                
+                {/* INTEGRATED PENDING METRICS CARD HERE */}
+                <PendingMetricsCard emAtraso={emAtraso} aVencer={aVencer} />
+                
+                <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase mb-4 pb-2">
+                        Análise Visual
+                    </h3>
+                </div>
                 
                 <div className="flex-1 flex flex-col gap-6">
                     {/* Chart Area */}
