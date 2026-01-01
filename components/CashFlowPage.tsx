@@ -30,7 +30,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   
   // Recurrence Delete State
@@ -432,7 +432,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      setIsExportModalOpen(false);
+      setIsExportModal(false);
   };
 
   const handlePrintReport = () => {
@@ -527,7 +527,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
           printWindow.print();
           printWindow.close();
       }, 500);
-      setIsExportModalOpen(false);
+      setIsExportModal(false);
   };
 
   const getCategoryIcon = (catName: string, type: 'receita' | 'despesa') => {
@@ -630,7 +630,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
       <div className="flex flex-col md:flex-row justify-end items-start md:items-center gap-4">
         <div className="flex gap-2 w-full md:w-auto">
              <button 
-                onClick={() => setIsExportModalOpen(true)}
+                onClick={() => setIsExportModal(true)}
                 className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm flex-1 md:flex-none justify-center"
             >
                 <span className="material-icons text-xl">file_download</span>
@@ -877,7 +877,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                                         </div>
                                     </td>
                                     </tr>
-                                )}
+                                )})}
                             </React.Fragment>
                         ))}
                         </tbody>
@@ -1075,7 +1075,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                   </div>
 
                   <button 
-                      onClick={() => setIsExportModalOpen(false)}
+                      onClick={() => setIsExportModal(false)}
                       className="mt-6 w-full py-2 text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium"
                   >
                       Cancelar
