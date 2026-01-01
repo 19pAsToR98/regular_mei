@@ -978,7 +978,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
         </div>
 
         {/* CHART SECTION (RIGHT - Col Span 1) */}
-        <div className="lg:col-span-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-5 shadow-sm flex flex-col order-2">
+        <div className="lg:col-span-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-5 shadow-sm flex flex-col order-2 max-h-[800px] overflow-y-auto custom-scrollbar">
             <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
                 Análise Visual
             </h3>
