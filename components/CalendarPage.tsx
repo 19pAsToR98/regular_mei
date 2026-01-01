@@ -344,7 +344,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
     );
   };
   
-  // NEW: Render event titles for desktop view
+  // UPDATED: Render event titles for desktop view
   const renderEventTitles = (dayEvents: CalendarEvent[], dayHolidays: Holiday[]) => {
       const titles: { title: string, colorClass: string }[] = [];
       
@@ -353,8 +353,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
           titles.push({ title: dayHolidays[0].title, colorClass: 'text-indigo-600 dark:text-indigo-400' });
       }
       
-      // 2. Add Top 2 Events (Prioritized by importance)
-      dayEvents.slice(0, 2).forEach(e => {
+      // 2. Add Top 4 Events (Prioritized by importance)
+      dayEvents.slice(0, 4).forEach(e => {
           let colorClass = 'text-slate-700 dark:text-slate-300';
           if (e.type === 'receita') colorClass = 'text-green-600 dark:text-green-400';
           if (e.type === 'despesa') colorClass = 'text-red-600 dark:text-red-400';
@@ -364,22 +364,23 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
           const isHighPriority = e.priority <= 2;
           
           titles.push({ 
-              title: e.title, 
+              // Truncate title aggressively for space
+              title: e.title.length > 15 ? e.title.substring(0, 12) + '...' : e.title, 
               colorClass: `${colorClass} ${isHighPriority ? 'font-bold' : 'font-medium'}` 
           });
       });
       
-      // Limit to 3 lines total (1 holiday + 2 events)
+      // Limit to 5 lines total (1 holiday + 4 events)
       return (
           <div className="hidden lg:block mt-1 space-y-0.5 px-1">
-              {titles.slice(0, 3).map((t, idx) => (
-                  <p key={idx} className={`text-[10px] leading-tight truncate ${t.colorClass}`}>
+              {titles.slice(0, 5).map((t, idx) => (
+                  <p key={idx} className={`text-[9px] leading-tight truncate ${t.colorClass}`}>
                       {t.title}
                   </p>
               ))}
-              {dayEvents.length > 3 && (
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                      + {dayEvents.length - 3} mais
+              {dayEvents.length > 5 && (
+                  <p className="text-[9px] text-slate-400 mt-0.5">
+                      + {dayEvents.length - 5} mais
                   </p>
               )}
           </div>
@@ -511,8 +512,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-auto lg:h-[calc(100vh-140px)] animate-in fade-in duration-500 pb-20 lg:pb-0">
       
-      {/* Calendar Grid Section */}
-      <div className="flex-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col min-h-[400px] overflow-hidden">
+      {/* Calendar Grid Section (Now takes more space) */}
+      <div className="flex-1 lg:flex-[3] bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col min-h-[400px] overflow-hidden">
         
         {/* Header & Filters */}
         <div className="p-4 flex flex-col gap-4 border-b border-slate-200 dark:border-slate-800">
@@ -588,7 +589,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
                 key={day}
                 onClick={() => handleDayClick(day)}
                 className={`
-                  relative border-b border-r border-slate-100 dark:border-slate-800 p-1 cursor-pointer transition-colors min-h-[80px] lg:min-h-0 flex flex-col items-center justify-start group active:bg-blue-100 dark:active:bg-blue-900/40
+                  relative border-b border-r border-slate-100 dark:border-slate-800 p-1 cursor-pointer transition-colors min-h-[100px] lg:min-h-0 flex flex-col items-center justify-start group active:bg-blue-100 dark:active:bg-blue-900/40
                   ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : isHoliday ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}
                 `}
               >
@@ -614,7 +615,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
       </div>
 
       {/* Desktop Sidebar (Hidden on Mobile) */}
-      <div className="hidden lg:flex w-full lg:w-80 flex-shrink-0 flex-col gap-4">
+      <div className="hidden lg:flex w-full lg:w-72 flex-shrink-0 flex-col gap-4">
         <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm p-6 flex-1 flex flex-col">
           <div className="mb-6">
             <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">
