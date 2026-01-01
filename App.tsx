@@ -30,7 +30,7 @@ import PrivacyPage from './components/PrivacyPage';
 import BalanceForecastCard from './components/BalanceForecastCard';
 import VirtualAssistantButton from './components/VirtualAssistantButton';
 import AssistantChat from './components/AssistantChat';
-import LandingPage from './components/LandingPage'; // NEW IMPORT
+import LandingPage from './components/LandingPage';
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -60,8 +60,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [isPublicView, setIsPublicView] = useState(false);
-  const [isEmbedView, setIsEmbedView] = useState(false); // NEW STATE FOR EMBED
-  const [showAuthForm, setShowAuthForm] = useState(false); // NEW STATE FOR LANDING/AUTH TOGGLE
+  const [isEmbedView, setIsEmbedView] = useState(false);
 
   // Ref to hold the current user state to avoid stale closures in the auth listener
   const userRef = useRef(user);
@@ -69,17 +68,17 @@ const App: React.FC = () => {
       userRef.current = user;
   }, [user]);
 
-  // Initialize activeTab from localStorage or default to 'dashboard'
+  // Initialize activeTab from localStorage or default to 'home'
   const [activeTab, setActiveTabState] = useState(() => {
     if (typeof window !== 'undefined') {
-      // If user is not logged in, default to 'login' (which now renders LandingPage)
       const storedTab = localStorage.getItem('activeTab');
-      if (!storedTab || storedTab === 'login') {
-          return 'login';
+      // If no stored tab or it's an old auth tab, default to 'home' (LandingPage)
+      if (!storedTab || storedTab === 'login' || storedTab === 'auth') {
+          return 'home';
       }
       return storedTab;
     }
-    return 'login';
+    return 'home';
   });
   
   const setActiveTab = (tab: string) => {
@@ -727,8 +726,7 @@ const App: React.FC = () => {
         setLoadingAuth(false);
         // Clear persisted tab on sign out
         localStorage.removeItem('activeTab');
-        setActiveTabState('login'); // Explicitly navigate to login view
-        setShowAuthForm(false); // Reset to landing page view
+        setActiveTabState('home'); // Explicitly navigate to home view
       } else if (event === 'INITIAL_SESSION' && session?.user) {
         loadUserProfile(session.user);
       } else if (event === 'INITIAL_SESSION' && !session) {
@@ -804,18 +802,20 @@ const App: React.FC = () => {
   
   // NEW HANDLERS for Landing Page
   const handleLandingLogin = () => {
-      setShowAuthForm(true);
+      setActiveTab('auth');
   };
 
   const handleLandingGetStarted = () => {
-      setShowAuthForm(true);
+      setActiveTab('auth');
   };
   
   const handleViewBlog = () => {
       setIsPublicView(true);
-      // Ensure we are not stuck in auth flow if we navigate to public view
-      setShowAuthForm(false);
       setActiveTab('news'); // Ensure the tab is set correctly for public view rendering
+  };
+  
+  const handleBackToLanding = () => {
+      setActiveTab('home');
   };
 
 
@@ -1004,7 +1004,7 @@ const App: React.FC = () => {
             
             // Reset local state immediately
             setUser(null);
-            setActiveTab('login'); // Redirect to login/home
+            setActiveTab('home'); // Redirect to home
             setTransactions([]);
             setAppointments([]);
             setCnpj('');
@@ -1029,7 +1029,7 @@ const App: React.FC = () => {
           showError('Erro ao sair.');
       }
       setUser(null);
-      setActiveTab('login'); // Explicitly navigate to login view
+      setActiveTab('home'); // Explicitly navigate to home view
   };
 
   // --- OFFERS HANDLERS ---
@@ -1730,7 +1730,7 @@ const App: React.FC = () => {
                         url.searchParams.delete('page');
                         url.searchParams.delete('articleId'); // Clear article ID from URL
                         window.history.pushState({}, '', url);
-                        setActiveTab('login'); // Redirect to login/home
+                        setActiveTab('home'); // Redirect to home/landing
                     }}
                     className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
                   >
@@ -1761,7 +1761,7 @@ const App: React.FC = () => {
                       <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase ml-2">{activeTab === 'terms' ? 'Termos' : 'Privacidade'}</span>
                   </div>
                   <button 
-                    onClick={() => setActiveTab('login')}
+                    onClick={() => setActiveTab('auth')}
                     className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
                   >
                       Voltar ao Login <span className="material-icons text-sm">login</span>
@@ -1779,14 +1779,15 @@ const App: React.FC = () => {
 
   // If not logged in, show LandingPage or AuthPage
   if (!user) {
-      if (showAuthForm) {
+      if (activeTab === 'auth') {
           return <AuthPage 
               onLogin={handleLogin} 
               onForgotPassword={handleForgotPassword} 
               onNavigate={setActiveTab} 
-              onBackToLanding={() => setShowAuthForm(false)}
+              onBackToLanding={handleBackToLanding}
           />;
       }
+      // Default to LandingPage
       return <LandingPage 
           onGetStarted={handleLandingGetStarted} 
           onLogin={handleLandingLogin} 
@@ -1799,7 +1800,7 @@ const App: React.FC = () => {
   }
   
   // Logged in user: Redirect if on a public-only tab
-  if (activeTab === 'login' || activeTab === 'terms' || activeTab === 'privacy') {
+  if (activeTab === 'home' || activeTab === 'auth') {
       setActiveTab('dashboard');
       return null; // Prevent rendering until state updates
   }
