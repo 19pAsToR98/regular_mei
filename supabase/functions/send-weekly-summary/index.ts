@@ -19,10 +19,11 @@ const formatDate = (dateStr: string) => {
 // Helper para enviar a mensagem via API do WhatsApp
 async function sendWhatsappMessage(phone: string, message: string, config: any) {
     const url = config.whatsappApi.sendTextUrl;
-    const token = config.whatsappApi.token;
+    // Read token from Deno environment secret (Issue 5)
+    const token = Deno.env.get('WHATSAPP_API_TOKEN');
 
     if (!url || !token) {
-        console.error("WhatsApp API URL or Token is missing in config.");
+        console.error("WhatsApp API URL or Token is missing in config/secrets.");
         return { success: false, error: "Config missing" };
     }
 

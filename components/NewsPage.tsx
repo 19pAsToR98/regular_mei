@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NewsItem } from '../types';
 import { showSuccess, showError } from '../utils/toastUtils';
+import DOMPurify from 'dompurify';
 
 interface NewsPageProps {
   news: NewsItem[];
@@ -50,6 +51,9 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
     const prevArticle = currentIndex > 0 ? filteredNews[currentIndex - 1] : null;
     const nextArticle = currentIndex < filteredNews.length - 1 ? filteredNews[currentIndex + 1] : null;
     
+    // Sanitize content before rendering (Issue 4)
+    const sanitizedContent = DOMPurify.sanitize(article.content || '');
+
     // --- Share Handler ---
     const handleShare = async () => {
         if (!article) return;
@@ -115,7 +119,7 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
              {/* REMOVENDO PROSE E APLICANDO ESTILOS BÁSICOS PARA MANTER O ESPAÇAMENTO DO EDITOR */}
              <div 
                className="text-base text-slate-700 dark:text-slate-300 leading-relaxed space-y-4"
-               dangerouslySetInnerHTML={{ __html: article.content || '' }}
+               dangerouslySetInnerHTML={{ __html: sanitizedContent }}
              />
              
              {/* Source Information */}
@@ -237,6 +241,7 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
                 alt={item.title}
                 className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
               <div className="absolute top-4 left-4">
                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-sm">
                   {item.category}

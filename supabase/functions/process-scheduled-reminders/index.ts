@@ -9,10 +9,11 @@ const corsHeaders = {
 // Helper para enviar a mensagem via API do WhatsApp
 async function sendWhatsappMessage(phone: string, message: string, config: any) {
     const url = config.sendTextUrl;
-    const token = config.token;
+    // Read token from Deno environment secret (Issue 5)
+    const token = Deno.env.get('WHATSAPP_API_TOKEN');
 
     if (!url || !token) {
-        console.error("WhatsApp API URL or Token is missing in config.");
+        console.error("WhatsApp API URL or Token is missing in config/secrets.");
         return { success: false, error: "Config missing" };
     }
 
@@ -46,7 +47,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 1. Fetch Connection Config (to get WhatsApp API details)
+    // 1. Fetch Connection Config (to get WhatsApp API details, excluding token)
     const { data: configData, error: configError } = await supabaseAdmin
         .from('app_config')
         .select('connection_config')

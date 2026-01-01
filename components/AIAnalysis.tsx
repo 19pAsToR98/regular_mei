@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { GoogleGenAI } from "@google/genai";
+import { supabase } from '../src/integrations/supabase/client';
+import { showError } from '../utils/toastUtils';
 
 interface AIAnalysisProps {
   enabled: boolean;
@@ -11,49 +12,67 @@ const AIAnalysis: React.FC<AIAnalysisProps> = ({ enabled }) => {
   const [expanded, setExpanded] = useState(false);
 
   const generateAnalysis = async () => {
+    if (!enabled) return;
+    
     setExpanded(true);
     setLoading(true);
+    setAnalysis(null);
+    
+    // Context data from the dashboard (simulated from the static data in other components)
+    const context = `
+        Dados do MEI:
+        - Receita Mensal Atual: R$ 5.780,00 (Tendência de alta)
+        - Despesas Mensais: R$ 1.250,00
+        - Saldo em Caixa: R$ 4.530,00
+        - Faturamento Anual Acumulado: R$ 52.650,00
+        - Limite MEI Anual: R$ 81.000,00 (65% utilizado)
+        - Previsão (30 dias): Receber R$ 2.100,00 vs Pagar R$ 875,50
+        - Obrigações Próximas: Guia DAS vence em 3 dias (R$ 72,60), Declaração Anual em 31/05.
+      `;
+
+    // 1. Get the current session token
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+        setLoading(false);
+        showError('Erro de autenticação. Faça login novamente.');
+        return;
+    }
+    
+    // 2. Call the secure Edge Function (Issue 3)
+    const EDGE_FUNCTION_URL = 'https://ogwjtlkemsqmpvcikrtd.supabase.co/functions/v1/analyze-financial-data';
+
     try {
-      // Context data from the dashboard (simulated from the static data in other components)
-      const context = `
-          Dados do MEI:
-          - Receita Mensal Atual: R$ 5.780,00 (Tendência de alta)
-          - Despesas Mensais: R$ 1.250,00
-          - Saldo em Caixa: R$ 4.530,00
-          - Faturamento Anual Acumulado: R$ 52.650,00
-          - Limite MEI Anual: R$ 81.000,00 (65% utilizado)
-          - Previsão (30 dias): Receber R$ 2.100,00 vs Pagar R$ 875,50
-          - Obrigações Próximas: Guia DAS vence em 3 dias (R$ 72,60), Declaração Anual em 31/05.
-        `;
+        const response = await fetch(EDGE_FUNCTION_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ context })
+        });
 
-      const prompt = `
-          Você é um consultor financeiro especializado em Microempreendedores Individuais (MEI) no Brasil.
-          Analise os dados financeiros fornecidos e gere um resumo executivo curto e motivador.
-          
-          Dados: ${context}
-          
-          Instruções:
-          1. Fale diretamente com o empreendedor ("Você").
-          2. O texto deve ser conciso (máximo 3-4 frases para o resumo).
-          3. Inclua 2 dicas práticas e acionáveis em bullet points, focando em otimização fiscal (limite MEI) ou fluxo de caixa.
-          4. Use um tom profissional mas amigável e encorajador.
-          5. Não use formatação Markdown complexa (como negrito **), apenas texto corrido e quebras de linha.
-        `;
+        const data = await response.json();
 
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-      });
-
-      setAnalysis(response.text);
+        if (!response.ok) {
+            console.error('AI Analysis Error:', data);
+            showError(`Erro na análise: ${data.error || 'Falha na comunicação com o servidor AI.'}`);
+            setAnalysis("O sistema de análise inteligente está temporariamente indisponível. Por favor, tente novamente mais tarde.");
+            return;
+        }
+        
+        setAnalysis(data.analysis);
     } catch (error) {
-      console.error("Erro ao gerar análise:", error);
-      setAnalysis("O sistema de análise inteligente está temporariamente indisponível. Por favor, verifique sua conexão e tente novamente mais tarde.");
+        console.error("Erro ao gerar análise:", error);
+        showError("Erro de rede ao tentar gerar análise.");
+        setAnalysis("O sistema de análise inteligente está temporariamente indisponível. Por favor, verifique sua conexão e tente novamente mais tarde.");
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
+
+  if (!enabled) return null;
 
   if (!expanded) {
     return (

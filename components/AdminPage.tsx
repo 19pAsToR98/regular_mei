@@ -537,35 +537,12 @@ const AdminPage: React.FC<AdminPageProps> = ({
               }
               
               const url = localConnConfig.whatsappApi.sendTextUrl;
-              const token = localConnConfig.whatsappApi.token;
+              // NOTE: Token is now read from Deno.env in the Edge Function, but here we test the direct API call
+              // Since we removed the token from the client config, we cannot test the direct API call from the client anymore.
+              // We will simulate a successful response for the client test, or instruct the user to test via the Edge Function.
               
-              const response = await fetch(url, {
-                  method: 'POST',
-                  headers: {
-                      'Content-Type': 'application/json',
-                      'Accept': 'application/json',
-                      'token': token,
-                  },
-                  body: JSON.stringify({
-                      number: testWhatsappNumber.replace(/[^\d]/g, ''),
-                      text: testWhatsappMessage
-                  })
-              });
-              
-              const rawText = await response.text();
-              let json;
-              try {
-                  json = JSON.parse(rawText);
-              } catch {
-                  json = { error: "Could not parse JSON", raw: rawText };
-              }
-              
-              setTestResponse(JSON.stringify(json, null, 2));
-              setTestParsedData({
-                  Status: response.ok ? 'Sucesso' : 'Falha',
-                  'HTTP Status': response.status,
-                  Mensagem: json.message || json.error || 'Verifique a resposta JSON.'
-              });
+              // For simplicity in the client, we will assume the user needs to test the Edge Function endpoint instead.
+              throw new Error('Teste direto da API WhatsApp desabilitado por segurança. Use o Edge Function para testes de envio.');
               
           } else if (testType === 'assistant') {
               if (!localConnConfig.assistantWebhookUrl) {
@@ -1655,16 +1632,8 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                   className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm"
                               />
                           </div>
-                          <div>
-                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Token de Autenticação</label>
-                              <input 
-                                  type="text" 
-                                  value={localConnConfig.whatsappApi.token} 
-                                  onChange={e => setLocalConnConfig({...localConnConfig, whatsappApi: {...localConnConfig.whatsappApi, token: e.target.value}})}
-                                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm"
-                              />
-                          </div>
-                          <p className="text-xs text-slate-500 mt-2">Este token é usado no header `token` para autenticar o envio de mensagens.</p>
+                          {/* REMOVED TOKEN INPUT FIELD (Issue 5) */}
+                          <p className="text-xs text-slate-500 mt-2">O token de autenticação é gerenciado como um segredo Deno (`WHATSAPP_API_TOKEN`).</p>
                           <button type="button" onClick={() => { setTestType('whatsapp'); setTestModalOpen(true); }} className="mt-4 text-sm font-medium text-primary hover:underline flex items-center gap-1">
                               <span className="material-icons text-sm">science</span> Testar Envio
                           </button>
@@ -1826,6 +1795,9 @@ const AdminPage: React.FC<AdminPageProps> = ({
                               </div>
                           ) : testType === 'whatsapp' ? (
                               <div className="space-y-4">
+                                  <div className="p-3 bg-yellow-50 rounded-lg text-yellow-700 text-xs">
+                                      O teste direto da API WhatsApp foi desabilitado por segurança. Este botão agora serve apenas como placeholder.
+                                  </div>
                                   <div>
                                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Número de Destino (Ex: 5531999999999)</label>
                                       <input 
@@ -1863,7 +1835,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
                           <button 
                               onClick={handleTestConnection}
-                              disabled={testLoading || (testType !== 'whatsapp' && testType !== 'assistant' && !testCnpj)}
+                              disabled={testLoading || (testType !== 'whatsapp' && testType !== 'assistant' && !testCnpj) || testType === 'whatsapp'}
                               className="mt-4 w-full bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-6 py-2 rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2"
                           >
                               {testLoading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : <span className="material-icons text-sm">send</span>}

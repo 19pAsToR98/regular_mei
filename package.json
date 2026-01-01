@@ -20,6 +20,7 @@
     "@tiptap/react": "^3.13.0",
     "@tiptap/starter-kit": "^3.13.0",
     "@typebot.io/react": "^0.9.17",
+    "dompurify": "^3.3.1",
     "jodit": "^4.7.9",
     "jodit-react": "^5.2.38",
     "lucide-react": "^0.556.0",

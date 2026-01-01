@@ -5,6 +5,19 @@ interface AssistantMessageContentProps {
 }
 
 /**
+ * Valida se a URL usa um protocolo seguro (http, https, mailto).
+ * @param url A URL a ser validada.
+ */
+const isSafeUrl = (url: string): boolean => {
+    try {
+        const parsedUrl = new URL(url);
+        return ['http:', 'https:', 'mailto:'].includes(parsedUrl.protocol);
+    } catch {
+        return false;
+    }
+};
+
+/**
  * Converte o texto simples do assistente em elementos React formatados.
  * Suporta:
  * 1. Links no formato Markdown [Texto do Link](URL)
@@ -34,20 +47,28 @@ const AssistantMessageContent: React.FC<AssistantMessageContentProps> = ({ text 
         parts.push(line.substring(lastIndex, match.index));
       }
       
-      // Adiciona o link como um elemento <a>
       const linkText = match[1];
-      const url = match[2];
-      parts.push(
-        <a 
-          key={`link-${index}-${match.index}`} 
-          href={url} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-blue-300 hover:text-blue-100 underline font-medium transition-colors"
-        >
-          {linkText}
-        </a>
-      );
+      const rawUrl = match[2];
+      
+      // 3. Validate URL scheme (Issue 6)
+      if (isSafeUrl(rawUrl)) {
+          // Adiciona o link como um elemento <a>
+          parts.push(
+            <a 
+              key={`link-${index}-${match.index}`} 
+              href={rawUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-300 hover:text-blue-100 underline font-medium transition-colors"
+            >
+              {linkText}
+            </a>
+          );
+      } else {
+          // If unsafe, render as plain text
+          parts.push(`[${linkText}](${rawUrl})`);
+      }
+      
       lastIndex = linkRegex.lastIndex;
     }
 
@@ -58,7 +79,6 @@ const AssistantMessageContent: React.FC<AssistantMessageContentProps> = ({ text 
 
     // 3. Processar formatação de título (*Título:* Valor) na linha
     // Nota: A regex de título só funciona se a linha inteira (após processamento de links) corresponder ao padrão.
-    // Para simplificar, vamos aplicar a regex de título apenas ao texto puro da linha (sem os elementos <a>).
     
     const lineText = parts.map(p => (typeof p === 'string' ? p : '')).join('');
     const matchTitle = lineText.match(titleRegex);

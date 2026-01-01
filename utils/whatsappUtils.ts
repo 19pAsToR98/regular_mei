@@ -3,84 +3,56 @@ import { showError, showSuccess, dismissToast, showLoading, showWarning } from '
 import { Appointment, Transaction } from '../types';
 
 // Helper para buscar a configuração da API do WhatsApp
-async function getWhatsappConfig() {
-    const { data, error } = await supabase
-        .from('app_config')
-        .select('connection_config')
-        .eq('id', 1)
-        .single();
-
-    if (error || !data?.connection_config?.whatsappApi) {
-        console.error('Failed to load WhatsApp config:', error);
-        showError('Erro de configuração: API do WhatsApp indisponível.');
-        return null;
-    }
-    return data.connection_config.whatsappApi;
-}
+// REMOVED: getWhatsappConfig is no longer needed on the client side for token/phone lookup
 
 // Helper para buscar o telefone do usuário
-async function getUserPhone(userId: string) {
-    const { data, error } = await supabase
-        .from('profiles')
-        .select('phone')
-        .eq('id', userId)
-        .single();
-
-    if (error || !data?.phone) {
-        console.error('Failed to load user phone:', error);
-        showError('Seu telefone não está cadastrado. Verifique as configurações.');
-        return null;
-    }
-    return data.phone.replace(/[^\d]/g, ''); // Retorna apenas dígitos
-}
+// REMOVED: getUserPhone is no longer needed on the client side
 
 /**
- * Envia uma mensagem imediata via WhatsApp.
+ * Envia uma mensagem imediata via WhatsApp usando a Edge Function como proxy seguro.
  * @param userId ID do usuário logado.
  * @param message Mensagem a ser enviada.
  */
 export async function sendImmediateNotification(userId: string, message: string): Promise<boolean> {
-    const config = await getWhatsappConfig();
-    const phone = await getUserPhone(userId);
+    
+    const loadingToastId = showLoading('Enviando notificação via WhatsApp...');
+    
+    // 1. Obter o token de sessão
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
 
-    if (!config || !phone) return false;
+    if (!token) {
+        dismissToast(loadingToastId);
+        showError('Erro de autenticação ao enviar notificação.');
+        return false;
+    }
 
-    const toastId = showLoading('Enviando notificação via WhatsApp...');
+    // 2. Chamar a Edge Function para enviar a mensagem (Issue 5)
+    const edgeFunctionUrl = `https://ogwjtlkemsqmpvcikrtd.supabase.co/functions/v1/send-whatsapp-notification`;
 
     try {
-        const response = await fetch(config.sendTextUrl, {
+        const response = await fetch(edgeFunctionUrl, {
             method: 'POST',
             headers: {
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
-                'token': config.token,
             },
-            body: JSON.stringify({
-                number: phone,
-                text: message
-            })
+            body: JSON.stringify({ message })
         });
 
-        let data: any = {};
-        try {
-            data = await response.json();
-        } catch (e) {
-            // Ignora erro de parsing JSON se a resposta for OK, mas não for JSON puro
-        }
-        
-        dismissToast(toastId);
+        const data = await response.json();
+        dismissToast(loadingToastId);
 
         if (response.ok) {
-            // Assume sucesso se o status HTTP for OK (2xx)
             showSuccess('Notificação enviada com sucesso!');
             return true;
         } else {
-            // Se o status HTTP não for OK, mostra a mensagem de erro do corpo da resposta, se disponível.
-            console.error('WhatsApp API Error:', data);
-            showError(`Falha ao enviar notificação: ${data.message || data.error || 'Erro desconhecido.'}`);
+            console.error('WhatsApp Proxy Error:', data);
+            showError(data.error || 'Falha ao enviar notificação.');
             return false;
         }
     } catch (e) {
-        dismissToast(toastId);
+        dismissToast(loadingToastId);
         console.error('Network error during WhatsApp send:', e);
         showError('Erro de rede ao tentar enviar notificação.');
         return false;
@@ -236,6 +208,6 @@ export async function scheduleTransactionReminder(userId: string, t: Transaction
 
     const message = `⚠️ Lembrete: O ${typeLabel} de R$ ${amountStr} referente a "${t.description}" está previsto para ${formattedDate}. Não se esqueça de atualizar o status!`;
 
-    // Send immediate confirmation/reminder
+    // Send immediate confirmation/reminder using the secure proxy
     return sendImmediateNotification(userId, message);
 }

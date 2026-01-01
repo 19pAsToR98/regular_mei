@@ -90,7 +90,7 @@ export interface ConnectionConfig {
   };
   whatsappApi: { // NEW: WhatsApp API Configuration
     sendTextUrl: string;
-    token: string;
+    // token: string; // REMOVED: Stored as Deno Secret
     enabled: boolean; // NEW: Global toggle for WhatsApp integration
   };
   smtp: {
