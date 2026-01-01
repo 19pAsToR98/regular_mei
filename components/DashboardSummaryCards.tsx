@@ -57,31 +57,15 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ metrics }
         </div>
       </div>
 
-      {/* 4. Caixa Projetado do Mês (Destaque) */}
-      <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-4 rounded-lg border border-slate-600 ring-1 ring-slate-500 shadow-lg text-white flex flex-col justify-between">
-        <div className="flex items-center gap-3 mb-2">
+      {/* 4. Caixa Projetado do Mês (Destaque) - CORRIGIDO */}
+      <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-4 rounded-lg border border-slate-600 ring-1 ring-slate-500 shadow-lg text-white flex flex-col justify-center">
+        <div className="flex items-center gap-3">
           <div className="p-2 bg-white/20 rounded-lg">
             <span className="material-icons text-white">query_stats</span>
           </div>
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase text-slate-300 truncate">Caixa Projetado do Mês</p>
             <p className={`text-xl font-bold truncate ${caixaProjetado >= 0 ? 'text-white' : 'text-red-300'}`}>R$ {caixaProjetado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-          </div>
-        </div>
-        
-        {/* Placeholder para manter a altura, removendo as métricas */}
-        <div className="mt-3 pt-3 border-t border-white/30 space-y-1 opacity-0 pointer-events-none">
-          <div className="flex justify-between text-xs">
-            <span className="flex items-center gap-1 text-red-300">
-              <span className="material-icons text-sm">error</span> Em Atraso
-            </span>
-            <span className="font-bold text-red-200">R$ 0,00</span>
-          </div>
-          <div className="flex justify-between text-xs">
-            <span className="flex items-center gap-1 text-yellow-300">
-              <span className="material-icons text-sm">schedule</span> A Vencer
-            </span>
-            <span className="font-bold text-yellow-200">R$ 0,00</span>
           </div>
         </div>
       </div>
