@@ -1098,6 +1098,22 @@ const App: React.FC = () => {
   // --- NEWS HANDLERS ---
   const handleViewNews = (id: number) => {
     console.log('Attempting to view news ID:', id); // DEBUG LOG
+    
+    // If in embed view, force parent navigation
+    if (isEmbedView) {
+        const baseUrl = window.location.origin;
+        const publicUrl = `${baseUrl}/?page=news&articleId=${id}`;
+        
+        // Use window.top.location.href to break out of the iframe and navigate the parent window
+        if (window.top) {
+            window.top.location.href = publicUrl;
+        } else {
+            window.location.href = publicUrl;
+        }
+        return;
+    }
+    
+    // If in dashboard or public view, update internal state
     setReadingNewsId(id);
     setActiveTab('news');
   };
