@@ -409,30 +409,52 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
         const pendingDasnCount = processedDasn.filter((i: any) => i.status === 'pendente').length;
         
         // --- ESTIMATION LOGIC ---
-        // Check if Previous Year DASN is pending AND Current Year DAS are missing
         const today = new Date();
         const currentYear = today.getFullYear();
-        const previousYear = currentYear - 1;
+        const averageDasValue = 75.00; // Valor médio estimado
+        let isEstimated = false;
         
+        // 1. Identify years where DASN is pending AND the year is complete (i.e., < currentYear)
+        const yearsToEstimate = processedDasn
+            .filter((d: DasnItem) => d.status === 'pendente' && parseInt(d.ano) < currentYear)
+            .map(d => parseInt(d.ano));
+            
+        // 2. Check if the current year needs estimation (if previous DASN is pending and no current DAS guides exist)
+        const previousYear = currentYear - 1;
         const previousYearDasn = processedDasn.find((d: DasnItem) => d.ano === previousYear.toString());
         const isPreviousDasnPending = previousYearDasn && (previousYearDasn.status === 'pendente');
-        
-        // Check if we have NO DAS for current year
-        const hasCurrentYearDas = processedDas.some((d: DasItem) => d.ano && d.ano.toString() === currentYear.toString());
-        
-        let isEstimated = false;
+        const hasCurrentYearDas = processedDas.some((d: DasItem) => d.ano && parseInt(d.ano) === currentYear);
 
         if (isPreviousDasnPending && !hasCurrentYearDas) {
-            addLog("Detectado: DASN anterior pendente e sem guias atuais. Estimando dívida...");
-            const averageDasValue = 75.00; // Valor médio estimado para 2025
-            // Estimate based on month (1 DAS per month passed)
-            const monthsPassed = today.getMonth() + 1; 
-            const estimatedCurrentDebt = monthsPassed * averageDasValue;
-            
-            totalDebt += estimatedCurrentDebt;
-            isEstimated = true;
+            // If previous year DASN is pending, and we have no current year DAS, estimate current year DAS up to the current month.
+            yearsToEstimate.push(currentYear);
+            addLog(`Adicionando ano ${currentYear} à estimativa (DASN anterior pendente).`);
         }
+        
+        // Remove duplicates and sort
+        const uniqueYearsToEstimate = Array.from(new Set(yearsToEstimate)).sort((a, b) => a - b);
 
+        for (const year of uniqueYearsToEstimate) {
+            const dasCountForYear = processedDas.filter((d: DasItem) => d.ano && parseInt(d.ano) === year).length;
+            
+            let monthsToEstimate = 0;
+            let maxMonths = 12;
+            
+            if (year === currentYear) {
+                // For the current year, only estimate up to the current month (0-indexed month + 1)
+                maxMonths = today.getMonth() + 1;
+            }
+            
+            monthsToEstimate = maxMonths - dasCountForYear;
+
+            if (monthsToEstimate > 0) {
+                const estimatedDebt = monthsToEstimate * averageDasValue;
+                totalDebt += estimatedDebt;
+                isEstimated = true;
+                addLog(`Estimando ${monthsToEstimate} DAS para ${year} (R$ ${estimatedDebt.toFixed(2)}).`);
+            }
+        }
+        
         const hasDebt = totalDebt > 0;
         
         const finalData: FiscalData = {
