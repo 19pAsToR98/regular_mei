@@ -3,6 +3,7 @@ import { Transaction, Category } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import RecurrenceDeleteModal from './RecurrenceDeleteModal';
 import { showSuccess, showLoading, dismissToast } from '../utils/toastUtils';
+import FinancialMetricsCards from './FinancialMetricsCards'; // NOVO IMPORT
 
 interface CashFlowPageProps {
   transactions: Transaction[];
@@ -978,51 +979,63 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
         </div>
 
         {/* CHART SECTION (RIGHT - Col Span 1) */}
-        <div className="lg:col-span-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-5 shadow-sm flex flex-col order-2 max-h-[800px] overflow-y-auto custom-scrollbar">
-            <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
-                Análise Visual
-            </h3>
-            
-            <div className="flex-1 flex flex-col gap-6">
-                {/* Chart Area */}
-                <div className="flex-1 flex flex-col">
-                    {filterType === 'all' ? (
-                       <>
-                         <ChartSection data={revenueChartData} title="Receitas" total={totalExpectedRevenue} />
-                         <div className="border-t border-slate-100 dark:border-slate-800"></div>
-                         <ChartSection data={expenseChartData} title="Despesas" total={totalExpectedExpense} />
-                       </>
-                    ) : (
-                        <ChartSection 
-                            data={filterType === 'receita' ? revenueChartData : expenseChartData} 
-                            title={filterType === 'receita' ? 'Receitas' : 'Despesas'} 
-                            total={filterType === 'receita' ? totalExpectedRevenue : totalExpectedExpense}
-                        />
-                    )}
-                </div>
+        <div className="lg:col-span-1 flex flex-col order-2 max-h-[800px] overflow-y-auto custom-scrollbar">
+            <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-5 shadow-sm flex flex-col flex-shrink-0">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
+                    Análise Visual
+                </h3>
                 
-                {/* Top Categories List (New Improvement) */}
-                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-3">
-                        Top Categorias ({filterType === 'receita' ? 'Receita' : filterType === 'despesa' ? 'Despesa' : 'Ambos'})
-                    </h4>
-                    <div className="space-y-2">
-                        {(filterType === 'receita' ? revenueChartData : expenseChartData)
-                            .slice(0, 5)
-                            .map((item, index) => (
-                                <div key={item.name} className="flex justify-between items-center text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                                        <span className="text-slate-700 dark:text-slate-300 truncate">{item.name}</span>
-                                    </div>
-                                    <span className="font-medium text-slate-800 dark:text-white">
-                                        R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </span>
-                                </div>
-                            ))}
-                        {(filterType === 'all' && revenueChartData.length === 0 && expenseChartData.length === 0) && (
-                            <p className="text-xs text-slate-400 italic">Sem dados para categorizar.</p>
+                {/* NOVO: Financial Metrics Cards */}
+                <FinancialMetricsCards 
+                    metrics={{
+                        realizedRevenue,
+                        realizedExpense,
+                        aReceber,
+                        emAtraso
+                    }}
+                />
+
+                <div className="flex-1 flex flex-col gap-6">
+                    {/* Chart Area */}
+                    <div className="flex-1 flex flex-col">
+                        {filterType === 'all' ? (
+                           <>
+                             <ChartSection data={revenueChartData} title="Receitas" total={totalExpectedRevenue} />
+                             <div className="border-t border-slate-100 dark:border-slate-800"></div>
+                             <ChartSection data={expenseChartData} title="Despesas" total={totalExpectedExpense} />
+                           </>
+                        ) : (
+                            <ChartSection 
+                                data={filterType === 'receita' ? revenueChartData : expenseChartData} 
+                                title={filterType === 'receita' ? 'Receitas' : 'Despesas'} 
+                                total={filterType === 'receita' ? totalExpectedRevenue : totalExpectedExpense}
+                            />
                         )}
+                    </div>
+                    
+                    {/* Top Categories List (New Improvement) */}
+                    <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <h4 className="text-xs font-bold text-slate-500 uppercase mb-3">
+                            Top Categorias ({filterType === 'receita' ? 'Receita' : filterType === 'despesa' ? 'Despesa' : 'Ambos'})
+                        </h4>
+                        <div className="space-y-2">
+                            {(filterType === 'receita' ? revenueChartData : expenseChartData)
+                                .slice(0, 5)
+                                .map((item, index) => (
+                                    <div key={item.name} className="flex justify-between items-center text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                                            <span className="text-slate-700 dark:text-slate-300 truncate">{item.name}</span>
+                                        </div>
+                                        <span className="font-medium text-slate-800 dark:text-white">
+                                            R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                ))}
+                            {(filterType === 'all' && revenueChartData.length === 0 && expenseChartData.length === 0) && (
+                                <p className="text-xs text-slate-400 italic">Sem dados para categorizar.</p>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
