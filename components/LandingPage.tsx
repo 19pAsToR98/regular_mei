@@ -4,21 +4,22 @@ interface LandingPageProps {
   onGetStarted: () => void;
   onLogin: () => void;
   onViewBlog: () => void;
+  onConsultCnpj: () => void; // NEW PROP
 }
 
 // Mapeamento dos Typebot IDs
 const TYPEBOT_IDS: Record<string, string> = {
-    'declaracao': 'declara-o-anual-1-pjfolf7',
+    'declaracao': 'declara-o-anual-cl1wie5', // ID padronizado para o fluxo de resolução/declaração
     'cancelamento': 'cancelar-mei-yljnmeh',
     'parcelamento': 'parcelamento-de-d-bitos-c1b6oco',
     'abertura': 'abrir-mei-43ty0i4',
     'alterar': 'alterar-mei-o1ryxif',
-    'consulta': 'consulta-dasn-extens-o-449s48j'
+    'consulta': 'declara-o-anual-cl1wie5' // Usando o mesmo ID do fluxo de declaração/resolução
 };
 const TYPEBOT_API_HOST = "https://typebotapi.portalmei360.com";
 
 
-const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onViewBlog }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onViewBlog, onConsultCnpj }) => {
   const [activeMessageIndex, setActiveMessageIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -126,7 +127,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
     {
       key: 'alterar',
       title: 'Alterar CNPJ MEI',
-      desc: 'Atualização de endereço, nome fantasia, atividades (CNAE) ou capital social.',
+      desc: 'Atualize dados do seu MEI, como endereço, atividades, nome fantasia e outras informações.',
       icon: 'edit_note',
       color: 'text-indigo-500',
       bg: 'bg-indigo-50 dark:bg-indigo-900/20'
@@ -278,7 +279,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
             </p>
             
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
-              <button onClick={() => handleOpenTypebot('consulta')} className="bg-primary hover:bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-base shadow-xl shadow-blue-500/30 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+              <button onClick={onConsultCnpj} className="bg-primary hover:bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-base shadow-xl shadow-blue-500/30 transition-all transform active:scale-95 flex items-center justify-center gap-2">
                 Consultar CNPJ Grátis <span className="material-icons">search</span>
               </button>
               <button onClick={() => handleOpenTypebot('declaracao')} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 px-8 py-4 rounded-2xl font-bold text-base hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
@@ -312,9 +313,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
                 <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent"></div>
               </div>
 
-              {/* Floating Gadget: Search/Consulta (Hidden on tiny screens) */}
+              {/* Floating Gadget: Search/Consulta (Change to use onConsultCnpj) */}
               <div className="absolute -top-6 -right-2 md:-right-12 z-20 animate-bounce-slow hidden sm:block">
-                <button onClick={() => handleOpenTypebot('consulta')} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-3 md:p-4 rounded-3xl shadow-2xl border border-white/20 flex items-center gap-3 md:gap-4 hover:scale-105 transition-transform">
+                <button onClick={onConsultCnpj} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-3 md:p-4 rounded-3xl shadow-2xl border border-white/20 flex items-center gap-3 md:gap-4 hover:scale-105 transition-transform">
                   <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-lg">
                     <span className="material-icons text-xl md:text-2xl">verified</span>
                   </div>

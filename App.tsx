@@ -31,6 +31,7 @@ import BalanceForecastCard from './components/BalanceForecastCard';
 import VirtualAssistantButton from './components/VirtualAssistantButton';
 import AssistantChat from './components/AssistantChat';
 import LandingPage from './components/LandingPage';
+import CnpjConsultPage from './components/CnpjConsultPage'; // NEW IMPORT
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -61,6 +62,7 @@ const App: React.FC = () => {
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [isPublicView, setIsPublicView] = useState(false);
   const [isEmbedView, setIsEmbedView] = useState(false);
+  // Removed: const [pendingCnpjFlow, setPendingCnpjFlow] = useState(false); 
 
   // Ref to hold the current user state to avoid stale closures in the auth listener
   const userRef = useRef(user);
@@ -193,24 +195,23 @@ const App: React.FC = () => {
   };
 
   const handleUpdateMaintenance = async (config: MaintenanceConfig) => {
-      if (user?.role !== 'admin') {
-          showError('Apenas administradores podem alterar a manutenção.');
-          return;
-      }
-      
-      const { error } = await supabase
-          .from('app_config')
-          .update({ maintenance_config: config })
-          .eq('id', 1);
+      if (user?.role === 'admin') {
+          const { error } = await supabase
+              .from('app_config')
+              .update({ maintenance_config: config })
+              .eq('id', 1);
 
-      if (error) {
-          console.error('Error updating maintenance config:', error);
-          showError('Erro ao salvar configuração de manutenção.');
-          return;
+          if (error) {
+              console.error('Error updating maintenance config:', error);
+              showError('Erro ao salvar configuração de manutenção.');
+              return;
+          }
+          
+          setMaintenance(config);
+          showSuccess('Configuração de manutenção atualizada!');
+      } else {
+          showError('Apenas administradores podem alterar a manutenção.');
       }
-      
-      setMaintenance(config);
-      showSuccess('Configuração de manutenção atualizada!');
   };
   
   const loadConnectionConfig = async () => {
@@ -236,24 +237,23 @@ const App: React.FC = () => {
   };
   
   const handleUpdateConnectionConfig = async (config: ConnectionConfig) => {
-      if (user?.role !== 'admin') {
-          showError('Apenas administradores podem alterar as conexões.');
-          return;
-      }
-      
-      const { error } = await supabase
-          .from('app_config')
-          .update({ connection_config: config })
-          .eq('id', 1);
+      if (user?.role === 'admin') {
+          const { error } = await supabase
+              .from('app_config')
+              .update({ connection_config: config })
+              .eq('id', 1);
 
-      if (error) {
-          console.error('Error updating connection config:', error);
-          showError('Erro ao salvar configuração de conexões.');
-          return;
+          if (error) {
+              console.error('Error updating connection config:', error);
+              showError('Erro ao salvar configuração de conexões.');
+              return;
+          }
+          
+          setConnectionConfig(config);
+          showSuccess('Configuração de conexões atualizada!');
+      } else {
+          showError('Apenas administradores podem alterar as conexões.');
       }
-      
-      setConnectionConfig(config);
-      showSuccess('Configuração de conexões atualizada!');
   };
 
 
@@ -798,6 +798,8 @@ const App: React.FC = () => {
       
       // 4. Load data for the first time
       loadAllUserData(user.id, updatedUser.role || 'user');
+
+      // Removed: if (pendingCnpjFlow) { setActiveTab('cnpj'); setPendingCnpjFlow(false); }
   }
   
   // NEW HANDLERS for Landing Page
@@ -807,6 +809,10 @@ const App: React.FC = () => {
 
   const handleLandingGetStarted = () => {
       setActiveTab('auth');
+  };
+  
+  const handleStartCnpjFlow = () => {
+      setActiveTab('cnpj-consult'); // Navigate to the new public page
   };
   
   const handleViewBlog = () => {
@@ -1776,6 +1782,11 @@ const App: React.FC = () => {
           </div>
       );
   }
+  
+  // NEW: Handle public CNPJ Consult Page
+  if (!user && activeTab === 'cnpj-consult') {
+      return <CnpjConsultPage onBack={handleBackToLanding} connectionConfig={connectionConfig} />;
+  }
 
   // If not logged in, show LandingPage or AuthPage
   if (!user) {
@@ -1792,6 +1803,7 @@ const App: React.FC = () => {
           onGetStarted={handleLandingGetStarted} 
           onLogin={handleLandingLogin} 
           onViewBlog={handleViewBlog} 
+          onConsultCnpj={handleStartCnpjFlow}
       />;
   }
 
@@ -1800,7 +1812,7 @@ const App: React.FC = () => {
   }
   
   // Logged in user: Redirect if on a public-only tab
-  if (activeTab === 'home' || activeTab === 'auth') {
+  if (activeTab === 'home' || activeTab === 'auth' || activeTab === 'cnpj-consult') {
       setActiveTab('dashboard');
       return null; // Prevent rendering until state updates
   }
