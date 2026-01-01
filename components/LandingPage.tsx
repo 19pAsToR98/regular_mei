@@ -601,7 +601,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
       {/* TYPEBOT MODAL - FULLSCREEN ON MOBILE */}
       {activeTypebotId && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full h-full md:h-auto md:max-w-4xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95">
+          <div className="bg-white dark:bg-slate-900 w-full h-full md:h-[680px] md:max-w-4xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95">
             <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
               <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 uppercase text-[10px] md:text-xs tracking-widest">
                 <span className="material-icons text-primary text-sm">smart_toy</span>
@@ -614,14 +614,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
                 <span className="material-icons text-xl">close</span>
               </button>
             </div>
-            <div className="bg-white flex-1 md:flex-none relative">
+            <div className="bg-white flex-1 relative">
               {/* Usando iframe para carregar o Typebot */}
               <iframe 
                   src={getTypebotUrl(activeTypebotId)} 
                   className="w-full h-full border-0 absolute inset-0" 
                   title={typebotTitle}
                   allow="camera; microphone; geolocation"
-                  style={{ height: window.innerWidth < 768 ? '100%' : '600px' }}
               ></iframe>
             </div>
           </div>
