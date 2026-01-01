@@ -227,11 +227,10 @@ const App: React.FC = () => {
       }
       
       if (data && data.connection_config) {
-          // Merge fetched config with default to ensure new fields exist
+          // Merge fetched config with current state to ensure robustness
           setConnectionConfig(prev => ({
               ...prev,
               ...(data.connection_config as ConnectionConfig),
-              // Ensure nested objects are merged correctly if needed, but for now, direct assignment is fine
           }));
       }
   };
@@ -534,7 +533,7 @@ const App: React.FC = () => {
           loadUserCategories(userId), // Load user-specific categories
           loadNewsAndOffers(),
           loadNotifications(userId), // Pass userId to load interactions
-          loadConnectionConfig() // Load connection config for WhatsApp status
+          // loadConnectionConfig() // REMOVED: Now called globally
       ];
 
       if (userRole === 'admin') {
@@ -688,6 +687,7 @@ const App: React.FC = () => {
             setIsEmbedView(true);
             setLoadingAuth(false);
             loadNewsAndOffers();
+            loadConnectionConfig(); // Ensure config loads even in embed view
             return () => {};
         }
 
@@ -700,12 +700,15 @@ const App: React.FC = () => {
             }
             // Ensure public data is loaded
             loadNewsAndOffers();
+            loadConnectionConfig(); // Ensure config loads for public news view
             return () => {}; // Return empty cleanup function
         }
     }
 
     // Load maintenance config first, as it affects rendering
     loadMaintenanceConfig();
+    // Load connection config unconditionally for all users (including public routes like cnpj-consult)
+    loadConnectionConfig(); // <-- ADDED HERE
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       const currentUser = userRef.current; 
