@@ -1881,7 +1881,7 @@ const App: React.FC = () => {
                 onDeleteAppointment={handleDeleteAppointment}
                 userId={user.id}
             />;
-          case 'cnpj': return <CNPJPage cnpj={cnpj} fiscalData={fiscalData} onUpdateFiscalData={setFiscalData} />;
+          case 'cnpj': return <CNPJPage cnpj={cnpj} fiscalData={fiscalData} onUpdateFiscalData={setFiscalData} connectionConfig={connectionConfig} />;
           case 'tools': return <ToolsPage user={user} />;
           case 'news': return <NewsPage news={news} readingId={readingNewsId} onSelectNews={(id) => setReadingNewsId(id)} />;
           case 'offers': return <OffersPage offers={offers} />;

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CNPJResponse, DasItem, DasnItem, Mei360Response, FiscalData, ServiceCTA } from '../types';
+import { CNPJResponse, DasItem, DasnItem, Mei360Response, FiscalData, ServiceCTA, ConnectionConfig } from '../types';
 
 interface CNPJPageProps {
   cnpj?: string;
   fiscalData: FiscalData | null;
   onUpdateFiscalData: (data: FiscalData) => void;
+  connectionConfig: ConnectionConfig; // ADICIONADO
 }
 
 // Redefining servicesData locally for CNPJPage to function independently
@@ -53,7 +54,7 @@ const servicesData: ServiceCTA[] = [
   }
 ];
 
-const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalData }) => {
+const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalData, connectionConfig }) => {
   // --- DADOS CADASTRAIS STATE ---
   const [loadingData, setLoadingData] = useState(false);
   const [lastUpdateData, setLastUpdateData] = useState('');
@@ -238,13 +239,20 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
     const cleanCnpj = cnpj.replace(/[^\d]/g, '');
     addLog(`CNPJ alvo: ${cleanCnpj}`);
     
-    // URL Updated as per request
-    const webhookUrl = `https://n8nwebhook.portalmei360.com/webhook/f0f542f0-c91a-4a61-817d-636af20a7024`;
+    // USANDO A URL DA CONFIGURAÇÃO SALVA
+    const webhookUrl = connectionConfig.diagnosticApi.webhookUrl;
+    const headerKey = connectionConfig.diagnosticApi.headerKey || 'cnpj';
     
-    // Adding query param as fallback for proxies that strip headers
+    if (!webhookUrl) {
+        setErrorFiscal('URL do Webhook de Diagnóstico Fiscal não configurada.');
+        setLoadingFiscal(false);
+        return;
+    }
+    
+    // Adicionando query param como fallback para proxies que strip headers
     const urlWithParams = `${webhookUrl}?cnpj=${cleanCnpj}`;
 
-    // Define strategies with ONLY DIRECT connection
+    // Define strategies with ONLY DIRECT connection (using corsproxy as a fallback wrapper if needed)
     const strategies = [
         { name: 'direct', url: urlWithParams }
     ];
@@ -254,12 +262,17 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
     for (const strategy of strategies) {
         addLog(`Conectando via: ${strategy.name}...`);
         try {
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+            };
+            // Adiciona o header key configurado, se existir
+            if (headerKey) {
+                headers[headerKey] = cleanCnpj; 
+            }
+            
             const response = await fetch(strategy.url, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'cnpj': cleanCnpj // Header as requested
-                },
+                headers: headers,
                 body: JSON.stringify({ cnpj: cleanCnpj }) // Body redundancy
             });
             
