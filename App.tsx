@@ -1088,6 +1088,7 @@ const App: React.FC = () => {
 
   // --- NEWS HANDLERS ---
   const handleViewNews = (id: number) => {
+    console.log('Attempting to view news ID:', id); // DEBUG LOG
     setReadingNewsId(id);
     setActiveTab('news');
   };
@@ -1676,7 +1677,7 @@ const App: React.FC = () => {
                   </button>
               </header>
               <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8">
-                  <NewsPage news={news} readingNewsId={readingNewsId} onSelectNews={setReadingNewsId} />
+                  <NewsPage news={news} readingId={readingNewsId} onSelectNews={setReadingNewsId} />
               </main>
               <footer className="mt-8 text-center text-sm text-slate-400 pb-8">
                 <p>&copy; {new Date().getFullYear()} Regular MEI. Todos os direitos reservados.</p>
@@ -1862,7 +1863,7 @@ const App: React.FC = () => {
             />;
           case 'cnpj': return <CNPJPage cnpj={cnpj} fiscalData={fiscalData} onUpdateFiscalData={setFiscalData} />;
           case 'tools': return <ToolsPage user={user} />;
-          case 'news': return <NewsPage news={news} readingNewsId={readingNewsId} onSelectNews={(id) => setReadingNewsId(id)} />;
+          case 'news': return <NewsPage news={news} readingId={readingNewsId} onSelectNews={(id) => setReadingNewsId(id)} />;
           case 'offers': return <OffersPage offers={offers} />;
           case 'admin':
             return <AdminPage 

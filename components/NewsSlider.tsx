@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 import { NewsItem } from '../types';
 
@@ -61,8 +60,8 @@ const NewsSlider: React.FC<NewsSliderProps> = ({ news, onViewNews }) => {
             {publishedNews.map((item) => (
             <div 
                 key={item.id} 
-                onClick={() => onViewNews(item.id)}
-                className="flex-shrink-0 w-72 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer snap-start group"
+                // REMOVIDO: onClick={() => onViewNews(item.id)}
+                className="flex-shrink-0 w-72 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-lg transition-shadow snap-start group"
             >
                 {/* Image Container */}
                 <div className="h-40 overflow-hidden relative">
@@ -88,9 +87,12 @@ const NewsSlider: React.FC<NewsSliderProps> = ({ news, onViewNews }) => {
                 <h4 className="font-semibold text-slate-800 dark:text-white text-sm leading-snug line-clamp-3 mb-3 group-hover:text-primary transition-colors flex-grow">
                     {item.title}
                 </h4>
-                <p className="text-xs font-medium text-primary mt-auto flex items-center gap-1 group-hover:gap-2 transition-all">
+                <button 
+                    onClick={() => onViewNews(item.id)} // ADICIONADO: Botão explícito para clique
+                    className="text-xs font-medium text-primary mt-auto flex items-center gap-1 group-hover:gap-2 transition-all cursor-pointer hover:underline w-fit"
+                >
                     Ler notícia <span className="material-icons text-xs">arrow_forward</span>
-                </p>
+                </button>
                 </div>
             </div>
             ))}
