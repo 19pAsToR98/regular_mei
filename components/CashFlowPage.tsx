@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Transaction, Category } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
-import RecurrenceDeleteModal from './RecurrenceDeleteModal'; // Importando o novo modal
+import RecurrenceDeleteModal from './RecurrenceDeleteModal';
+import { showSuccess, showLoading, dismissToast } from '../utils/toastUtils';
 
 interface CashFlowPageProps {
   transactions: Transaction[];
@@ -10,7 +11,7 @@ interface CashFlowPageProps {
   onAddTransaction: (t: Transaction | Transaction[]) => void;
   onUpdateTransaction: (t: Transaction) => void;
   onDeleteTransaction: (id: number) => void;
-  onDeleteTransactionSeries: (t: Transaction) => void; // Nova prop para exclusão de série
+  onDeleteTransactionSeries: (t: Transaction) => void;
 }
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
@@ -23,6 +24,9 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
   const [filterType, setFilterType] = useState<'all' | 'receita' | 'despesa'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // NEW STATE for bulk actions
+  const [selectedTransactions, setSelectedTransactions] = useState<number[]>([]);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,19 +68,67 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
     return matchesType && matchesSearch;
   }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+  // --- SELECTION HANDLERS ---
+  
+  const handleSelectTransaction = (id: number, isChecked: boolean) => {
+      setSelectedTransactions(prev => 
+          isChecked ? [...prev, id] : prev.filter(tid => tid !== id)
+      );
+  };
+
+  const handleSelectAll = (isChecked: boolean) => {
+      if (isChecked) {
+          setSelectedTransactions(filteredTransactions.map(t => t.id));
+      } else {
+          setSelectedTransactions([]);
+      }
+  };
+  
+  const isAllSelected = filteredTransactions.length > 0 && selectedTransactions.length === filteredTransactions.length;
+
+  // --- BULK ACTIONS LOGIC ---
+  
+  const handleBulkUpdateStatus = async (newStatus: 'pago' | 'pendente') => {
+      if (selectedTransactions.length === 0) return;
+      
+      const loadingToastId = showLoading(`Atualizando ${selectedTransactions.length} transações...`);
+      
+      const transactionsToUpdate = transactions.filter(t => selectedTransactions.includes(t.id));
+      
+      const updatePromises = transactionsToUpdate.map(t => {
+          return onUpdateTransaction({ ...t, status: newStatus });
+      });
+      
+      await Promise.all(updatePromises);
+      
+      dismissToast(loadingToastId);
+      showSuccess(`${selectedTransactions.length} transações atualizadas para ${newStatus === 'pago' ? 'Pagas/Recebidas' : 'Pendentes'}.`);
+      setSelectedTransactions([]);
+  };
+  
+  const handleBulkDelete = async () => {
+      if (selectedTransactions.length === 0) return;
+      
+      if (!window.confirm(`Tem certeza que deseja excluir permanentemente ${selectedTransactions.length} transações?`)) {
+          return;
+      }
+      
+      const loadingToastId = showLoading(`Excluindo ${selectedTransactions.length} transações...`);
+      
+      const deletePromises = selectedTransactions.map(id => {
+          return onDeleteTransaction(id);
+      });
+      
+      await Promise.all(deletePromises);
+      
+      dismissToast(loadingToastId);
+      showSuccess(`${selectedTransactions.length} transações excluídas.`);
+      setSelectedTransactions([]);
+  };
+
+
   // --- CALCULATIONS (NEW MODEL) ---
-  const {
-    caixaAtual,
-    aReceber,
-    aPagar,
-    caixaProjetado,
-    emAtraso,
-    aVencer,
-    totalExpectedRevenue,
-    totalExpectedExpense,
-    realizedRevenue,
-    realizedExpense,
-  } = useMemo(() => {
+  const metrics = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0];
 
     // Transactions for the current month
@@ -144,6 +196,20 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
       realizedExpense,
     };
   }, [transactions, currentMonth, currentYear]);
+  
+  const {
+    caixaAtual,
+    aReceber,
+    aPagar,
+    caixaProjetado,
+    emAtraso,
+    aVencer,
+    totalExpectedRevenue,
+    totalExpectedExpense,
+    realizedRevenue,
+    realizedExpense,
+  } = metrics;
+
 
   // --- CHART DATA CALCULATION ---
   const getChartData = (type: 'receita' | 'despesa') => {
@@ -511,6 +577,39 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
         )}
      </div>
   );
+  
+  const BulkActionBar: React.FC = () => {
+      if (selectedTransactions.length === 0) return null;
+      
+      return (
+          <div className="sticky top-0 z-20 bg-white dark:bg-slate-900 p-3 rounded-lg border border-primary shadow-lg flex flex-col sm:flex-row justify-between items-center gap-3 animate-in fade-in slide-in-from-top-2">
+              <p className="text-sm font-bold text-slate-800 dark:text-white flex-shrink-0">
+                  {selectedTransactions.length} transação(ões) selecionada(s)
+              </p>
+              <div className="flex gap-3 flex-wrap justify-end">
+                  <button 
+                      onClick={() => handleBulkUpdateStatus('pago')}
+                      className="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors shadow-sm"
+                  >
+                      <span className="material-icons text-sm">check_circle</span> Marcar como Pago
+                  </button>
+                  <button 
+                      onClick={() => handleBulkUpdateStatus('pendente')}
+                      className="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white transition-colors shadow-sm"
+                  >
+                      <span className="material-icons text-sm">schedule</span> Marcar como Pendente
+                  </button>
+                  <button 
+                      onClick={handleBulkDelete}
+                      className="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors shadow-sm"
+                  >
+                      <span className="material-icons text-sm">delete</span> Excluir
+                  </button>
+              </div>
+          </div>
+      );
+  };
+
 
   // Group by date for "Statement Style" display
   const groupedTransactions = useMemo(() => {
@@ -673,35 +772,56 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
         {/* TABLE SECTION (LEFT - Col Span 2) */}
         <div className="lg:col-span-2 flex flex-col order-1 gap-4">
             
+            {/* Bulk Action Bar */}
+            <BulkActionBar />
+            
             {/* DESKTOP TABLE VIEW (Grouped by Date) */}
             <div className="hidden md:block bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                         <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
-                            <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 tracking-wider">Descrição</th>
-                            <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 tracking-wider">Status</th>
-                            <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 tracking-wider text-right">Valor</th>
-                            <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 tracking-wider text-center">Ações</th>
+                            <th className="px-4 py-4 w-10">
+                                <input 
+                                    type="checkbox" 
+                                    checked={isAllSelected}
+                                    onChange={(e) => handleSelectAll(e.target.checked)}
+                                    className="rounded text-primary focus:ring-primary"
+                                />
+                            </th>
+                            <th className="px-3 py-4 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 tracking-wider w-1/2">Descrição</th>
+                            <th className="px-3 py-4 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 tracking-wider w-24">Status</th>
+                            <th className="px-3 py-4 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 tracking-wider text-right w-32">Valor</th>
+                            <th className="px-3 py-4 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 tracking-wider text-center w-24">Ações</th>
                         </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                         {sortedDates.map(dateKey => (
                             <React.Fragment key={dateKey}>
                                 <tr className="bg-slate-50/50 dark:bg-slate-800/30">
-                                    <td colSpan={4} className="px-6 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                    <td colSpan={5} className="px-4 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
                                         {formatDateDisplay(dateKey).full}
                                     </td>
                                 </tr>
-                                {groupedTransactions[dateKey].map((t) => (
+                                {groupedTransactions[dateKey].map((t) => {
+                                    const isSelected = selectedTransactions.includes(t.id);
+                                    return (
                                     <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                                    <td className="px-4 py-4">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={isSelected}
+                                            onChange={(e) => handleSelectTransaction(t.id, e.target.checked)}
+                                            className="rounded text-primary focus:ring-primary"
+                                        />
+                                    </td>
+                                    <td className="px-3 py-4"> {/* Removed whitespace-nowrap */}
                                         <div className="flex items-center gap-3">
                                         <div className={`p-2 rounded-full flex-shrink-0 ${t.type === 'receita' ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-red-100 dark:bg-red-900/30 text-red-500'}`}>
                                             <span className="material-icons text-lg">{getCategoryIcon(t.category, t.type)}</span>
                                         </div>
-                                        <div className="flex flex-col">
-                                            <span className="font-medium text-slate-800 dark:text-white block leading-snug">{t.description}</span>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="font-medium text-slate-800 dark:text-white block leading-snug line-clamp-1">{t.description}</span>
                                             
                                             <div className="flex flex-wrap gap-2 mt-1.5 items-center">
                                                 <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 rounded border border-slate-200 dark:border-slate-700">
@@ -724,7 +844,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                                         </div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                                    <td className="px-3 py-4"> {/* Removed whitespace-nowrap */}
                                         <button 
                                             onClick={() => handleQuickStatusToggle(t)}
                                             className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full transition-all hover:ring-2 ring-offset-1 dark:ring-offset-slate-900 ${
@@ -738,12 +858,12 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                                             {t.status === 'pago' ? (t.type === 'receita' ? 'Recebido' : 'Pago') : 'Pendente'}
                                         </button>
                                     </td>
-                                    <td className={`px-6 py-4 whitespace-nowrap text-right`}>
+                                    <td className={`px-3 py-4 text-right`}> {/* Removed whitespace-nowrap */}
                                         <span className={`font-bold ${t.type === 'receita' ? 'text-green-600 dark:text-green-400' : 'text-slate-800 dark:text-white'}`}>
                                             {t.type === 'despesa' ? '- ' : ''}R$ {(t.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                                    <td className="px-3 py-4 text-center"> {/* Removed whitespace-nowrap */}
                                         <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onClick={() => openEditModal(t)} className="p-1.5 text-slate-400 hover:text-primary transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 rounded" title="Editar">
                                             <span className="material-icons text-lg">edit</span>
@@ -757,7 +877,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                                         </div>
                                     </td>
                                     </tr>
-                                ))}
+                                )}
                             </React.Fragment>
                         ))}
                         </tbody>
@@ -765,17 +885,26 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                 </div>
             </div>
 
-            {/* MOBILE CARD VIEW (Grouped) */}
+            {/* MOBILE CARD VIEW (Grouped) - Need to add checkbox here too */}
             <div className="md:hidden space-y-4">
                 {sortedDates.map(dateKey => (
                     <div key={dateKey} className="space-y-2">
                         <h4 className="text-xs font-bold text-slate-500 uppercase sticky top-0 bg-background-light dark:bg-background-dark py-2 z-10">
                             {formatDateDisplay(dateKey).full}
                         </h4>
-                        {groupedTransactions[dateKey].map(t => (
+                        {groupedTransactions[dateKey].map(t => {
+                            const isSelected = selectedTransactions.includes(t.id);
+                            return (
                             <div key={t.id} className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4 shadow-sm flex flex-col gap-3">
                                 <div className="flex justify-between items-start">
                                     <div className="flex items-center gap-3">
+                                        {/* Checkbox for mobile */}
+                                        <input 
+                                            type="checkbox" 
+                                            checked={isSelected}
+                                            onChange={(e) => handleSelectTransaction(t.id, e.target.checked)}
+                                            className="rounded text-primary focus:ring-primary mt-1"
+                                        />
                                         <div className={`p-2 rounded-full flex-shrink-0 ${t.type === 'receita' ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-red-100 dark:bg-red-900/30 text-red-500'}`}>
                                             <span className="material-icons text-xl">{getCategoryIcon(t.category, t.type)}</span>
                                         </div>
@@ -835,7 +964,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                                     </div>
                                 </div>
                             </div>
-                        ))}
+                        )})}
                     </div>
                 ))}
             </div>
@@ -855,19 +984,47 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
             </h3>
             
             <div className="flex-1 flex flex-col gap-6">
-                {filterType === 'all' ? (
-                   <>
-                     <ChartSection data={revenueChartData} title="Receitas" total={totalExpectedRevenue} />
-                     <div className="border-t border-slate-100 dark:border-slate-800"></div>
-                     <ChartSection data={expenseChartData} title="Despesas" total={totalExpectedExpense} />
-                   </>
-                ) : (
-                    <ChartSection 
-                        data={filterType === 'receita' ? revenueChartData : expenseChartData} 
-                        title={filterType === 'receita' ? 'Receitas' : 'Despesas'} 
-                        total={filterType === 'receita' ? totalExpectedRevenue : totalExpectedExpense}
-                    />
-                )}
+                {/* Chart Area */}
+                <div className="flex-1 flex flex-col">
+                    {filterType === 'all' ? (
+                       <>
+                         <ChartSection data={revenueChartData} title="Receitas" total={totalExpectedRevenue} />
+                         <div className="border-t border-slate-100 dark:border-slate-800"></div>
+                         <ChartSection data={expenseChartData} title="Despesas" total={totalExpectedExpense} />
+                       </>
+                    ) : (
+                        <ChartSection 
+                            data={filterType === 'receita' ? revenueChartData : expenseChartData} 
+                            title={filterType === 'receita' ? 'Receitas' : 'Despesas'} 
+                            total={filterType === 'receita' ? totalExpectedRevenue : totalExpectedExpense}
+                        />
+                    )}
+                </div>
+                
+                {/* Top Categories List (New Improvement) */}
+                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-3">
+                        Top Categorias ({filterType === 'receita' ? 'Receita' : filterType === 'despesa' ? 'Despesa' : 'Ambos'})
+                    </h4>
+                    <div className="space-y-2">
+                        {(filterType === 'receita' ? revenueChartData : expenseChartData)
+                            .slice(0, 5)
+                            .map((item, index) => (
+                                <div key={item.name} className="flex justify-between items-center text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                                        <span className="text-slate-700 dark:text-slate-300 truncate">{item.name}</span>
+                                    </div>
+                                    <span className="font-medium text-slate-800 dark:text-white">
+                                        R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            ))}
+                        {(filterType === 'all' && revenueChartData.length === 0 && expenseChartData.length === 0) && (
+                            <p className="text-xs text-slate-400 italic">Sem dados para categorizar.</p>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
 
