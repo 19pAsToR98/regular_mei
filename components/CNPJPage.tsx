@@ -8,6 +8,78 @@ interface CNPJPageProps {
   connectionConfig: ConnectionConfig; // ADICIONADO
 }
 
+// --- HOLIDAY CALCULATION HELPERS ---
+const getEasterDate = (year: number): Date => {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month, day);
+};
+
+interface Holiday {
+    date: Date;
+    title: string;
+}
+
+const getBrazilianHolidays = (year: number): Holiday[] => {
+  const easter = getEasterDate(year);
+  
+  const carnival = new Date(easter);
+  carnival.setDate(easter.getDate() - 47);
+  
+  const goodFriday = new Date(easter);
+  goodFriday.setDate(easter.getDate() - 2);
+  
+  const corpusChristi = new Date(easter);
+  corpusChristi.setDate(easter.getDate() + 60);
+
+  return [
+    { date: new Date(year, 0, 1), title: 'Confraternização Universal' },
+    { date: carnival, title: 'Carnaval' },
+    { date: goodFriday, title: 'Sexta-feira Santa' },
+    { date: easter, title: 'Páscoa' },
+    { date: new Date(year, 3, 21), title: 'Tiradentes' },
+    { date: new Date(year, 4, 1), title: 'Dia do Trabalho' },
+    { date: corpusChristi, title: 'Corpus Christi' },
+    { date: new Date(year, 8, 7), title: 'Independência do Brasil' },
+    { date: new Date(year, 9, 12), title: 'Nossa Sr.a Aparecida' },
+    { date: new Date(year, 10, 2), title: 'Finados' },
+    { date: new Date(year, 10, 15), title: 'Proclamação da República' },
+    { date: new Date(year, 11, 25), title: 'Natal' },
+  ];
+};
+
+const isHolidayOrWeekend = (date: Date): boolean => {
+  const day = date.getDay();
+  if (day === 0 || day === 6) return true; // Sunday or Saturday
+  
+  const holidays = getBrazilianHolidays(date.getFullYear());
+  return holidays.some(h => 
+    h.getDate() === date.getDate() && h.getMonth() === date.getMonth()
+  );
+};
+
+const getNextBusinessDay = (date: Date): Date => {
+  let checkDate = new Date(date);
+  while (isHolidayOrWeekend(checkDate)) {
+    checkDate.setDate(checkDate.getDate() + 1);
+  }
+  return checkDate;
+};
+// --- END HOLIDAY CALCULATION HELPERS ---
+
+
 // Redefining servicesData locally for CNPJPage to function independently
 const servicesData: ServiceCTA[] = [
   {
@@ -371,6 +443,7 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                    // Check date
                    const parts = item.vencimento.split('/');
                    if (parts.length === 3) {
+                       // Create date using local components (YYYY, MM-1, DD)
                        const dueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
                        const today = new Date();
                        today.setHours(0,0,0,0);
@@ -408,8 +481,7 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
 
         const pendingDasnCount = processedDasn.filter((i: any) => i.status === 'pendente').length;
         
-        // --- ESTIMATION LOGIC ---
-        // Check if Previous Year DASN is pending AND Current Year DAS are missing
+        // --- ESTIMATION LOGIC (Updated to include synthetic DAS items) ---
         const today = new Date();
         const currentYear = today.getFullYear();
         const previousYear = currentYear - 1;
@@ -418,25 +490,69 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
         const isPreviousDasnPending = previousYearDasn && (previousYearDasn.status === 'pendente');
         
         // Check if we have NO DAS for current year
-        const hasCurrentYearDas = processedDas.some((d: DasItem) => d.ano && d.ano.toString() === currentYear.toString());
+        const hasCurrentYearDas = processedDas.some((d: DasItem) => d.ano && parseInt(d.ano) === currentYear);
         
         let isEstimated = false;
+        let estimatedDasList: DasItem[] = [];
 
         if (isPreviousDasnPending && !hasCurrentYearDas) {
-            addLog("Detectado: DASN anterior pendente e sem guias atuais. Estimando dívida...");
-            const averageDasValue = 75.00; // Valor médio estimado para 2025
-            // Estimate based on month (1 DAS per month passed)
-            const monthsPassed = today.getMonth() + 1; 
-            const estimatedCurrentDebt = monthsPassed * averageDasValue;
+            addLog(`Detectado: DASN ${previousYear} pendente e sem guias ${currentYear}. Estimando dívida...`);
+            const averageDasValue = 75.00; 
+            const monthsPassed = today.getMonth() + 1; // 1 to 12
             
-            totalDebt += estimatedCurrentDebt;
+            const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+            for (let i = 0; i < monthsPassed; i++) {
+                const period = `${monthNames[i]}/${currentYear}`;
+                
+                // Calculate due date (20th of the next month, adjusted for business days)
+                const rawDueDate = new Date(currentYear, i + 1, 20);
+                const dueDate = getNextBusinessDay(rawDueDate);
+                
+                const dueDateStr = dueDate.toLocaleDateString('pt-BR');
+                
+                // Determine status (all estimated are 'vencido' if today is past the due date, otherwise 'avencer')
+                const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                const status = dueDate < todayMidnight ? 'vencido' : 'avencer';
+                
+                const estimatedItem: DasItem = {
+                    ano: currentYear.toString(),
+                    periodo: period,
+                    principal: `R$ ${averageDasValue.toFixed(2).replace('.', ',')}`,
+                    multa: 'R$ 0,00',
+                    juros: 'R$ 0,00',
+                    total: `R$ ${averageDasValue.toFixed(2).replace('.', ',')}`,
+                    vencimento: dueDateStr,
+                    situacao: 'ESTIMADO',
+                    status: status as any, // Use 'vencido' or 'avencer'
+                };
+                estimatedDasList.push(estimatedItem);
+                
+                // Add to total debt only if VENCIDO
+                if (status === 'vencido') {
+                    totalDebt += averageDasValue;
+                }
+            }
+            
             isEstimated = true;
+            addLog(`Estimado ${estimatedDasList.length} guias DAS para ${currentYear}.`);
         }
 
+        // Combine existing DAS list with estimated ones
+        const finalDasList = [...processedDas, ...estimatedDasList];
+        
+        // Re-sort the final list (by date descending)
+        finalDasList.sort((a: any, b: any) => {
+            if (!a.vencimento || !b.vencimento) return 0;
+            const dateA = a.vencimento.split('/').reverse().join('-');
+            const dateB = b.vencimento.split('/').reverse().join('-');
+            return dateA < dateB ? 1 : -1;
+        });
+        
         const hasDebt = totalDebt > 0;
         
         const finalData: FiscalData = {
-            dasList: processedDas,
+            dasList: finalDasList, // Use the combined list
             dasnList: processedDasn,
             totalDebt,
             pendingDasnCount,
@@ -628,7 +744,7 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                                     R$ {fiscalData.totalDebt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </span>
                                 {fiscalData.isEstimated && (
-                                    <span className="material-icons text-yellow-500 text-lg cursor-help" title="Valor estimado. Guias de 2025 ainda não foram geradas devido à pendência da Declaração Anual.">
+                                    <span className="material-icons text-yellow-500 text-lg cursor-help" title="Valor estimado. Guias de DAS do ano corrente estão pendentes devido à DASN anterior.">
                                         warning_amber
                                     </span>
                                 )}
@@ -668,7 +784,7 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                                   {fiscalData.isEstimated && (
                                       <div className="p-3 mb-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900/50 rounded-lg text-sm text-yellow-800 dark:text-yellow-200 flex items-start gap-2">
                                           <span className="material-icons text-sm mt-0.5">info</span>
-                                          <p>As guias do ano vigente ainda não estão disponíveis no sistema da Receita Federal pois a Declaração Anual (DASN) do ano anterior está pendente.</p>
+                                          <p>As guias do ano vigente estão estimadas e adicionadas à lista abaixo, pois a Declaração Anual (DASN) do ano anterior está pendente.</p>
                                       </div>
                                   )}
 
@@ -683,6 +799,7 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                                               </div>
                                               <div className="text-right">
                                                   <p className="font-mono text-sm font-medium text-slate-700 dark:text-slate-300">{item.total}</p>
+                                                  {item.situacao === 'ESTIMADO' && <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded uppercase">Estimado</span>}
                                                   {item.status === 'pago' && <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded uppercase">Pago</span>}
                                                   {item.status === 'vencido' && <span className="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded uppercase">Vencido</span>}
                                                   {item.status === 'avencer' && <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded uppercase">A Vencer</span>}
