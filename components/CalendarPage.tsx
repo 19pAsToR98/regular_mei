@@ -307,6 +307,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
     if (window.innerWidth < 1024) setIsDayDetailsOpen(true);
   };
 
+  // REVERTED: Using dots for all screen sizes now
   const renderDots = (dayEvents: CalendarEvent[], dayHolidays: Holiday[]) => {
     if (dayEvents.length === 0 && dayHolidays.length === 0) return null;
     
@@ -336,7 +337,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
     }
 
     return (
-      <div className="flex gap-1.5 mt-1.5 justify-center flex-wrap px-1 lg:hidden">
+      <div className="flex gap-1.5 mt-1.5 justify-center flex-wrap px-1">
         {dots.map((dot, idx) => (
              <div key={dot.type} className={`w-3 h-3 rounded-full ${dot.colorClass} ring-2 ring-white dark:ring-slate-900`} title={dot.title}></div>
         ))}
@@ -344,48 +345,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
     );
   };
   
-  // UPDATED: Render event titles for desktop view
-  const renderEventTitles = (dayEvents: CalendarEvent[], dayHolidays: Holiday[]) => {
-      const titles: { title: string, colorClass: string }[] = [];
-      
-      // 1. Add Holiday (Highest Priority)
-      if (dayHolidays.length > 0) {
-          titles.push({ title: dayHolidays[0].title, colorClass: 'text-indigo-600 dark:text-indigo-400' });
-      }
-      
-      // 2. Add Top 4 Events (Prioritized by importance)
-      dayEvents.slice(0, 4).forEach(e => {
-          let colorClass = 'text-slate-700 dark:text-slate-300';
-          if (e.type === 'receita') colorClass = 'text-green-600 dark:text-green-400';
-          if (e.type === 'despesa') colorClass = 'text-red-600 dark:text-red-400';
-          if (e.type === 'compromisso') colorClass = 'text-blue-600 dark:text-blue-400';
-          
-          // If it's a high priority item (like overdue expense), make it bold
-          const isHighPriority = e.priority <= 2;
-          
-          titles.push({ 
-              // Truncate title aggressively for space
-              title: e.title.length > 15 ? e.title.substring(0, 12) + '...' : e.title, 
-              colorClass: `${colorClass} ${isHighPriority ? 'font-bold' : 'font-medium'}` 
-          });
-      });
-      
-      // Limit to 5 lines total (1 holiday + 4 events)
-      return (
-          <div className="hidden lg:block mt-1 space-y-0.5 px-1">
-              {titles.slice(0, 5).map((t, idx) => (
-                  <p key={idx} className={`text-[9px] leading-tight truncate ${t.colorClass}`}>
-                      {t.title}
-                  </p>
-              ))}
-              {dayEvents.length > 5 && (
-                  <p className="text-[9px] text-slate-400 mt-0.5">
-                      + {dayEvents.length - 5} mais
-                  </p>
-              )}
-          </div>
-      );
-  };
+  // REMOVED renderEventTitles function entirely.
 
   const renderLegend = () => (
     <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
@@ -513,7 +473,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
     <div className="flex flex-col lg:flex-row gap-6 h-auto lg:h-[calc(100vh-140px)] animate-in fade-in duration-500 pb-20 lg:pb-0">
       
       {/* Calendar Grid Section (Now takes more space) */}
-      <div className="flex-1 lg:flex-[3] bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col min-h-[400px] overflow-hidden">
+      <div className="flex-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col min-h-[400px] overflow-hidden">
         
         {/* Header & Filters */}
         <div className="p-4 flex flex-col gap-4 border-b border-slate-200 dark:border-slate-800">
@@ -599,10 +559,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
                 `}>
                   {day}
                 </span>
-                {/* Mobile Dots */}
+                {/* Dots for all screen sizes */}
                 {renderDots(dayEvents, dayHolidays)}
-                {/* Desktop Titles */}
-                {renderEventTitles(dayEvents, dayHolidays)}
               </div>
             );
           })}
