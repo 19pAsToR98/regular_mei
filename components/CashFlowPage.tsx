@@ -700,8 +700,8 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
           </div>
         </div>
 
-        {/* 4. Caixa Projetado do Mês (Destaque) */}
-         <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-4 rounded-lg border border-slate-600 ring-1 ring-slate-500 shadow-lg text-white">
+        {/* 4. Caixa Projetado do Mês (Destaque) - REVISADO */}
+         <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-4 rounded-lg border border-slate-600 ring-1 ring-slate-500 shadow-lg text-white flex flex-col justify-between">
            <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-white/20 rounded-lg">
               <span className="material-icons text-white">query_stats</span>
@@ -712,7 +712,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
             </div>
           </div>
           
-          {/* Secondary Indicators */}
+          {/* Secondary Indicators - INTEGRATED */}
           <div className="mt-3 pt-3 border-t border-white/30 space-y-1">
               <div className="flex justify-between text-xs">
                   <span className="flex items-center gap-1 text-red-300">
