@@ -22,7 +22,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
   const [activeMessageIndex, setActiveMessageIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeTypebot, setActiveTypebot] = useState<string | null>(null);
+  const [activeTypebot, setActiveTypebot] = useState<string | null>(null); // Stores the Typebot ID
+  const [typebotTitle, setTypebotTitle] = useState('Atendimento Especializado'); // Stores the title for the modal
 
   // WhatsApp conversation simulation logic
   useEffect(() => {
@@ -59,20 +60,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
   // Effect to initialize Typebot after modal is rendered
   useEffect(() => {
     if (activeTypebot && (window as any).Typebot) {
-      const timer = setTimeout(() => {
-        // Remove qualquer Typebot existente antes de inicializar um novo
-        const existingTypebot = document.querySelector('typebot-standard');
-        if (existingTypebot) {
-            existingTypebot.remove();
-        }
+      const container = document.getElementById('typebot-container');
+      if (container) {
+        // Limpa o contêiner antes de inicializar
+        container.innerHTML = ''; 
         
         // Inicializa o Typebot com o ID correto
         (window as any).Typebot.initStandard({
           typebot: activeTypebot,
           apiHost: TYPEBOT_API_HOST,
+          container: container, // Passa o elemento DOM
         });
-      }, 100);
-      return () => clearTimeout(timer);
+      }
     }
   }, [activeTypebot]);
 
@@ -94,7 +93,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
   };
 
   const handleOpenTypebot = (serviceKey: keyof typeof TYPEBOT_IDS = 'consulta') => {
+    const service = mainServices.find(s => s.key === serviceKey);
+    setTypebotTitle(service?.title || 'Atendimento Especializado');
     setActiveTypebot(TYPEBOT_IDS[serviceKey]);
+  };
+  
+  const handleCloseTypebot = () => {
+      setActiveTypebot(null);
+      // Limpa o contêiner para garantir que o próximo init funcione
+      const container = document.getElementById('typebot-container');
+      if (container) {
+          container.innerHTML = '';
+      }
   };
 
   const mainServices = [
@@ -612,19 +622,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
             <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
               <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 uppercase text-[10px] md:text-xs tracking-widest">
                 <span className="material-icons text-primary text-sm">smart_toy</span>
-                Atendimento Especializado
+                {typebotTitle}
               </h3>
               <button 
-                onClick={() => setActiveTypebot(null)} 
+                onClick={handleCloseTypebot} 
                 className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:bg-slate-300 transition-colors"
               >
                 <span className="material-icons text-xl">close</span>
               </button>
             </div>
             <div className="bg-white flex-1 md:flex-none">
-              {/* O Typebot será injetado aqui pelo script global */}
+              {/* O contêiner do Typebot será injetado aqui */}
               <div id="typebot-container" style={{ width: '100%', height: window.innerWidth < 768 ? '100%' : '600px' }}>
-                {/* O componente Typebot.io/react não é usado diretamente, mas sim o script global */}
+                {/* Conteúdo injetado pelo script Typebot */}
               </div>
             </div>
           </div>
