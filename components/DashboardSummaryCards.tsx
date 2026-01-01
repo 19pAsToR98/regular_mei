@@ -14,7 +14,7 @@ interface DashboardSummaryCardsProps {
 }
 
 const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ metrics }) => {
-  const { caixaAtual, aReceber, aPagar, caixaProjetado, emAtraso, aVencer } = metrics;
+  const { caixaAtual, aReceber, aPagar, caixaProjetado } = metrics;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
@@ -57,7 +57,7 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ metrics }
         </div>
       </div>
 
-      {/* 4. Caixa Projetado do Mês (Destaque) - NOVO LAYOUT COMPACTO */}
+      {/* 4. Caixa Projetado do Mês (Destaque) */}
       <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-4 rounded-lg border border-slate-600 ring-1 ring-slate-500 shadow-lg text-white flex flex-col justify-between">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2 bg-white/20 rounded-lg">
@@ -69,19 +69,19 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ metrics }
           </div>
         </div>
         
-        {/* Secondary Indicators */}
-        <div className="mt-3 pt-3 border-t border-white/30 space-y-1">
+        {/* Placeholder para manter a altura, removendo as métricas */}
+        <div className="mt-3 pt-3 border-t border-white/30 space-y-1 opacity-0 pointer-events-none">
           <div className="flex justify-between text-xs">
             <span className="flex items-center gap-1 text-red-300">
               <span className="material-icons text-sm">error</span> Em Atraso
             </span>
-            <span className="font-bold text-red-200">R$ {emAtraso.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            <span className="font-bold text-red-200">R$ 0,00</span>
           </div>
           <div className="flex justify-between text-xs">
             <span className="flex items-center gap-1 text-yellow-300">
               <span className="material-icons text-sm">schedule</span> A Vencer
             </span>
-            <span className="font-bold text-yellow-200">R$ {aVencer.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            <span className="font-bold text-yellow-200">R$ 0,00</span>
           </div>
         </div>
       </div>
