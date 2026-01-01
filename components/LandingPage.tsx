@@ -547,7 +547,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
               </div>
               <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">{tool.title}</h3>
               <p className="text-slate-400 text-sm md:text-base leading-relaxed mb-6 md:mb-8">{tool.desc}</p>
-              <button onClick={() => handleOpenTypebot('consulta')} className="text-white font-bold flex items-center gap-2 hover:gap-3 transition-all mt-auto">
+              <button onClick={onGetStarted} className="text-white font-bold flex items-center gap-2 hover:gap-3 transition-all mt-auto">
                  Acessar Agora <span className="material-icons text-sm">arrow_forward</span>
               </button>
             </div>
