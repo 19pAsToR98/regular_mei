@@ -59,6 +59,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [isPublicView, setIsPublicView] = useState(false);
+  const [isEmbedView, setIsEmbedView] = useState(false); // NEW STATE FOR EMBED
 
   // Ref to hold the current user state to avoid stale closures in the auth listener
   const userRef = useRef(user);
@@ -675,7 +676,15 @@ const App: React.FC = () => {
     if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
         const articleIdParam = params.get('articleId');
+        const embedParam = params.get('embed'); // CHECK FOR EMBED PARAM
         
+        if (embedParam === 'news-slider') {
+            setIsEmbedView(true);
+            setLoadingAuth(false);
+            loadNewsAndOffers();
+            return () => {};
+        }
+
         if (params.get('page') === 'news') {
             setIsPublicView(true);
             setLoadingAuth(false);
@@ -1648,6 +1657,17 @@ const App: React.FC = () => {
           </div>
       );
   }
+  
+  // NEW: Render Embed View
+  if (isEmbedView) {
+      return (
+          <div className="w-full h-full bg-background-light dark:bg-background-dark overflow-hidden">
+              <div className="max-w-full mx-auto p-4">
+                  <NewsSlider news={news} onViewNews={handleViewNews} />
+              </div>
+          </div>
+      );
+  }
 
   if (isPublicView) {
       return (
@@ -1912,11 +1932,11 @@ const App: React.FC = () => {
   // Main App Structure
   return (
     <div className="flex h-screen bg-background-light dark:bg-background-dark overflow-hidden relative">
-      {user && (
+      {user && !isEmbedView && (
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} userRole={user?.role} />
       )}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {user && (
+      <div className={`flex-1 flex flex-col overflow-hidden ${isEmbedView ? 'w-full' : ''}`}>
+        {user && !isEmbedView && (
             <Header activeTab={activeTab} onMenuClick={() => setIsSidebarOpen(true)} notifications={notifications} onMarkAsRead={handleMarkAsRead} onVote={handleVote} user={user} onLogout={handleLogout} onNavigateToProfile={() => setActiveTab('settings')} />
         )}
         <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth relative">
@@ -1952,7 +1972,7 @@ const App: React.FC = () => {
       )}
       
       {/* VIRTUAL ASSISTANT UI */}
-      {user && user.isSetupComplete && (
+      {user && user.isSetupComplete && !isEmbedView && (
           <>
               <VirtualAssistantButton 
                   isOpen={isAssistantOpen} 
