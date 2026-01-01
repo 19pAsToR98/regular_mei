@@ -27,13 +27,25 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
 
   // Logic to view a single article
   if (readingId) {
-    const article = filteredNews.find(n => n.id === readingId);
+    // Tenta encontrar o artigo na lista filtrada (para navegação) ou na lista completa (para garantir que abra)
+    let article = filteredNews.find(n => n.id === readingId);
+    
     if (!article) {
-        const fullArticle = news.find(n => n.id === readingId);
-        if (!fullArticle) return <div>Artigo não encontrado.</div>;
+        // Se não estiver na lista filtrada, busca na lista completa (necessário se o usuário clicou no slider do dashboard)
+        article = news.find(n => n.id === readingId && n.status === 'published');
     }
 
-    // Find index for navigation
+    if (!article) {
+        // Se o artigo não for encontrado ou não estiver publicado
+        return (
+            <div className="text-center p-12 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                <h1 className="text-2xl font-bold text-red-500">Artigo não encontrado ou indisponível.</h1>
+                <button onClick={() => onSelectNews(null)} className="mt-4 text-primary hover:underline">Voltar para a lista</button>
+            </div>
+        );
+    }
+
+    // Find index for navigation (using the filtered list for context)
     const currentIndex = filteredNews.findIndex(n => n.id === readingId);
     const prevArticle = currentIndex > 0 ? filteredNews[currentIndex - 1] : null;
     const nextArticle = currentIndex < filteredNews.length - 1 ? filteredNews[currentIndex + 1] : null;
@@ -44,6 +56,7 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
 
         // 1. Construct the public URL
         const baseUrl = window.location.origin;
+        // Usando a URL base + parâmetros para que o link funcione mesmo para usuários deslogados
         const publicUrl = `${baseUrl}/?page=news&articleId=${article.id}`;
 
         const shareData = {
@@ -74,7 +87,7 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
       <div className="w-full">
         <div className="bg-white dark:bg-slate-900 rounded-xl md:border md:border-slate-200 dark:md:border-slate-800 overflow-hidden md:shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="relative h-64 md:h-80 w-full">
-             <img src={article?.imageUrl} alt={article?.title} className="w-full h-full object-cover" />
+             <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover" />
              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
              <button 
                onClick={() => onSelectNews(null)}
@@ -84,29 +97,29 @@ const NewsPage: React.FC<NewsPageProps> = ({ news, readingId, onSelectNews }) =>
              </button>
              <div className="absolute bottom-6 left-6 md:left-10 right-6 text-white">
                 <span className="inline-block px-3 py-1 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-md mb-3">
-                  {article?.category}
+                  {article.category}
                 </span>
-                <h1 className="text-2xl md:text-4xl font-bold leading-tight mb-2">{article?.title}</h1>
+                <h1 className="text-2xl md:text-4xl font-bold leading-tight mb-2">{article.title}</h1>
                 <div className="flex items-center gap-4 text-sm text-slate-200">
-                   <span className="flex items-center gap-1"><span className="material-icons text-sm">event</span> {article?.date}</span>
-                   <span className="flex items-center gap-1"><span className="material-icons text-sm">schedule</span> {article?.readTime}</span>
+                   <span className="flex items-center gap-1"><span className="material-icons text-sm">event</span> {article.date}</span>
+                   <span className="flex items-center gap-1"><span className="material-icons text-sm">schedule</span> {article.readTime}</span>
                 </div>
              </div>
           </div>
           
           <div className="p-6 md:p-10">
              <p className="text-lg text-slate-600 dark:text-slate-300 font-medium mb-8 leading-relaxed border-l-4 border-primary pl-4 italic">
-               {article?.excerpt}
+               {article.excerpt}
              </p>
              
              {/* REMOVENDO PROSE E APLICANDO ESTILOS BÁSICOS PARA MANTER O ESPAÇAMENTO DO EDITOR */}
              <div 
                className="text-base text-slate-700 dark:text-slate-300 leading-relaxed space-y-4"
-               dangerouslySetInnerHTML={{ __html: article?.content || '' }}
+               dangerouslySetInnerHTML={{ __html: article.content || '' }}
              />
              
              {/* Source Information */}
-             {(article?.sourceName || article?.sourceUrl) && (
+             {(article.sourceName || article.sourceUrl) && (
                  <div className="mt-8 pt-4 border-t border-slate-200 dark:border-slate-800">
                      <p className="text-xs font-bold text-slate-500 uppercase mb-1">Fonte</p>
                      {article.sourceUrl ? (
