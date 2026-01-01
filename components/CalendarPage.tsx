@@ -26,6 +26,7 @@ interface CalendarEvent {
   amount?: number;
   time?: string;
   notify?: boolean;
+  priority: number; // 1=High (DAS/Vencido), 2=Medium (A Pagar/Receber), 3=Low (Compromisso)
 }
 
 // --- HOLIDAY CALCULATION HELPERS ---
@@ -80,6 +81,8 @@ const getBrazilianHolidays = (year: number): Holiday[] => {
   ];
 };
 
+type EventFilter = 'all' | 'receita' | 'despesa' | 'compromisso';
+
 const CalendarPage: React.FC<CalendarPageProps> = ({
   transactions,
   appointments,
@@ -96,7 +99,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
   const [currentDate, setCurrentDate] = useState(new Date()); 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDayDetailsOpen, setIsDayDetailsOpen] = useState(false); // New state for mobile modal
+  const [isDayDetailsOpen, setIsDayDetailsOpen] = useState(false); 
+  const [activeFilter, setActiveFilter] = useState<EventFilter>('all'); // NEW FILTER STATE
 
   // Form States
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -109,8 +113,19 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
 
   // --- MERGE DATA SOURCES ---
   const events: CalendarEvent[] = useMemo(() => {
+      const todayStr = new Date().toISOString().split('T')[0];
+      
       const transEvents = transactions.map(t => {
           const [year, month, day] = t.date.split('-').map(Number);
+          const isOverdue = t.status === 'pendente' && t.date < todayStr;
+          
+          let priority = 3;
+          if (t.type === 'despesa') {
+              priority = isOverdue ? 1 : 2; // Despesas vencidas são prioridade máxima
+          } else if (t.type === 'receita') {
+              priority = isOverdue ? 2 : 3; // Receitas vencidas são prioridade média
+          }
+
           return {
               id: t.id,
               date: new Date(year, month - 1, day),
@@ -119,7 +134,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
               category: t.category,
               amount: t.amount || t.expectedAmount,
               time: t.time || '00:00',
-              notify: false
+              notify: false,
+              priority: priority
           } as CalendarEvent;
       });
 
@@ -131,7 +147,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
               title: a.title,
               type: 'compromisso',
               time: a.time,
-              notify: a.notify
+              notify: a.notify,
+              priority: 3 // Compromissos são prioridade baixa
           } as CalendarEvent;
       });
 
@@ -153,6 +170,11 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
   const handleNextMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
+  
+  const handleToday = () => {
+    setCurrentDate(new Date());
+    setSelectedDate(new Date());
+  };
 
   const isSameDay = (d1: Date, d2: Date) => {
     return d1.getDate() === d2.getDate() && 
@@ -160,9 +182,16 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
            d1.getFullYear() === d2.getFullYear();
   };
 
-  const getEventsForDay = (day: number) => {
+  const getEventsForDay = (day: number): CalendarEvent[] => {
     const checkDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    return events.filter(e => isSameDay(e.date, checkDate));
+    
+    const dayEvents = events.filter(e => isSameDay(e.date, checkDate));
+    
+    // Apply filter
+    const filtered = dayEvents.filter(e => activeFilter === 'all' || e.type === activeFilter);
+
+    // Sort by priority (1=High, 3=Low)
+    return filtered.sort((a, b) => a.priority - b.priority);
   };
   
   const getHolidaysForDay = (day: number) => {
@@ -307,12 +336,54 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
     }
 
     return (
-      <div className="flex gap-1.5 mt-1.5 justify-center flex-wrap px-1">
+      <div className="flex gap-1.5 mt-1.5 justify-center flex-wrap px-1 lg:hidden">
         {dots.map((dot, idx) => (
              <div key={dot.type} className={`w-3 h-3 rounded-full ${dot.colorClass} ring-2 ring-white dark:ring-slate-900`} title={dot.title}></div>
         ))}
       </div>
     );
+  };
+  
+  // NEW: Render event titles for desktop view
+  const renderEventTitles = (dayEvents: CalendarEvent[], dayHolidays: Holiday[]) => {
+      const titles: { title: string, colorClass: string }[] = [];
+      
+      // 1. Add Holiday (Highest Priority)
+      if (dayHolidays.length > 0) {
+          titles.push({ title: dayHolidays[0].title, colorClass: 'text-indigo-600 dark:text-indigo-400' });
+      }
+      
+      // 2. Add Top 2 Events (Prioritized by importance)
+      dayEvents.slice(0, 2).forEach(e => {
+          let colorClass = 'text-slate-700 dark:text-slate-300';
+          if (e.type === 'receita') colorClass = 'text-green-600 dark:text-green-400';
+          if (e.type === 'despesa') colorClass = 'text-red-600 dark:text-red-400';
+          if (e.type === 'compromisso') colorClass = 'text-blue-600 dark:text-blue-400';
+          
+          // If it's a high priority item (like overdue expense), make it bold
+          const isHighPriority = e.priority <= 2;
+          
+          titles.push({ 
+              title: e.title, 
+              colorClass: `${colorClass} ${isHighPriority ? 'font-bold' : 'font-medium'}` 
+          });
+      });
+      
+      // Limit to 3 lines total (1 holiday + 2 events)
+      return (
+          <div className="hidden lg:block mt-1 space-y-0.5 px-1">
+              {titles.slice(0, 3).map((t, idx) => (
+                  <p key={idx} className={`text-[10px] leading-tight truncate ${t.colorClass}`}>
+                      {t.title}
+                  </p>
+              ))}
+              {dayEvents.length > 3 && (
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                      + {dayEvents.length - 3} mais
+                  </p>
+              )}
+          </div>
+      );
   };
 
   const renderLegend = () => (
@@ -339,7 +410,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
     </div>
   );
 
-  const selectedDayEvents = events.filter(e => isSameDay(e.date, selectedDate));
+  const selectedDayEvents = events.filter(e => isSameDay(e.date, selectedDate) && (activeFilter === 'all' || e.type === activeFilter));
   const selectedDayHolidays = holidays.filter(h => isSameDay(h.date, selectedDate));
 
   // --- REUSABLE EVENT LIST COMPONENT (For Sidebar & Mobile Modal) ---
@@ -442,19 +513,51 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
       
       {/* Calendar Grid Section */}
       <div className="flex-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col min-h-[400px] overflow-hidden">
-        {/* Header */}
-        <div className="p-4 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
-          <h2 className="text-xl font-bold text-slate-800 dark:text-white capitalize">
-            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-          </h2>
-          <div className="flex gap-2">
-            <button onClick={handlePrevMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-              <span className="material-icons text-slate-600 dark:text-slate-400">chevron_left</span>
-            </button>
-            <button onClick={handleNextMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-              <span className="material-icons text-slate-600 dark:text-slate-400">chevron_right</span>
-            </button>
-          </div>
+        
+        {/* Header & Filters */}
+        <div className="p-4 flex flex-col gap-4 border-b border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-800 dark:text-white capitalize">
+                    {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                </h2>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={handleToday}
+                        className="px-3 py-1 text-sm font-medium rounded-full border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    >
+                        Hoje
+                    </button>
+                    <button onClick={handlePrevMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                        <span className="material-icons text-slate-600 dark:text-slate-400">chevron_left</span>
+                    </button>
+                    <button onClick={handleNextMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                        <span className="material-icons text-slate-600 dark:text-slate-400">chevron_right</span>
+                    </button>
+                </div>
+            </div>
+            
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg">
+                {([
+                    { id: 'all', label: 'Todos', icon: 'view_agenda' },
+                    { id: 'compromisso', label: 'Compromissos', icon: 'event' },
+                    { id: 'receita', label: 'Receitas', icon: 'arrow_upward' },
+                    { id: 'despesa', label: 'Despesas', icon: 'arrow_downward' },
+                ] as { id: EventFilter, label: string, icon: string }[]).map(filter => (
+                    <button
+                        key={filter.id}
+                        onClick={() => setActiveFilter(filter.id)}
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-colors border ${
+                            activeFilter === filter.id 
+                                ? 'bg-primary text-white border-primary shadow-sm' 
+                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        }`}
+                    >
+                        <span className="material-icons text-sm">{filter.icon}</span>
+                        {filter.label}
+                    </button>
+                ))}
+            </div>
         </div>
 
         {/* Weekdays */}
@@ -485,7 +588,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
                 key={day}
                 onClick={() => handleDayClick(day)}
                 className={`
-                  relative border-b border-r border-slate-100 dark:border-slate-800 p-2 cursor-pointer transition-colors min-h-[80px] lg:min-h-0 flex flex-col items-center justify-start group active:bg-blue-100 dark:active:bg-blue-900/40
+                  relative border-b border-r border-slate-100 dark:border-slate-800 p-1 cursor-pointer transition-colors min-h-[80px] lg:min-h-0 flex flex-col items-center justify-start group active:bg-blue-100 dark:active:bg-blue-900/40
                   ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : isHoliday ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}
                 `}
               >
@@ -495,7 +598,10 @@ const CalendarPage: React.FC<CalendarPageProps> = ({
                 `}>
                   {day}
                 </span>
+                {/* Mobile Dots */}
                 {renderDots(dayEvents, dayHolidays)}
+                {/* Desktop Titles */}
+                {renderEventTitles(dayEvents, dayHolidays)}
               </div>
             );
           })}
