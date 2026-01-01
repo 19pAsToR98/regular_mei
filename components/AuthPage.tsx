@@ -6,11 +6,12 @@ interface AuthPageProps {
   onLogin: (user: User) => void;
   onForgotPassword: (email: string) => Promise<boolean>;
   onNavigate: (tab: string) => void; // Added navigation prop
+  onBackToLanding: () => void; // NEW PROP
 }
 
 type AuthMode = 'login' | 'register' | 'forgot';
 
-const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNavigate }) => {
+const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNavigate, onBackToLanding }) => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false); // Global loading state for forms
   const [authError, setAuthError] = useState<string | null>(null);
@@ -200,6 +201,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 animate-in fade-in slide-in-from-right-8 duration-500">
         <div className="max-w-md w-full">
             
+            {/* NEW: Back to Landing Button */}
+            <button 
+                onClick={onBackToLanding} 
+                className="mb-6 flex items-center text-slate-500 hover:text-primary transition-colors font-medium"
+            >
+                <span className="material-icons text-sm mr-1">arrow_back</span> Voltar para a Home
+            </button>
+
             <div className="text-center mb-8 lg:hidden">
                 <img 
                     src="https://regularmei.com.br/wp-content/uploads/2024/07/REGULAR-500-x-200-px.png" 

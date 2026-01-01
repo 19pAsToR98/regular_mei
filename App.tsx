@@ -30,6 +30,7 @@ import PrivacyPage from './components/PrivacyPage';
 import BalanceForecastCard from './components/BalanceForecastCard';
 import VirtualAssistantButton from './components/VirtualAssistantButton';
 import AssistantChat from './components/AssistantChat';
+import LandingPage from './components/LandingPage'; // NEW IMPORT
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -60,6 +61,7 @@ const App: React.FC = () => {
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [isPublicView, setIsPublicView] = useState(false);
   const [isEmbedView, setIsEmbedView] = useState(false); // NEW STATE FOR EMBED
+  const [showAuthForm, setShowAuthForm] = useState(false); // NEW STATE FOR LANDING/AUTH TOGGLE
 
   // Ref to hold the current user state to avoid stale closures in the auth listener
   const userRef = useRef(user);
@@ -70,9 +72,14 @@ const App: React.FC = () => {
   // Initialize activeTab from localStorage or default to 'dashboard'
   const [activeTab, setActiveTabState] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('activeTab') || 'dashboard';
+      // If user is not logged in, default to 'login' (which now renders LandingPage)
+      const storedTab = localStorage.getItem('activeTab');
+      if (!storedTab || storedTab === 'login') {
+          return 'login';
+      }
+      return storedTab;
     }
-    return 'dashboard';
+    return 'login';
   });
   
   const setActiveTab = (tab: string) => {
@@ -721,6 +728,7 @@ const App: React.FC = () => {
         // Clear persisted tab on sign out
         localStorage.removeItem('activeTab');
         setActiveTabState('login'); // Explicitly navigate to login view
+        setShowAuthForm(false); // Reset to landing page view
       } else if (event === 'INITIAL_SESSION' && session?.user) {
         loadUserProfile(session.user);
       } else if (event === 'INITIAL_SESSION' && !session) {
@@ -793,6 +801,23 @@ const App: React.FC = () => {
       // 4. Load data for the first time
       loadAllUserData(user.id, updatedUser.role || 'user');
   }
+  
+  // NEW HANDLERS for Landing Page
+  const handleLandingLogin = () => {
+      setShowAuthForm(true);
+  };
+
+  const handleLandingGetStarted = () => {
+      setShowAuthForm(true);
+  };
+  
+  const handleViewBlog = () => {
+      setIsPublicView(true);
+      // Ensure we are not stuck in auth flow if we navigate to public view
+      setShowAuthForm(false);
+      setActiveTab('news'); // Ensure the tab is set correctly for public view rendering
+  };
+
 
   // --- USER MANAGEMENT HANDLERS (Admin & Settings) ---
   
@@ -1752,9 +1777,21 @@ const App: React.FC = () => {
       );
   }
 
-  // If not logged in, show AuthPage
+  // If not logged in, show LandingPage or AuthPage
   if (!user) {
-      return <AuthPage onLogin={handleLogin} onForgotPassword={handleForgotPassword} onNavigate={setActiveTab} />;
+      if (showAuthForm) {
+          return <AuthPage 
+              onLogin={handleLogin} 
+              onForgotPassword={handleForgotPassword} 
+              onNavigate={setActiveTab} 
+              onBackToLanding={() => setShowAuthForm(false)}
+          />;
+      }
+      return <LandingPage 
+          onGetStarted={handleLandingGetStarted} 
+          onLogin={handleLandingLogin} 
+          onViewBlog={handleViewBlog} 
+      />;
   }
 
   if (!user.isSetupComplete) {

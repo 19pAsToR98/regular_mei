@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 
 interface LandingPageProps {
@@ -75,7 +74,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
     }
   };
 
-  const handleOpenTypebot = (id: string = "declara-o-anual-1-pjfolf7") => {
+  const handleOpenTypebot = (id: string = "declara-o-anual-cl1wie5") => {
     setActiveTypebot(id);
   };
 
@@ -235,7 +234,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
 
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 items-center">
           {/* Left Column: Content */}
-          <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-6 animate-in fade-in slide-in-from-left-6 duration-700">
+          <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-6 md:space-y-8 animate-in fade-in slide-in-from-left-6 duration-700">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-primary dark:text-blue-400 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest border border-blue-100 dark:border-blue-800">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
