@@ -60,8 +60,8 @@ const NewsSlider: React.FC<NewsSliderProps> = ({ news, onViewNews }) => {
             {publishedNews.map((item) => (
             <div 
                 key={item.id} 
-                // REMOVIDO: onClick={() => onViewNews(item.id)}
-                className="flex-shrink-0 w-72 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-lg transition-shadow snap-start group"
+                onClick={() => onViewNews(item.id)} // CORRIGIDO: Adicionando o clique no container principal
+                className="flex-shrink-0 w-72 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-lg transition-shadow snap-start group cursor-pointer"
             >
                 {/* Image Container */}
                 <div className="h-40 overflow-hidden relative">
@@ -88,7 +88,7 @@ const NewsSlider: React.FC<NewsSliderProps> = ({ news, onViewNews }) => {
                     {item.title}
                 </h4>
                 <button 
-                    onClick={() => onViewNews(item.id)} // ADICIONADO: Botão explícito para clique
+                    onClick={(e) => { e.stopPropagation(); onViewNews(item.id); }} // Mantendo o botão explícito, mas garantindo que o clique no container funcione
                     className="text-xs font-medium text-primary mt-auto flex items-center gap-1 group-hover:gap-2 transition-all cursor-pointer hover:underline w-fit"
                 >
                     Ler notícia <span className="material-icons text-xs">arrow_forward</span>
