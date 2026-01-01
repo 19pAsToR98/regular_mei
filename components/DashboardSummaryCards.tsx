@@ -19,7 +19,7 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ metrics }
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
       {/* 1. Caixa Atual (Realizado) */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden shadow-sm flex flex-col justify-between">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
             <span className="material-icons text-primary dark:text-blue-400">account_balance_wallet</span>
@@ -32,7 +32,7 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ metrics }
       </div>
       
       {/* 2. A Receber (Pendente) */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden shadow-sm flex flex-col justify-between">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
             <span className="material-icons text-green-500 dark:text-green-400">arrow_upward</span>
@@ -45,7 +45,7 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ metrics }
       </div>
 
       {/* 3. A Pagar (Pendente) */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2 bg-red-100 dark:bg-red-900/50 rounded-lg">
             <span className="material-icons text-red-500 dark:text-red-400">arrow_downward</span>
@@ -57,8 +57,8 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({ metrics }
         </div>
       </div>
 
-      {/* 4. Caixa Projetado do Mês (Destaque) */}
-      <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-4 rounded-lg border border-slate-600 ring-1 ring-slate-500 shadow-lg text-white">
+      {/* 4. Caixa Projetado do Mês (Destaque) - NOVO LAYOUT COMPACTO */}
+      <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-4 rounded-lg border border-slate-600 ring-1 ring-slate-500 shadow-lg text-white flex flex-col justify-between">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2 bg-white/20 rounded-lg">
             <span className="material-icons text-white">query_stats</span>
