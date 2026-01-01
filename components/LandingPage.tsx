@@ -22,7 +22,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
   const [activeMessageIndex, setActiveMessageIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeTypebot, setActiveTypebot] = useState<string | null>(null); // Stores the Typebot ID
+  const [activeTypebotId, setActiveTypebotId] = useState<string | null>(null); // Stores the Typebot ID
   const [typebotTitle, setTypebotTitle] = useState('Atendimento Especializado'); // Stores the title for the modal
 
   // WhatsApp conversation simulation logic
@@ -57,23 +57,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
     return () => clearTimeout(timer);
   }, []);
 
-  // Effect to initialize Typebot after modal is rendered
-  useEffect(() => {
-    if (activeTypebot && (window as any).Typebot) {
-      const container = document.getElementById('typebot-container');
-      if (container) {
-        // Limpa o contêiner antes de inicializar
-        container.innerHTML = ''; 
-        
-        // Inicializa o Typebot com o ID correto
-        (window as any).Typebot.initStandard({
-          typebot: activeTypebot,
-          apiHost: TYPEBOT_API_HOST,
-          container: container, // Passa o elemento DOM
-        });
-      }
-    }
-  }, [activeTypebot]);
+  // Function to generate the iframe URL
+  const getTypebotUrl = (id: string) => {
+      // URL format for embedding Typebot in an iframe
+      return `${TYPEBOT_API_HOST}/${id}`;
+  };
 
   const scrollToSection = (id: string) => {
     setIsMenuOpen(false);
@@ -95,16 +83,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
   const handleOpenTypebot = (serviceKey: keyof typeof TYPEBOT_IDS = 'consulta') => {
     const service = mainServices.find(s => s.key === serviceKey);
     setTypebotTitle(service?.title || 'Atendimento Especializado');
-    setActiveTypebot(TYPEBOT_IDS[serviceKey]);
+    setActiveTypebotId(TYPEBOT_IDS[serviceKey]);
   };
   
   const handleCloseTypebot = () => {
-      setActiveTypebot(null);
-      // Limpa o contêiner para garantir que o próximo init funcione
-      const container = document.getElementById('typebot-container');
-      if (container) {
-          container.innerHTML = '';
-      }
+      setActiveTypebotId(null);
   };
 
   const mainServices = [
@@ -616,7 +599,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
       </footer>
 
       {/* TYPEBOT MODAL - FULLSCREEN ON MOBILE */}
-      {activeTypebot && (
+      {activeTypebotId && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4 animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 w-full h-full md:h-auto md:max-w-4xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95">
             <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
@@ -631,11 +614,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
                 <span className="material-icons text-xl">close</span>
               </button>
             </div>
-            <div className="bg-white flex-1 md:flex-none">
-              {/* O contêiner do Typebot será injetado aqui */}
-              <div id="typebot-container" style={{ width: '100%', height: window.innerWidth < 768 ? '100%' : '600px' }}>
-                {/* Conteúdo injetado pelo script Typebot */}
-              </div>
+            <div className="bg-white flex-1 md:flex-none relative">
+              {/* Usando iframe para carregar o Typebot */}
+              <iframe 
+                  src={getTypebotUrl(activeTypebotId)} 
+                  className="w-full h-full border-0 absolute inset-0" 
+                  title={typebotTitle}
+                  allow="camera; microphone; geolocation"
+                  style={{ height: window.innerWidth < 768 ? '100%' : '600px' }}
+              ></iframe>
             </div>
           </div>
         </div>
