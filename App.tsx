@@ -1807,6 +1807,7 @@ const App: React.FC = () => {
           onLogin={handleLandingLogin} 
           onViewBlog={handleViewBlog} 
           onConsultCnpj={handleStartCnpjFlow}
+          news={news} // PASSING NEWS DATA HERE
       />;
   }
 

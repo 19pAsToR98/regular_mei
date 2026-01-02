@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { NewsItem } from '../types';
+import PublicNewsSlider from './PublicNewsSlider';
 
 interface LandingPageProps {
   onGetStarted: () => void;
   onLogin: () => void;
   onViewBlog: () => void;
-  onConsultCnpj: () => void; // NEW PROP
+  onConsultCnpj: () => void;
+  news: NewsItem[]; // NEW PROP
 }
 
 // Mapeamento dos Typebot IDs
@@ -19,7 +22,7 @@ const TYPEBOT_IDS: Record<string, string> = {
 const TYPEBOT_API_HOST = "https://typebotapi.portalmei360.com";
 
 
-const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onViewBlog, onConsultCnpj }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onViewBlog, onConsultCnpj, news }) => {
   const [activeMessageIndex, setActiveMessageIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -163,36 +166,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
     }
   ];
   
-  // Mock News Data for Landing Page Slider
-  const mockNews = [
-      {
-          id: 1,
-          title: 'Novas regras do Simples Nacional para 2025',
-          excerpt: 'Fique atento às mudanças na legislação que podem afetar seu limite de faturamento.',
-          category: 'Legislação',
-          date: '15 JUL',
-          readTime: '5 min',
-          imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=400&h=200',
-      },
-      {
-          id: 2,
-          title: 'Como usar o PIX para otimizar seu fluxo de caixa',
-          excerpt: 'Dicas práticas para receber pagamentos de forma instantânea e segura.',
-          category: 'Finanças',
-          date: '10 JUL',
-          readTime: '3 min',
-          imageUrl: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&q=80&w=400&h=200',
-      },
-      {
-          id: 3,
-          title: 'Marketing digital para MEIs: 5 passos essenciais',
-          excerpt: 'Estratégias simples para aumentar sua visibilidade online sem gastar muito.',
-          category: 'Marketing',
-          date: '01 JUL',
-          readTime: '7 min',
-          imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c824977?auto=format&fit=crop&q=80&w=400&h=200',
-      }
-  ];
+  // Mock News Data removed, using 'news' prop instead.
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 selection:bg-primary selection:text-white overflow-x-hidden scroll-smooth">
@@ -587,7 +561,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
         </div>
       </section>
       
-      {/* NEW: BLOG/NEWS SECTION (Simulated Slider) */}
+      {/* NEW: BLOG/NEWS SECTION (Using PublicNewsSlider) */}
       <section id="blog" className="py-16 md:py-24 px-4 border-t border-slate-100 dark:border-slate-800">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
@@ -599,51 +573,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
             </p>
           </div>
           
-          {/* Simulated News Slider */}
-          <div className="flex overflow-x-auto gap-6 pb-4 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide snap-x">
-              {mockNews.map((item) => (
-                  <div 
-                      key={item.id} 
-                      className="flex-shrink-0 w-72 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-lg transition-shadow snap-start group cursor-pointer"
-                      onClick={onViewBlog}
-                  >
-                      {/* Image */}
-                      <div className="h-36 overflow-hidden relative">
-                          <img 
-                              src={item.imageUrl} 
-                              alt={item.title}
-                              className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
-                          />
-                          <div className="absolute top-3 left-3">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-800 bg-white/95 backdrop-blur-md px-3 py-1 rounded-lg shadow-sm">
-                                  {item.category}
-                              </span>
-                          </div>
-                      </div>
-                      
-                      {/* Content */}
-                      <div className="p-4 flex flex-col">
-                          <div className="flex items-center gap-3 text-xs text-slate-400 mb-2">
-                              <span className="flex items-center gap-1">
-                                  <span className="material-icons text-sm">calendar_today</span> {item.date}
-                              </span>
-                              <span>•</span>
-                              <span className="flex items-center gap-1">
-                                  <span className="material-icons text-sm">schedule</span> {item.readTime}
-                              </span>
-                          </div>
-
-                          <h3 className="text-base font-bold text-slate-800 dark:text-white mb-2 leading-snug group-hover:text-primary transition-colors">
-                              {item.title}
-                          </h3>
-                          
-                          <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed line-clamp-2">
-                              {item.excerpt}
-                          </p>
-                      </div>
-                  </div>
-              ))}
-          </div>
+          {/* Public News Slider */}
+          <PublicNewsSlider news={news} onViewNews={onViewBlog} />
           
           <div className="text-center mt-10">
               <button 
