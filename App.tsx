@@ -31,9 +31,7 @@ import BalanceForecastCard from './components/BalanceForecastCard';
 import VirtualAssistantButton from './components/VirtualAssistantButton';
 import AssistantChat from './components/AssistantChat';
 import LandingPage from './components/LandingPage';
-import CnpjConsultPage from './components/CnpjConsultPage';
-import ServiceFlowPage from './components/ServiceFlowPage';
-import ServiceDetailPage from './components/ServiceDetailPage'; // NEW IMPORT
+import CnpjConsultPage from './components/CnpjConsultPage'; // NEW IMPORT
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -57,53 +55,6 @@ const defaultExpenseCats: Category[] = [
     { name: 'Software', icon: 'computer' },
     { name: 'Outros', icon: 'receipt_long' }
 ];
-
-// Mapeamento dos Typebot IDs (Incluindo descrição e cor para ServiceDetailPage)
-const TYPEBOT_SERVICES: Record<string, { id: string, title: string, description: string, icon: string, color: string }> = {
-    'service-declaracao': { 
-        id: 'declara-o-anual-cl1wie5', 
-        title: 'Declaração Anual (DASN)', 
-        description: 'Entrega da DASN-SIMEI obrigatória para manter seu CNPJ regular e evitar multas. Nosso assistente garante o preenchimento correto e o envio seguro.',
-        icon: 'assignment',
-        color: 'text-blue-500'
-    },
-    'service-cancelamento': { 
-        id: 'cancelar-mei-yljnmeh', 
-        title: 'Cancelamento de CNPJ', 
-        description: 'Baixa definitiva do registro MEI com orientação completa sobre pendências e obrigações fiscais. Encerre seu negócio sem dores de cabeça.',
-        icon: 'cancel',
-        color: 'text-red-500'
-    },
-    'service-parcelamento': { 
-        id: 'parcelamento-de-d-bitos-c1b6oco', 
-        title: 'Parcelamento de Débitos', 
-        description: 'Negocie e parcele suas guias DAS atrasadas em condições acessíveis (até 60x) para regularizar sua situação fiscal e evitar cobranças.',
-        icon: 'account_balance_wallet',
-        color: 'text-orange-500'
-    },
-    'service-abertura': { 
-        id: 'abrir-mei-43ty0i4', 
-        title: 'Abertura MEI', 
-        description: 'Criação do seu novo CNPJ MEI de forma rápida, segura e com suporte especializado. Comece seu negócio do jeito certo.',
-        icon: 'rocket_launch',
-        color: 'text-emerald-500'
-    },
-    'service-alterar': { 
-        id: 'alterar-mei-o1ryxif', 
-        title: 'Alteração de CNPJ', 
-        description: 'Atualize dados do seu MEI, como endereço, atividades, nome fantasia e outras informações cadastrais de forma simples e assistida.',
-        icon: 'edit_note',
-        color: 'text-indigo-500'
-    },
-    'service-consulta': { 
-        id: 'declara-o-anual-cl1wie5', 
-        title: 'Consulta de Débitos', 
-        description: 'Verifique pendências no CNPJ e receba orientação sobre os próximos passos para a regularização. Serviço rápido e informativo.',
-        icon: 'search',
-        color: 'text-purple-500'
-    },
-};
-
 
 const App: React.FC = () => {
   // --- AUTH STATE ---
@@ -757,7 +708,7 @@ const App: React.FC = () => {
     // Load maintenance config first, as it affects rendering
     loadMaintenanceConfig();
     // Load connection config unconditionally for all users (including public routes like cnpj-consult)
-    loadConnectionConfig(); 
+    loadConnectionConfig(); // <-- ADDED HERE
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       const currentUser = userRef.current; 
@@ -1839,24 +1790,6 @@ const App: React.FC = () => {
   if (!user && activeTab === 'cnpj-consult') {
       return <CnpjConsultPage onBack={handleBackToLanding} connectionConfig={connectionConfig} />;
   }
-  
-  // NEW: Handle public Service Flow Pages (Now uses ServiceDetailPage)
-  const serviceKey = Object.keys(TYPEBOT_SERVICES).find(key => key === activeTab);
-  if (!user && serviceKey) {
-      const service = TYPEBOT_SERVICES[serviceKey];
-      return (
-          <ServiceDetailPage 
-              serviceKey={serviceKey}
-              title={service.title}
-              description={service.description}
-              icon={service.icon}
-              color={service.color}
-              typebotId={service.id}
-              onBack={handleBackToLanding}
-          />
-      );
-  }
-
 
   // If not logged in, show LandingPage or AuthPage
   if (!user) {
@@ -1874,7 +1807,6 @@ const App: React.FC = () => {
           onLogin={handleLandingLogin} 
           onViewBlog={handleViewBlog} 
           onConsultCnpj={handleStartCnpjFlow}
-          onNavigate={setActiveTab} // Pass setActiveTab to LandingPage
       />;
   }
 
@@ -1883,7 +1815,7 @@ const App: React.FC = () => {
   }
   
   // Logged in user: Redirect if on a public-only tab
-  if (activeTab === 'home' || activeTab === 'auth' || activeTab === 'cnpj-consult' || serviceKey) {
+  if (activeTab === 'home' || activeTab === 'auth' || activeTab === 'cnpj-consult') {
       setActiveTab('dashboard');
       return null; // Prevent rendering until state updates
   }
