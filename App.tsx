@@ -1914,12 +1914,13 @@ const App: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 xl:col-span-8 h-full">
+                    <div className="col-span-12 h-full">
                         <RecentTransactions transactions={transactions} onNavigate={setActiveTab} />
                     </div>
-                    <div className="col-span-12 xl:col-span-4 h-full">
-                        <NewsSlider news={news} onViewNews={handleViewNews} />
-                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12">
+                    <NewsSlider news={news} onViewNews={handleViewNews} />
                   </div>
                 </div>
               </>
