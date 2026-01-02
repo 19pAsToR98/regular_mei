@@ -162,6 +162,37 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
       color: 'bg-cyan-500'
     }
   ];
+  
+  // Mock News Data for Landing Page Slider
+  const mockNews = [
+      {
+          id: 1,
+          title: 'Novas regras do Simples Nacional para 2025',
+          excerpt: 'Fique atento às mudanças na legislação que podem afetar seu limite de faturamento.',
+          category: 'Legislação',
+          date: '15 JUL',
+          readTime: '5 min',
+          imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=400&h=200',
+      },
+      {
+          id: 2,
+          title: 'Como usar o PIX para otimizar seu fluxo de caixa',
+          excerpt: 'Dicas práticas para receber pagamentos de forma instantânea e segura.',
+          category: 'Finanças',
+          date: '10 JUL',
+          readTime: '3 min',
+          imageUrl: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&q=80&w=400&h=200',
+      },
+      {
+          id: 3,
+          title: 'Marketing digital para MEIs: 5 passos essenciais',
+          excerpt: 'Estratégias simples para aumentar sua visibilidade online sem gastar muito.',
+          category: 'Marketing',
+          date: '01 JUL',
+          readTime: '7 min',
+          imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c824977?auto=format&fit=crop&q=80&w=400&h=200',
+      }
+  ];
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 selection:bg-primary selection:text-white overflow-x-hidden scroll-smooth">
@@ -185,7 +216,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
                 <button onClick={() => scrollToSection('dashboard')} className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">Gestão</button>
                 <button onClick={() => scrollToSection('whatsapp')} className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">WhatsApp AI</button>
                 <button onClick={() => scrollToSection('tools')} className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">Ferramentas</button>
-                <button onClick={onViewBlog} className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">Blog</button>
+                <button onClick={() => scrollToSection('blog')} className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">Blog</button>
               </div>
             </div>
             <div className="flex items-center gap-2 md:gap-4">
@@ -234,7 +265,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
                 </div>
                 Ferramentas
               </button>
-              <button onClick={onViewBlog} className="flex items-center gap-4 w-full px-5 py-4 text-lg font-bold text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+              <button onClick={() => scrollToSection('blog')} className="flex items-center gap-4 w-full px-5 py-4 text-lg font-bold text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
                 <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 flex items-center justify-center">
                   <span className="material-icons">article</span>
                 </div>
@@ -555,6 +586,75 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
           ))}
         </div>
       </section>
+      
+      {/* NEW: BLOG/NEWS SECTION (Simulated Slider) */}
+      <section id="blog" className="py-16 md:py-24 px-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
+            <h2 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white mb-4 md:mb-6">
+              Blog & <span className="text-primary">Notícias</span>
+            </h2>
+            <p className="text-base md:text-lg text-slate-500 dark:text-slate-400">
+              Mantenha-se atualizado com as últimas novidades sobre legislação, finanças e gestão para MEIs.
+            </p>
+          </div>
+          
+          {/* Simulated News Slider */}
+          <div className="flex overflow-x-auto gap-6 pb-4 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide snap-x">
+              {mockNews.map((item) => (
+                  <div 
+                      key={item.id} 
+                      className="flex-shrink-0 w-72 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-lg transition-shadow snap-start group cursor-pointer"
+                      onClick={onViewBlog}
+                  >
+                      {/* Image */}
+                      <div className="h-36 overflow-hidden relative">
+                          <img 
+                              src={item.imageUrl} 
+                              alt={item.title}
+                              className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                          />
+                          <div className="absolute top-3 left-3">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-800 bg-white/95 backdrop-blur-md px-3 py-1 rounded-lg shadow-sm">
+                                  {item.category}
+                              </span>
+                          </div>
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="p-4 flex flex-col">
+                          <div className="flex items-center gap-3 text-xs text-slate-400 mb-2">
+                              <span className="flex items-center gap-1">
+                                  <span className="material-icons text-sm">calendar_today</span> {item.date}
+                              </span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                  <span className="material-icons text-sm">schedule</span> {item.readTime}
+                              </span>
+                          </div>
+
+                          <h3 className="text-base font-bold text-slate-800 dark:text-white mb-2 leading-snug group-hover:text-primary transition-colors">
+                              {item.title}
+                          </h3>
+                          
+                          <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed line-clamp-2">
+                              {item.excerpt}
+                          </p>
+                      </div>
+                  </div>
+              ))}
+          </div>
+          
+          <div className="text-center mt-10">
+              <button 
+                  onClick={onViewBlog} 
+                  className="bg-primary hover:bg-blue-600 text-white px-8 py-3 rounded-xl font-bold text-base shadow-lg shadow-blue-500/25 transition-all active:scale-95 flex items-center justify-center gap-2 mx-auto"
+              >
+                  Ver Blog Completo <span className="material-icons">arrow_forward</span>
+              </button>
+          </div>
+        </div>
+      </section>
 
       {/* FOOTER */}
       <footer className="bg-white dark:bg-slate-950 pt-16 md:pt-20 pb-10 px-4 border-t border-slate-100 dark:border-slate-900">
@@ -581,7 +681,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
                 <li><button onClick={() => scrollToSection('dashboard')} className="hover:text-primary">Funcionalidades</button></li>
                 <li><button onClick={() => scrollToSection('whatsapp')} className="hover:text-primary">WhatsApp AI</button></li>
                 <li><button onClick={() => scrollToSection('tools')} className="hover:text-primary"> HUB de Ferramentas</button></li>
-                <li><button onClick={onViewBlog} className="hover:text-primary">Blog & Notícias</button></li>
+                <li><button onClick={() => scrollToSection('blog')} className="hover:text-primary">Blog & Notícias</button></li>
               </ul>
             </div>
             <div>
