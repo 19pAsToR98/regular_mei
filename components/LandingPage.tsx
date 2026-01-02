@@ -4,27 +4,26 @@ interface LandingPageProps {
   onGetStarted: () => void;
   onLogin: () => void;
   onViewBlog: () => void;
-  onConsultCnpj: () => void; // NEW PROP
+  onConsultCnpj: () => void;
+  onNavigate: (tab: string) => void; // NEW PROP for service navigation
 }
 
-// Mapeamento dos Typebot IDs
+// Mapeamento dos Typebot IDs (Mantido aqui para referência de serviço)
 const TYPEBOT_IDS: Record<string, string> = {
-    'declaracao': 'declara-o-anual-cl1wie5', // ID padronizado para o fluxo de resolução/declaração
+    'declaracao': 'declara-o-anual-cl1wie5',
     'cancelamento': 'cancelar-mei-yljnmeh',
     'parcelamento': 'parcelamento-de-d-bitos-c1b6oco',
     'abertura': 'abrir-mei-43ty0i4',
     'alterar': 'alterar-mei-o1ryxif',
-    'consulta': 'declara-o-anual-cl1wie5' // Usando o mesmo ID do fluxo de declaração/resolução
+    'consulta': 'declara-o-anual-cl1wie5'
 };
-const TYPEBOT_API_HOST = "https://typebotapi.portalmei360.com";
 
-
-const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onViewBlog, onConsultCnpj }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onViewBlog, onConsultCnpj, onNavigate }) => {
   const [activeMessageIndex, setActiveMessageIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeTypebotId, setActiveTypebotId] = useState<string | null>(null); // Stores the Typebot ID
-  const [typebotTitle, setTypebotTitle] = useState('Atendimento Especializado'); // Stores the title for the modal
+  
+  // Removendo Typebot Modal State
 
   // WhatsApp conversation simulation logic
   useEffect(() => {
@@ -58,12 +57,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
     return () => clearTimeout(timer);
   }, []);
 
-  // Function to generate the iframe URL
-  const getTypebotUrl = (id: string) => {
-      // URL format for embedding Typebot in an iframe
-      return `${TYPEBOT_API_HOST}/${id}`;
-  };
-
   const scrollToSection = (id: string) => {
     setIsMenuOpen(false);
     const element = document.getElementById(id);
@@ -81,16 +74,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
     }
   };
 
-  const handleOpenTypebot = (serviceKey: keyof typeof TYPEBOT_IDS = 'consulta') => {
-    const service = mainServices.find(s => s.key === serviceKey);
-    setTypebotTitle(service?.title || 'Atendimento Especializado');
-    setActiveTypebotId(TYPEBOT_IDS[serviceKey]);
+  const handleServiceClick = (serviceKey: keyof typeof TYPEBOT_IDS) => {
+    // Navega para a rota específica do serviço
+    onNavigate(`service-${serviceKey}`);
   };
   
-  const handleCloseTypebot = () => {
-      setActiveTypebotId(null);
-  };
-
   const mainServices = [
     {
       key: 'declaracao',
@@ -282,7 +270,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
               <button onClick={onConsultCnpj} className="bg-primary hover:bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-base shadow-xl shadow-blue-500/30 transition-all transform active:scale-95 flex items-center justify-center gap-2">
                 Consultar CNPJ Grátis <span className="material-icons">search</span>
               </button>
-              <button onClick={() => handleOpenTypebot('declaracao')} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 px-8 py-4 rounded-2xl font-bold text-base hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
+              <button onClick={() => handleServiceClick('declaracao')} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 px-8 py-4 rounded-2xl font-bold text-base hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
                 DASN 2025 <span className="material-icons text-sm">assignment</span>
               </button>
             </div>
@@ -356,7 +344,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
               <div 
                 key={i} 
                 className="group p-6 md:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 cursor-pointer"
-                onClick={() => handleOpenTypebot(service.key as keyof typeof TYPEBOT_IDS)}
+                onClick={() => handleServiceClick(service.key as keyof typeof TYPEBOT_IDS)}
               >
                 <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl ${service.bg} ${service.color} flex items-center justify-center mb-5 md:mb-6 group-hover:scale-110 transition-transform`}>
                   <span className="material-icons text-2xl md:text-3xl">{service.icon}</span>
@@ -377,7 +365,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
                <span className="material-icons text-4xl md:text-5xl">help_outline</span>
                <h3 className="text-xl md:text-2xl font-bold">Precisa de ajuda?</h3>
                <p className="text-blue-100 text-xs md:text-sm opacity-90">Nossos consultores estão prontos para te orientar em qualquer processo.</p>
-               <button onClick={() => handleOpenTypebot('consulta')} className="bg-white text-primary px-6 py-3 rounded-xl font-black text-sm hover:bg-blue-50 transition-colors w-full">
+               <button onClick={() => handleServiceClick('consulta')} className="bg-white text-primary px-6 py-3 rounded-xl font-black text-sm hover:bg-blue-50 transition-colors w-full">
                   Falar com Consultor
                </button>
             </div>
@@ -599,34 +587,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
         </div>
       </footer>
 
-      {/* TYPEBOT MODAL - FULLSCREEN ON MOBILE */}
-      {activeTypebotId && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full h-full md:h-[680px] md:max-w-4xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95">
-            <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-              <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 uppercase text-[10px] md:text-xs tracking-widest">
-                <span className="material-icons text-primary text-sm">smart_toy</span>
-                {typebotTitle}
-              </h3>
-              <button 
-                onClick={handleCloseTypebot} 
-                className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:bg-slate-300 transition-colors"
-              >
-                <span className="material-icons text-xl">close</span>
-              </button>
-            </div>
-            <div className="bg-white flex-1 relative">
-              {/* Usando iframe para carregar o Typebot */}
-              <iframe 
-                  src={getTypebotUrl(activeTypebotId)} 
-                  className="w-full h-full border-0 absolute inset-0" 
-                  title={typebotTitle}
-                  allow="camera; microphone; geolocation"
-              ></iframe>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* REMOVED TYPEBOT MODAL */}
     </div>
   );
 };

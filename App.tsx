@@ -31,7 +31,8 @@ import BalanceForecastCard from './components/BalanceForecastCard';
 import VirtualAssistantButton from './components/VirtualAssistantButton';
 import AssistantChat from './components/AssistantChat';
 import LandingPage from './components/LandingPage';
-import CnpjConsultPage from './components/CnpjConsultPage'; // NEW IMPORT
+import CnpjConsultPage from './components/CnpjConsultPage';
+import ServiceFlowPage from './components/ServiceFlowPage'; // NEW IMPORT
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -55,6 +56,17 @@ const defaultExpenseCats: Category[] = [
     { name: 'Software', icon: 'computer' },
     { name: 'Outros', icon: 'receipt_long' }
 ];
+
+// Mapeamento dos Typebot IDs (Duplicado para uso no roteamento)
+const TYPEBOT_SERVICES: Record<string, { id: string, title: string }> = {
+    'service-declaracao': { id: 'declara-o-anual-cl1wie5', title: 'Declaração Anual (DASN)' },
+    'service-cancelamento': { id: 'cancelar-mei-yljnmeh', title: 'Cancelamento de CNPJ' },
+    'service-parcelamento': { id: 'parcelamento-de-d-bitos-c1b6oco', title: 'Parcelamento de Débitos' },
+    'service-abertura': { id: 'abrir-mei-43ty0i4', title: 'Abertura MEI' },
+    'service-alterar': { id: 'alterar-mei-o1ryxif', title: 'Alteração de CNPJ' },
+    'service-consulta': { id: 'declara-o-anual-cl1wie5', title: 'Consulta de Débitos' },
+};
+
 
 const App: React.FC = () => {
   // --- AUTH STATE ---
@@ -708,7 +720,7 @@ const App: React.FC = () => {
     // Load maintenance config first, as it affects rendering
     loadMaintenanceConfig();
     // Load connection config unconditionally for all users (including public routes like cnpj-consult)
-    loadConnectionConfig(); // <-- ADDED HERE
+    loadConnectionConfig(); 
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       const currentUser = userRef.current; 
@@ -1790,6 +1802,14 @@ const App: React.FC = () => {
   if (!user && activeTab === 'cnpj-consult') {
       return <CnpjConsultPage onBack={handleBackToLanding} connectionConfig={connectionConfig} />;
   }
+  
+  // NEW: Handle public Service Flow Pages
+  const serviceKey = Object.keys(TYPEBOT_SERVICES).find(key => key === activeTab);
+  if (!user && serviceKey) {
+      const service = TYPEBOT_SERVICES[serviceKey];
+      return <ServiceFlowPage typebotId={service.id} title={service.title} onClose={handleBackToLanding} />;
+  }
+
 
   // If not logged in, show LandingPage or AuthPage
   if (!user) {
@@ -1807,6 +1827,7 @@ const App: React.FC = () => {
           onLogin={handleLandingLogin} 
           onViewBlog={handleViewBlog} 
           onConsultCnpj={handleStartCnpjFlow}
+          onNavigate={setActiveTab} // Pass setActiveTab to LandingPage
       />;
   }
 
@@ -1815,7 +1836,7 @@ const App: React.FC = () => {
   }
   
   // Logged in user: Redirect if on a public-only tab
-  if (activeTab === 'home' || activeTab === 'auth' || activeTab === 'cnpj-consult') {
+  if (activeTab === 'home' || activeTab === 'auth' || activeTab === 'cnpj-consult' || serviceKey) {
       setActiveTab('dashboard');
       return null; // Prevent rendering until state updates
   }
