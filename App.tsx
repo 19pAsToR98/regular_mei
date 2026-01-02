@@ -264,7 +264,7 @@ const App: React.FC = () => {
 
       if (error) {
           console.error('Error fetching all users:', error);
-          return;
+          return [];
       }
       
       const mappedUsers: User[] = data.map(p => ({
@@ -281,6 +281,7 @@ const App: React.FC = () => {
           receiveWeeklySummary: p.receive_weekly_summary ?? true
       }));
       setAllUsers(mappedUsers);
+      return mappedUsers;
   };
 
   const loadTransactions = async (userId: string) => {
@@ -1342,7 +1343,6 @@ const App: React.FC = () => {
         .upsert({
             user_id: user.id,
             notification_id: id,
-            is_read: true,
         }, { onConflict: 'user_id, notification_id' });
 
     if (error) {
