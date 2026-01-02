@@ -483,12 +483,14 @@ const AdminPage: React.FC<AdminPageProps> = ({
   const handleExportPollVotes = () => {
       if (!viewingResultsPoll || !viewingResultsPoll.pollVotes) return;
 
-      const headers = ["Data/Hora", "Usuário", "Email", "Voto (Opção)"];
+      // UPDATED HEADERS to include Name and Email
+      const headers = ["Data/Hora", "Nome do Usuário", "Email do Usuário", "Voto (Opção)"];
+      
       const rows = viewingResultsPoll.pollVotes.map(v => [
           new Date(v.votedAt).toLocaleString('pt-BR'),
-          v.userName,
+          `"${v.userName.replace(/"/g, '""')}"`, // Wrap in quotes and escape internal quotes
           v.userEmail,
-          v.optionText
+          `"${v.optionText.replace(/"/g, '""')}"`
       ]);
 
       const csvContent = "\uFEFF" + headers.join(";") + "\n" + rows.map(r => r.join(";")).join("\n");

@@ -436,7 +436,6 @@ const App: React.FC = () => {
                 user_id, voted_option_id, voted_at
             )
         `)
-        // REMOVED .eq('active', true) to fetch all notifications for Admin management
         .order('created_at', { ascending: false });
     
     if (notifError) {
@@ -445,6 +444,7 @@ const App: React.FC = () => {
     }
 
     let userInteractions: Record<number, { is_read: boolean, voted_option_id: number | null }> = {};
+    let allVoterIds: string[] = [];
 
     // 2. If user is logged in, fetch their specific interactions
     if (userId) {
@@ -464,22 +464,54 @@ const App: React.FC = () => {
             });
         }
     }
+    
+    // 3. Collect all unique voter IDs for Admin view
+    if (user?.role === 'admin') {
+        notifData.forEach(n => {
+            if (n.poll_votes) {
+                (n.poll_votes as any[]).forEach(v => {
+                    if (v.user_id && !allVoterIds.includes(v.user_id)) {
+                        allVoterIds.push(v.user_id);
+                    }
+                });
+            }
+        });
+    }
+    
+    // 4. Fetch profile data for all voters (Admin only)
+    let voterProfiles: Record<string, { name: string, email: string }> = {};
+    if (allVoterIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, name, email')
+            .in('id', allVoterIds);
 
-    // 3. Process and map notifications
+        if (profilesError) {
+            console.error('Error fetching voter profiles:', profilesError);
+        } else {
+            profilesData.forEach(p => {
+                voterProfiles[p.id] = { name: p.name || 'Usuário Desconhecido', email: p.email || 'Email Desconhecido' };
+            });
+        }
+    }
+
+    // 5. Process and map notifications
     const processedNotifications: AppNotification[] = notifData
         .map(n => {
             const interaction = userInteractions[n.id];
             
-            // Process poll votes for Admin view (if needed)
-            const pollVotes: PollVote[] = (n.poll_votes || []).map((v: any) => ({
-                userId: v.user_id,
-                optionId: v.voted_option_id,
-                votedAt: v.voted_at,
-                // Note: userName/userEmail are not fetched here for simplicity/RLS reasons
-                userName: 'N/A', 
-                userEmail: 'N/A',
-                optionText: n.poll_options?.find((opt: any) => opt.id === v.voted_option_id)?.text || 'N/A'
-            }));
+            // Process poll votes for Admin view
+            const pollVotes: PollVote[] = (n.poll_votes || []).map((v: any) => {
+                const profile = voterProfiles[v.user_id] || { name: 'N/A', email: 'N/A' };
+                return {
+                    userId: v.user_id,
+                    optionId: v.voted_option_id,
+                    votedAt: v.voted_at,
+                    userName: profile.name, // Now includes name
+                    userEmail: profile.email, // Now includes email
+                    optionText: n.poll_options?.find((opt: any) => opt.id === v.voted_option_id)?.text || 'N/A'
+                };
+            });
 
             // Update poll options with current vote counts for Admin view
             const pollOptionsWithCounts = n.poll_options?.map((opt: any) => ({
