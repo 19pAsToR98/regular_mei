@@ -42,7 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, togg
       <aside 
         className={`
           fixed inset-y-0 left-0 z-30 
-          w-72 bg-slate-50 dark:bg-slate-900 
+          w-72 bg-indigo-50 dark:bg-slate-900 
           border-r border-slate-200 dark:border-slate-800
           transition-transform duration-300 ease-in-out
           lg:translate-x-0 lg:static lg:block
