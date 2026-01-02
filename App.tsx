@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import DashboardSummaryCards from './components/DashboardSummarySummaryCards';
+import DashboardSummaryCards from './components/DashboardSummaryCards';
 import RevenueChart from './components/RevenueChart';
 import Reminders from './components/Reminders';
 import Thermometer from './components/Thermometer';
@@ -32,6 +32,7 @@ import VirtualAssistantButton from './components/VirtualAssistantButton';
 import AssistantChat from './components/AssistantChat';
 import LandingPage from './components/LandingPage';
 import CnpjConsultPage from "./components/CnpjConsultPage";
+import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
 import { scheduleTransactionReminder, scheduleAppointmentReminder, deleteScheduledReminder } from './utils/whatsappUtils';
