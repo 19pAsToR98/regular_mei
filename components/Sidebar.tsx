@@ -42,8 +42,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, togg
       <aside 
         className={`
           fixed inset-y-0 left-0 z-30 
-          w-72 bg-indigo-50 dark:bg-slate-900 
-          border-r border-slate-200 dark:border-slate-800
+          w-72 bg-slate-800 dark:bg-slate-900 
+          border-r border-slate-700 dark:border-slate-800
           transition-transform duration-300 ease-in-out
           lg:translate-x-0 lg:static lg:block
           flex flex-col h-screen
@@ -52,13 +52,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, togg
       >
           
         {/* Header */}
-        <div className="h-[72px] flex items-center justify-between px-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+        <div className="h-[72px] flex items-center justify-between px-6 border-b border-slate-700 dark:border-slate-800 shrink-0">
           <img 
             src="https://regularmei.com.br/wp-content/uploads/2024/07/REGULAR-500-x-200-px.png" 
             alt="Regular MEI" 
-            className="h-8 w-auto object-contain dark:brightness-0 dark:invert transition-all"
+            className="h-8 w-auto object-contain brightness-0 invert transition-all"
           />
-          <button onClick={toggleSidebar} className="lg:hidden p-2 text-slate-400 hover:text-slate-600 rounded-lg transition-colors">
+          <button onClick={toggleSidebar} className="lg:hidden p-2 text-slate-400 hover:text-white rounded-lg transition-colors">
               <span className="material-icons">close</span>
           </button>
         </div>
@@ -82,18 +82,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, togg
                       group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-md transition-all duration-200
                       ${isActive 
                         ? 'bg-primary text-white shadow-sm' 
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
+                        : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                       }
                     `}
                   >
-                    <span className={`material-icons text-[20px] ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`}>
+                    <span className={`material-icons text-[20px] ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}`}>
                       {item.icon}
                     </span>
                     
                     <span className="flex-1">{item.label}</span>
                     
                     {item.id === 'invoices' && (
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'}`}>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive ? 'bg-white/20 text-white' : 'bg-blue-500/20 text-blue-300'}`}>
                           Novo
                         </span>
                     )}
@@ -105,7 +105,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, togg
         </nav>
 
         {/* Footer (Settings) */}
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-800/20">
+        <div className="p-4 border-t border-slate-700 dark:border-slate-800 bg-slate-700 dark:bg-slate-800/20">
           <a
             href="#"
             onClick={(e) => {
@@ -116,12 +116,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, togg
             className={`
               flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-md transition-all duration-200
               ${activeTab === 'settings' 
-                ? 'bg-white dark:bg-slate-800 text-primary border border-slate-200 dark:border-slate-700 shadow-sm' 
-                : 'text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm hover:text-slate-900'
+                ? 'bg-slate-600 text-primary border border-slate-500 shadow-sm' 
+                : 'text-slate-300 hover:bg-slate-700 hover:shadow-sm hover:text-white'
               }
             `}
           >
-            <div className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${activeTab === 'settings' ? 'bg-primary/10 text-primary' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
+            <div className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${activeTab === 'settings' ? 'bg-primary/10 text-primary' : 'bg-slate-600 text-slate-400'}`}>
                 <span className="material-icons text-lg">settings</span>
             </div>
             <div className="flex-1">
