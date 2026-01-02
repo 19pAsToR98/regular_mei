@@ -497,7 +497,7 @@ const App: React.FC = () => {
                 active: n.active,
                 expiresAt: n.expires_at,
                 read: interaction?.is_read || false,
-                userVotedOptionId: interaction?.voted_option_id || undefined
+                userVotedOptionId: interaction?.voted_option_id ?? undefined // FIX: Use ?? to handle 0 correctly
             } as AppNotification;
         });
 
