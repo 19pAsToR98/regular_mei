@@ -28,7 +28,7 @@ const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen,
         transform
         
         /* Ajuste para mobile: 16px acima da bottom bar (h-16 = 4rem). 4rem + 16px = 5rem */
-        bottom-[5rem]
+        bottom-[5rem] lg:bottom-6
       `}
       aria-label="Abrir Assistente Virtual"
       title="Assistente Virtual"

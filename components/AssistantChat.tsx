@@ -246,9 +246,13 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
   return (
     <div 
         className="fixed top-0 left-0 w-full h-full z-40 
-               lg:top-auto lg:left-auto lg:bottom-[6.5rem] lg:right-6 
+               lg:top-auto lg:left-auto lg:bottom-6 lg:right-6 
                lg:max-w-sm lg:h-[80vh] lg:max-h-[600px] 
-               bg-white dark:bg-slate-900 lg:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300 transition-all ease-in-out"
+               bg-white dark:bg-slate-900 lg:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300 transition-all ease-in-out
+               
+               /* Ajuste para mobile: 4rem (h-16 do MobileBottomNav) + 1rem (padding/gap) = 5rem */
+               bottom-[5rem] lg:bottom-6
+               "
     >
       
       {/* Balão de fala (Tail) - Oculto no mobile */}
