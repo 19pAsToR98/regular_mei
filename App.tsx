@@ -259,6 +259,7 @@ const App: React.FC = () => {
   const loadAllUsers = async () => {
       
       if (userRef.current?.role === 'admin') {
+          console.log('loadAllUsers: User is admin. Attempting to fetch all profiles.');
           // Admin: Use standard Supabase client call. RLS policy 'Admins can view all profiles' 
           // now uses the secure public.is_admin() function to grant access.
           const { data: profiles, error: fetchError } = await supabase
@@ -266,11 +267,13 @@ const App: React.FC = () => {
               .select('*');
 
           if (fetchError) {
-              console.error('Error fetching all profiles (Admin):', fetchError);
+              console.error('loadAllUsers: Error fetching all profiles (Admin):', fetchError);
               showError(`Erro ao carregar usuários: ${fetchError.message}`);
               return [];
           }
           
+          console.log(`loadAllUsers: Successfully fetched ${profiles.length} profiles.`);
+
           const mappedUsers: User[] = (profiles as any[]).map(p => ({
               id: p.id,
               name: p.name || p.email,
@@ -490,6 +493,7 @@ const App: React.FC = () => {
     // 4. Fetch profile data for all voters (Admin only)
     let voterProfiles: Record<string, { name: string, email: string }> = {};
     if (allVoterIds.length > 0) {
+        console.log(`loadNotifications: Admin fetching ${allVoterIds.length} voter profiles.`);
         // Use the standard client call, which is now permitted by RLS for admins
         const { data: profilesData, error: profilesError } = await supabase
             .from('profiles')
@@ -497,8 +501,9 @@ const App: React.FC = () => {
             .in('id', allVoterIds);
         
         if (profilesError) {
-            console.error('Error fetching voter profiles:', profilesError);
+            console.error('loadNotifications: Error fetching voter profiles:', profilesError);
         } else {
+            console.log(`loadNotifications: Successfully fetched ${profilesData.length} voter profiles.`);
             (profilesData as any[]).forEach(p => {
                 voterProfiles[p.id] = { name: p.name || 'Usuário Desconhecido', email: p.email || 'Email Desconhecido' };
             });
@@ -1173,8 +1178,6 @@ const App: React.FC = () => {
 
   // --- NEWS HANDLERS ---
   const handleViewNews = (id: number) => {
-    console.log('Attempting to view news ID:', id); // DEBUG LOG
-    
     // If in embed view, force parent navigation
     if (isEmbedView) {
         const baseUrl = window.location.origin;
@@ -1280,7 +1283,7 @@ const App: React.FC = () => {
           active: true,
       };
       
-      console.log('Payload de Inserção de Notificação:', payload);
+      // console.log('Payload de Inserção de Notificação:', payload);
 
       const { error } = await supabase
           .from('notifications')
@@ -1305,11 +1308,11 @@ const App: React.FC = () => {
           text: item.text,
           type: item.type,
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          expires_at: expiresAtValue, 
+          expires_at: expiresAtAtValue, 
           active: item.active,
       };
       
-      console.log('Payload de Atualização de Notificação:', payload);
+      // console.log('Payload de Atualização de Notificação:', payload);
 
       const { error } = await supabase
           .from('notifications')
