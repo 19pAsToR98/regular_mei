@@ -342,7 +342,7 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                 <div className="flex flex-col gap-6 items-center">
                     
                     {/* VISUAL PREVIEW CONTAINER */}
-                    <div className="w-full bg-slate-100 dark:bg-black/20 p-8 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-center items-center min-h-[600px] overflow-hidden relative">
+                    <div className="w-full bg-slate-100 dark:bg-black/20 p-4 md:p-8 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-center items-center min-h-[600px] overflow-hidden relative">
                         <div className="absolute top-2 right-2 bg-white/50 dark:bg-black/50 px-2 py-1 rounded text-[10px] uppercase font-bold text-slate-500">
                             Pré-visualização
                         </div>
@@ -1118,10 +1118,11 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                 <span className="material-icons text-sm mr-1">arrow_back</span> Voltar para ferramentas
             </button>
 
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+            {/* CORREÇÃO: Usando grid-cols-1 no mobile e lg:grid-cols-12 no desktop */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
-                {/* Editor (Left Column) */}
-                <div className="xl:col-span-4 space-y-6 print:hidden">
+                {/* Editor (Left Column) - Ocupa 12 colunas no mobile, 4 no desktop */}
+                <div className="lg:col-span-4 space-y-6 print:hidden">
                     <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                             <span className="material-icons text-blue-500">settings</span> Configurações
@@ -1230,14 +1231,14 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                     </button>
                 </div>
 
-                {/* Preview (Right Column) */}
-                <div className="xl:col-span-8 flex justify-center">
+                {/* Preview (Right Column) - Ocupa 12 colunas no mobile, 8 no desktop */}
+                <div className="lg:col-span-8 flex justify-center">
                     <div 
                         ref={budgetRef} 
                         id="budget-preview"
-                        // Removendo a largura fixa de 210mm para que o html2canvas capture a largura total do container flex
-                        className={`bg-white text-slate-900 shadow-2xl mx-auto relative ${budget.template === 'modern' ? 'border-t-8 ' + colors[budget.color].split(' ')[1] : ''}`} 
-                        style={{ maxWidth: '210mm', minHeight: '297mm', padding: '15mm' }}
+                        // CORREÇÃO: Usar max-w-full no mobile e definir o tamanho A4 no desktop
+                        className={`bg-white text-slate-900 shadow-2xl mx-auto relative w-full lg:max-w-[210mm] lg:min-h-[297mm] ${budget.template === 'modern' ? 'border-t-8 ' + colors[budget.color].split(' ')[1] : ''}`} 
+                        style={{ padding: '15mm' }}
                     >
                         
                         {/* HEADER */}
