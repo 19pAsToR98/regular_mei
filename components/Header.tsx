@@ -4,7 +4,7 @@ import PollModal from './PollModal';
 
 interface HeaderProps {
   activeTab: string;
-  onMenuClick: () => void;
+  onMenuClick: () => void; // Mantido, mas não usado no mobile
   notifications: AppNotification[];
   onMarkAsRead: (id: number) => void;
   onVote: (notificationId: number, optionId: number) => void;
@@ -100,12 +100,23 @@ const Header: React.FC<HeaderProps> = ({
     <>
     <header className="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 px-4 md:px-8 h-[72px] flex justify-between items-center transition-all">
       <div className="flex items-center gap-4">
-        <button onClick={onMenuClick} className="lg:hidden text-slate-500 hover:text-slate-700">
-          <span className="material-icons">menu</span>
-        </button>
-        <div>
+        {/* Logo discreta no mobile, Título no desktop */}
+        <img 
+            src="https://regularmei.com.br/wp-content/uploads/2024/07/REGULAR-500-x-200-px.png" 
+            alt="Regular MEI" 
+            className="lg:hidden h-6 w-auto object-contain dark:brightness-0 dark:invert"
+        />
+        
+        <div className="hidden lg:block">
           <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white leading-none">{getPageTitle()}</h2>
           <p className="hidden md:block text-xs text-slate-500 dark:text-slate-400 mt-1">{getPageSubtitle()}</p>
+        </div>
+        
+        {/* Título no mobile (apenas se não for dashboard) */}
+        <div className="lg:hidden">
+            {activeTab !== 'dashboard' && (
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-none">{getPageTitle()}</h2>
+            )}
         </div>
       </div>
 
@@ -172,7 +183,7 @@ const Header: React.FC<HeaderProps> = ({
                                             {n.type === 'poll' && (
                                                 <span className="inline-flex items-center gap-1 text-xs text-purple-600 font-medium mt-1 hover:underline">
                                                     {n.userVotedOptionId !== undefined ? 'Ver resultados' : 'Participar agora'} 
-                                                    <span className="material-icons text-[10px]">arrow_forward</span>
+                                                    <span className="material-icons text-sm">arrow_forward</span>
                                                 </span>
                                             )}
                                             {n.expiresAt && (

@@ -32,6 +32,7 @@ import VirtualAssistantButton from './components/VirtualAssistantButton';
 import AssistantChat from './components/AssistantChat';
 import LandingPage from './components/LandingPage';
 import CnpjConsultPage from "./components/CnpjConsultPage";
+import MobileBottomNav from './components/MobileBottomNav'; // NEW IMPORT
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -88,8 +89,7 @@ const App: React.FC = () => {
     localStorage.setItem('activeTab', tab);
   };
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [showIntro, setShowIntro] = useState(false);
+  // Removed isSidebarOpen and toggleSidebar state/logic
   
   // --- ASSISTANT STATE ---
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
@@ -533,7 +533,7 @@ const App: React.FC = () => {
           loadUserCategories(userId), // Load user-specific categories
           loadNewsAndOffers(),
           loadNotifications(userId), // Pass userId to load interactions
-          // loadConnectionConfig() // REMOVED: Now called globally
+          loadConnectionConfig() // Load connection config unconditionally
       ];
 
       if (userRole === 'admin') {
@@ -818,8 +818,9 @@ const App: React.FC = () => {
       setActiveTab('cnpj-consult'); // Navigate to the new public page
   };
   
-  const handleViewBlog = () => {
+  const handleViewBlog = (id: number) => {
       setIsPublicView(true);
+      setReadingNewsId(id);
       setActiveTab('news'); // Ensure the tab is set correctly for public view rendering
   };
   
@@ -2002,14 +2003,18 @@ const App: React.FC = () => {
   // Main App Structure
   return (
     <div className="flex h-screen bg-background-light dark:bg-background-dark overflow-hidden relative">
-      {user && !isEmbedView && (
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} userRole={user?.role} />
+      {/* Sidebar (Desktop Only) */}
+      {user && (
+        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={false} toggleSidebar={() => {}} userRole={user?.role} />
       )}
-      <div className={`flex-1 flex flex-col overflow-hidden ${isEmbedView ? 'w-full' : ''}`}>
-        {user && !isEmbedView && (
-            <Header activeTab={activeTab} onMenuClick={() => setIsSidebarOpen(true)} notifications={notifications} onMarkAsRead={handleMarkAsRead} onVote={handleVote} user={user} onLogout={handleLogout} onNavigateToProfile={() => setActiveTab('settings')} />
+      
+      <div className={`flex-1 flex flex-col overflow-hidden`}>
+        {user && (
+            <Header activeTab={activeTab} onMenuClick={() => {}} notifications={notifications} onMarkAsRead={handleMarkAsRead} onVote={handleVote} user={user} onLogout={handleLogout} onNavigateToProfile={() => setActiveTab('settings')} />
         )}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth relative">
+        
+        {/* Main Content Area - Added pb-20 for mobile to prevent content being hidden by bottom nav */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth relative lg:pb-8 pb-20">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Conditional rendering for global maintenance */}
             {maintenance.global && activeTab !== 'admin' && activeTab !== 'settings' && user?.role !== 'admin' ? (
@@ -2042,7 +2047,7 @@ const App: React.FC = () => {
       )}
       
       {/* VIRTUAL ASSISTANT UI */}
-      {user && user.isSetupComplete && !isEmbedView && (
+      {user && user.isSetupComplete && (
           <>
               <VirtualAssistantButton 
                   isOpen={isAssistantOpen} 
@@ -2058,6 +2063,15 @@ const App: React.FC = () => {
                   />
               )}
           </>
+      )}
+      
+      {/* Mobile Bottom Navigation (Mobile Only) */}
+      {user && (
+          <MobileBottomNav 
+              activeTab={activeTab} 
+              setActiveTab={setActiveTab} 
+              userRole={user.role} 
+          />
       )}
     </div>
   );

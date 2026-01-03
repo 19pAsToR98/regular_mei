@@ -16,12 +16,12 @@ const navItems: NavItem[] = [
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (id: string) => void;
-  isOpen: boolean;
-  toggleSidebar: () => void;
+  isOpen: boolean; // Mantido para compatibilidade, mas ignorado no desktop
+  toggleSidebar: () => void; // Mantido para compatibilidade, mas ignorado no desktop
   userRole?: 'admin' | 'user';
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, toggleSidebar, userRole }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole }) => {
   
   const filteredNavItems = navItems.filter(item => 
     item.id !== 'admin' || userRole === 'admin'
@@ -29,25 +29,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, togg
 
   return (
     <>
-      {/* Mobile Overlay */}
-      <div 
-        className={`fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-20 transition-opacity duration-300 lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        onClick={toggleSidebar}
-      />
-
       {/* 
         Sidebar Container 
-        Full height, attached to left edge, professional border separation
+        Visível apenas em telas grandes (lg:block)
       */}
       <aside 
         className={`
-          fixed inset-y-0 left-0 z-30 
-          w-72 bg-slate-800 dark:bg-slate-900 
+          hidden lg:flex lg:flex-col lg:w-72 lg:h-screen lg:shrink-0
+          bg-slate-800 dark:bg-slate-900 
           border-r border-slate-700 dark:border-slate-800
-          transition-transform duration-300 ease-in-out
-          lg:translate-x-0 lg:static lg:block
-          flex flex-col h-screen
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
           
@@ -58,9 +48,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, togg
             alt="Regular MEI" 
             className="h-8 w-auto object-contain brightness-0 invert transition-all"
           />
-          <button onClick={toggleSidebar} className="lg:hidden p-2 text-slate-400 hover:text-white rounded-lg transition-colors">
-              <span className="material-icons">close</span>
-          </button>
         </div>
         
         {/* Navigation */}
@@ -76,7 +63,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, togg
                     onClick={(e) => {
                       e.preventDefault();
                       setActiveTab(item.id);
-                      if (window.innerWidth < 1024) toggleSidebar();
                     }}
                     className={`
                       group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-md transition-all duration-200
@@ -111,7 +97,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, togg
             onClick={(e) => {
               e.preventDefault();
               setActiveTab('settings');
-              if (window.innerWidth < 1024) toggleSidebar();
             }}
             className={`
               flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-md transition-all duration-200
