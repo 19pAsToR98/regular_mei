@@ -259,58 +259,33 @@ const App: React.FC = () => {
   const loadAllUsers = async () => {
       
       if (userRef.current?.role === 'admin') {
-          const { data: sessionData } = await supabase.auth.getSession();
-          const token = sessionData.session?.access_token;
+          // Admin: Use standard Supabase client call. RLS policy 'Admins can view all profiles' 
+          // now uses the secure public.is_admin() function to grant access.
+          const { data: profiles, error: fetchError } = await supabase
+              .from('profiles')
+              .select('*');
 
-          if (!token) {
-              console.error('Admin token missing.');
+          if (fetchError) {
+              console.error('Error fetching all profiles (Admin):', fetchError);
+              showError(`Erro ao carregar usuários: ${fetchError.message}`);
               return [];
           }
           
-          // 1. Call the secure Edge Function
-          const EDGE_FUNCTION_URL = 'https://ogwjtlkemsqmpvcikrtd.supabase.co/functions/v1/get-all-profiles-admin';
-
-          try {
-              const response = await fetch(EDGE_FUNCTION_URL, {
-                  method: 'GET',
-                  headers: {
-                      'Authorization': `Bearer ${token}`,
-                      'Content-Type': 'application/json',
-                  },
-              });
-
-              const data = await response.json();
-              
-              console.log('loadAllUsers: Response Status:', response.status);
-              console.log('loadAllUsers: Response Data:', data);
-
-              if (!response.ok) {
-                  console.error('Error fetching all users via Edge Function:', data);
-                  showError(`Erro ao carregar usuários: ${data.error || 'Falha na comunicação.'}`);
-                  return [];
-              }
-              
-              const mappedUsers: User[] = (data as any[]).map(p => ({
-                  id: p.id,
-                  name: p.name || p.email,
-                  email: p.email,
-                  phone: p.phone,
-                  cnpj: p.cnpj,
-                  isSetupComplete: p.is_setup_complete,
-                  role: p.role as 'admin' | 'user',
-                  status: p.status as 'active' | 'inactive' | 'suspended',
-                  joinedAt: p.joined_at,
-                  lastActive: p.last_active,
-                  receiveWeeklySummary: p.receive_weekly_summary ?? true
-              }));
-              setAllUsers(mappedUsers);
-              return mappedUsers;
-
-          } catch (error) {
-              console.error('Network or Fetch Error during loadAllUsers:', error);
-              showError('Erro de rede ao carregar usuários.');
-              return [];
-          }
+          const mappedUsers: User[] = (profiles as any[]).map(p => ({
+              id: p.id,
+              name: p.name || p.email,
+              email: p.email,
+              phone: p.phone,
+              cnpj: p.cnpj,
+              isSetupComplete: p.is_setup_complete,
+              role: p.role as 'admin' | 'user',
+              status: p.status as 'active' | 'inactive' | 'suspended',
+              joinedAt: p.joined_at,
+              lastActive: p.last_active,
+              receiveWeeklySummary: p.receive_weekly_summary ?? true
+          }));
+          setAllUsers(mappedUsers);
+          return mappedUsers;
       }
       
       // Se não for admin, retorna apenas o usuário logado (já carregado)
@@ -515,32 +490,18 @@ const App: React.FC = () => {
     // 4. Fetch profile data for all voters (Admin only)
     let voterProfiles: Record<string, { name: string, email: string }> = {};
     if (allVoterIds.length > 0) {
-        // Use the new Edge Function to fetch profiles if admin, to avoid RLS issues on profile lookup
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
+        // Use the standard client call, which is now permitted by RLS for admins
+        const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, name, email')
+            .in('id', allVoterIds);
         
-        if (token) {
-            const EDGE_FUNCTION_URL = 'https://ogwjtlkemsqmpvcikrtd.supabase.co/functions/v1/get-all-profiles-admin';
-            try {
-                const response = await fetch(EDGE_FUNCTION_URL, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                });
-                
-                if (response.ok) {
-                    const profilesData = await response.json();
-                    (profilesData as any[]).forEach(p => {
-                        voterProfiles[p.id] = { name: p.name || 'Usuário Desconhecido', email: p.email || 'Email Desconhecido' };
-                    });
-                } else {
-                    console.error('Failed to fetch voter profiles via admin function.');
-                }
-            } catch (e) {
-                console.error('Network error fetching voter profiles:', e);
-            }
+        if (profilesError) {
+            console.error('Error fetching voter profiles:', profilesError);
+        } else {
+            (profilesData as any[]).forEach(p => {
+                voterProfiles[p.id] = { name: p.name || 'Usuário Desconhecido', email: p.email || 'Email Desconhecido' };
+            });
         }
     }
 
