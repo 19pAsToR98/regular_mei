@@ -452,8 +452,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             <span className="material-icons text-orange-500">notifications_active</span>
                             Preferências de Notificação
                         </h4>
-                        <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
-                            <div className="flex items-center gap-3">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 gap-4">
+                            <div className="flex items-center gap-3 flex-1">
                                 <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
                                     <span className="material-icons text-xl text-green-600">whatsapp</span>
                                 </div>
@@ -468,7 +468,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                     ...prev,
                                     receiveWeeklySummary: !prev.receiveWeeklySummary
                                 }))}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${profileForm.receiveWeeklySummary ? 'bg-green-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${profileForm.receiveWeeklySummary ? 'bg-green-600' : 'bg-slate-300 dark:bg-slate-700'}`}
                             >
                                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${profileForm.receiveWeeklySummary ? 'translate-x-6' : 'translate-x-1'}`} />
                             </button>
@@ -553,9 +553,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                                 type="button"
                                                 onClick={() => setShowPass({...showPass, confirm: !showPass.confirm})}
                                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                                            >
-                                                <span className="material-icons text-lg">{showPass.confirm ? 'visibility_off' : 'visibility'}</span>
-                                            </button>
+                                        >
+                                            <span className="material-icons text-lg">{showPass.confirm ? 'visibility_off' : 'visibility'}</span>
+                                        </button>
                                         </div>
                                     </div>
                                 </div>
@@ -745,7 +745,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
            </div>
         </div>
 
-        {/* Category Modal */}
+        /* Category Modal */
         <CategoryModal 
             type={activeCatTab}
             isOpen={isCategoryModalOpen}
@@ -753,7 +753,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             onSave={onAddCategory}
         />
 
-        {/* Verification Modal */}
+        /* Verification Modal */
         {isVerifyingEmail && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
                 <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 border border-slate-200 dark:border-slate-800">
