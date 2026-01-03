@@ -615,6 +615,12 @@ const App: React.FC = () => {
         setLoadingAuth(false);
         return;
     }
+    
+    // --- DIAGNOSTIC LOG ---
+    console.log('--- PROFILE DATA FROM SUPABASE ---');
+    console.log('is_setup_complete (DB):', profileData.is_setup_complete);
+    console.log('----------------------------------');
+    // --- END DIAGNOSTIC LOG ---
 
     const appUser: User = {
         id: profileData.id,
