@@ -847,11 +847,15 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Itens / Serviços</label>
                             <div className="space-y-3">
                                 {items.map((item) => (
-                                    <div key={item.id} className="flex gap-2 items-start">
-                                        <input type="text" value={item.desc} onChange={e => updateItem(item.id, 'desc', e.target.value)} className="flex-1 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Descrição" />
-                                        <input type="number" value={item.qty} onChange={e => updateItem(item.id, 'qty', parseFloat(e.target.value))} className="w-16 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Qtd" />
-                                        <input type="number" value={item.price} onChange={e => updateItem(item.id, 'price', parseFloat(e.target.value))} className="w-20 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="R$" />
-                                        <button onClick={() => removeItem(item.id)} className="text-red-500 hover:text-red-700"><span className="material-icons text-sm">close</span></button>
+                                    <div key={item.id} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                                        <input type="text" value={item.desc} onChange={e => updateItem(item.id, 'desc', e.target.value)} className="flex-1 w-full sm:w-auto px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Descrição" />
+                                        
+                                        <div className="flex gap-2 w-full sm:w-auto">
+                                            <input type="number" value={item.qty} onChange={e => updateItem(item.id, 'qty', parseFloat(e.target.value))} className="w-1/2 sm:w-16 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="Qtd" />
+                                            <input type="number" value={item.price} onChange={e => updateItem(item.id, 'price', parseFloat(e.target.value))} className="w-1/2 sm:w-20 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50" placeholder="R$" />
+                                        </div>
+                                        
+                                        <button onClick={() => removeItem(item.id)} className="text-red-500 hover:text-red-700 flex-shrink-0 p-1 sm:p-0"><span className="material-icons text-sm">close</span></button>
                                     </div>
                                 ))}
                                 <button onClick={addItem} className="w-full py-2 border border-dashed border-slate-300 rounded text-slate-500 hover:bg-slate-50 text-sm flex items-center justify-center gap-1">
@@ -1189,12 +1193,20 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                         </h3>
                         <div className="space-y-3">
                             {items.map((item, index) => (
-                                <div key={item.id} className="flex gap-2 items-start">
-                                    {/* Ajustando larguras para serem mais flexíveis no mobile */}
-                                    <input type="text" value={item.desc} onChange={e => updateItem(item.id, 'desc', e.target.value)} className="flex-1 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="Descrição" />
-                                    <input type="number" value={item.qty} onChange={e => updateItem(item.id, 'qty', parseFloat(e.target.value))} className="w-1/6 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="Qtd" />
-                                    <input type="number" value={item.price} onChange={e => updateItem(item.id, 'price', parseFloat(e.target.value))} className="w-1/5 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="R$" />
-                                    <button onClick={() => removeItem(item.id)} className="text-red-500 hover:text-red-700 flex-shrink-0"><span className="material-icons text-sm">close</span></button>
+                                <div key={item.id} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                                    {/* Descrição (Ocupa a largura total no mobile) */}
+                                    <input type="text" value={item.desc} onChange={e => updateItem(item.id, 'desc', e.target.value)} className="flex-1 w-full sm:w-auto px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="Descrição" />
+                                    
+                                    {/* Qtd e Preço (Ocupam 50% cada no mobile, e largura fixa no desktop) */}
+                                    <div className="flex gap-2 w-full sm:w-auto sm:flex-shrink-0">
+                                        <input type="number" value={item.qty} onChange={e => updateItem(item.id, 'qty', parseFloat(e.target.value))} className="w-1/2 sm:w-16 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="Qtd" />
+                                        <input type="number" value={item.price} onChange={e => updateItem(item.id, 'price', parseFloat(e.target.value))} className="w-1/2 sm:w-20 px-2 py-1 border rounded text-sm bg-white text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="R$" />
+                                    </div>
+                                    
+                                    {/* Botão de Remover */}
+                                    <button onClick={() => removeItem(item.id)} className="text-red-500 hover:text-red-700 flex-shrink-0 p-1 sm:p-0 absolute right-0 top-0 sm:static">
+                                        <span className="material-icons text-sm">close</span>
+                                    </button>
                                 </div>
                             ))}
                             <button onClick={addItem} className="w-full py-2 border border-dashed border-slate-300 rounded text-slate-500 hover:bg-slate-50 text-sm flex items-center justify-center gap-1">
