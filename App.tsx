@@ -280,6 +280,9 @@ const App: React.FC = () => {
               });
 
               const data = await response.json();
+              
+              console.log('loadAllUsers: Response Status:', response.status);
+              console.log('loadAllUsers: Response Data:', data);
 
               if (!response.ok) {
                   console.error('Error fetching all users via Edge Function:', data);
