@@ -638,7 +638,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                      <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-4 lg:hidden">Aparência</h2>
                      <p className="text-slate-500 dark:text-slate-400">Escolha como você prefere visualizar a plataforma.</p>
                      
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl">
+                     {/* ALTERADO: grid-cols-1 md:grid-cols-2 */}
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
                         <button 
                             type="button"
                             onClick={() => handleThemeChange('light')}
