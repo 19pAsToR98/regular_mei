@@ -16,7 +16,7 @@ const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen,
     <button
       onClick={onClick}
       className={`
-        fixed bottom-6 right-6 z-40 
+        fixed right-6 z-40 
         lg:bottom-6 lg:right-6 
         lg:w-20 lg:h-20 
         w-16 h-16 
@@ -27,8 +27,8 @@ const VirtualAssistantButton: React.FC<VirtualAssistantButtonProps> = ({ isOpen,
         flex items-center justify-center 
         transform
         
-        /* Ajuste para mobile: 16px acima da bottom bar (h-16) */
-        bottom-[calc(4rem+16px)]
+        /* Ajuste para mobile: 16px acima da bottom bar (h-16 = 4rem). 4rem + 16px = 5rem */
+        bottom-[5rem]
       `}
       aria-label="Abrir Assistente Virtual"
       title="Assistente Virtual"

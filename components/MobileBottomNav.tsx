@@ -11,8 +11,8 @@ const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Início', icon: 'dashboard', href: '#' },
   { id: 'cashflow', label: 'Caixa', icon: 'swap_horiz', href: '#' },
   { id: 'cnpj', label: 'CNPJ', icon: 'business', href: '#' },
-  { id: 'tools', label: 'Ferramentas', icon: 'build', href: '#' },
-  { id: 'more', label: 'Mais', icon: 'more_horiz', href: '#' }, // NOVO ITEM
+  { id: 'calendar', label: 'Agenda', icon: 'calendar_today', href: '#' }, // NOVO ITEM AQUI
+  { id: 'more', label: 'Mais', icon: 'more_horiz', href: '#' },
 ];
 
 const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeTab, setActiveTab, userRole }) => {

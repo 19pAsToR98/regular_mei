@@ -5,7 +5,7 @@ interface MorePageProps {
 }
 
 const secondaryNavItems = [
-    { id: 'calendar', label: 'Calendário', icon: 'calendar_today', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+    { id: 'tools', label: 'Ferramentas', icon: 'build', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20' }, // NOVO ITEM AQUI
     { id: 'news', label: 'Notícias & Blog', icon: 'article', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20' },
     { id: 'offers', label: 'Ofertas & Cupons', icon: 'local_offer', color: 'text-orange-600', bg: 'bg-orange-50 dark:bg-orange-900/20' },
     { id: 'invoices', label: 'Notas Fiscais', icon: 'receipt', color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
