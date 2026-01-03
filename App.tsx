@@ -837,7 +837,7 @@ const App: React.FC = () => {
       setActiveTab('cnpj-consult'); // Navigate to the new public page
   };
   
-  const handleViewBlog = (id: number) => {
+  const handleViewNews = (id: number) => {
     console.log('Attempting to view news ID:', id); // DEBUG LOG
     
     // If in embed view, force parent navigation
@@ -1277,7 +1277,7 @@ const App: React.FC = () => {
           text: item.text,
           type: item.type,
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          expires_at: expiresAtValue, 
+          expires_at: expiresAtAtValue, 
           active: item.active,
       };
       
@@ -1819,7 +1819,7 @@ const App: React.FC = () => {
       return <LandingPage 
           onGetStarted={handleLandingGetStarted} 
           onLogin={handleLandingLogin} 
-          onViewBlog={handleViewBlog} 
+          onViewBlog={handleViewNews} 
           onConsultCnpj={handleStartCnpjFlow}
           news={news} // PASSING NEWS DATA HERE
       />;
