@@ -32,6 +32,7 @@ import VirtualAssistantButton from './components/VirtualAssistantButton';
 import AssistantChat from './components/AssistantChat';
 import LandingPage from './components/LandingPage';
 import CnpjConsultPage from "./components/CnpjConsultPage";
+import AuthDebugLog from './components/AuthDebugLog'; // IMPORTADO
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -1738,6 +1739,7 @@ const App: React.FC = () => {
       return (
           <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
               <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+              <AuthDebugLog user={user} loadingAuth={loadingAuth} activeTab={activeTab} />
           </div>
       );
   }
@@ -2093,6 +2095,9 @@ const App: React.FC = () => {
               )}
           </>
       )}
+      
+      {/* DEBUG LOG */}
+      <AuthDebugLog user={user} loadingAuth={loadingAuth} activeTab={activeTab} />
     </div>
   );
 };
