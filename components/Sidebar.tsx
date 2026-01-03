@@ -10,7 +10,7 @@ const navItems: NavItem[] = [
   { id: 'tools', label: 'Ferramentas', icon: 'build', href: '#' },
   { id: 'news', label: 'Notícias', icon: 'article', href: '#' },
   { id: 'offers', label: 'Ofertas', icon: 'local_offer', href: '#' },
-  { id: 'admin', label: 'Admin', icon: 'admin_panel_settings', href: '#' },
+  // { id: 'admin', label: 'Admin', icon: 'admin_panel_settings', href: '#' }, // REMOVIDO
 ];
 
 interface SidebarProps {
@@ -23,9 +23,8 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole }) => {
   
-  const filteredNavItems = navItems.filter(item => 
-    item.id !== 'admin' || userRole === 'admin'
-  );
+  // O item 'admin' não está mais na lista principal, então o filtro é simplificado.
+  const filteredNavItems = navItems;
 
   return (
     <>
@@ -87,6 +86,30 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole }) 
                 </li>
               );
             })}
+            {/* Adicionando o link Admin aqui, se for admin, para manter o acesso no desktop */}
+            {userRole === 'admin' && (
+                <li>
+                    <a
+                        href="#"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            setActiveTab('admin');
+                        }}
+                        className={`
+                            group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-md transition-all duration-200
+                            ${activeTab === 'admin' 
+                                ? 'bg-red-600 text-white shadow-sm' 
+                                : 'text-red-300 hover:bg-slate-700 hover:text-red-100'
+                            }
+                        `}
+                    >
+                        <span className={`material-icons text-[20px] ${activeTab === 'admin' ? 'text-white' : 'text-red-400 group-hover:text-red-100'}`}>
+                            admin_panel_settings
+                        </span>
+                        <span className="flex-1">Admin</span>
+                    </a>
+                </li>
+            )}
           </ul>
         </nav>
 

@@ -1999,7 +1999,7 @@ const App: React.FC = () => {
               onChangePassword={handleChangePassword}
             />;
           case 'more': // NEW CASE
-            return <MorePage onNavigate={setActiveTab} />;
+            return <MorePage onNavigate={setActiveTab} userRole={user.role} />;
           case 'terms': return <TermsPage />;
           case 'privacy': return <PrivacyPage />;
           default: return null;
