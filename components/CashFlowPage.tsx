@@ -262,11 +262,13 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
         description: '',
         category: '',
         type: 'receita',
-        amount: '',
+        amount: '', // Single Amount Field
         date: new Date().toISOString().split('T')[0],
         status: 'pago',
-        recurrenceType: 'none',
-        recurrenceCount: 2
+        
+        // Repetition logic
+        recurrenceType: 'none', // none, installment, recurring
+        recurrenceCount: 2, // Total installments or months
     });
     setIsModalOpen(true);
   };
@@ -627,9 +629,59 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
       
-      {/* Actions */}
-      <div className="flex flex-col md:flex-row justify-end items-start md:items-center gap-4">
-        <div className="flex gap-2 w-full md:w-auto">
+      {/* --- HEADER BAR: Date Navigation, Filters, and Actions --- */}
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row gap-4 justify-between items-center">
+        
+        {/* 1. Date Navigation (Left) */}
+        <div className="flex items-center justify-center gap-4 flex-shrink-0">
+           <button onClick={handlePrevMonth} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500">
+               <span className="material-icons">chevron_left</span>
+           </button>
+           <span className="text-lg font-bold text-slate-800 dark:text-white capitalize min-w-[140px] text-center">
+               {monthNames[currentMonth]} {currentYear}
+           </span>
+           <button onClick={handleNextMonth} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500">
+               <span className="material-icons">chevron_right</span>
+           </button>
+        </div>
+
+        {/* 2. Filters (Center) */}
+        <div className="flex flex-col md:flex-row gap-4 w-full lg:w-auto flex-1 lg:flex-none">
+          <div className="relative w-full md:w-64">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons">search</span>
+            <input 
+              type="text" 
+              placeholder="Buscar lançamento..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
+            />
+          </div>
+          
+          <div className="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-1 self-start md:self-auto w-full md:w-auto overflow-x-auto">
+             <button 
+              onClick={() => setFilterType('all')}
+              className={`flex-1 md:flex-none px-3 py-1.5 rounded-md text-sm font-medium transition-all ${filterType === 'all' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+             >
+               Todos
+             </button>
+             <button 
+              onClick={() => setFilterType('receita')}
+              className={`flex-1 md:flex-none px-3 py-1.5 rounded-md text-sm font-medium transition-all ${filterType === 'receita' ? 'bg-white dark:bg-slate-700 text-green-500 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+             >
+               Entradas
+             </button>
+             <button 
+              onClick={() => setFilterType('despesa')}
+              className={`flex-1 md:flex-none px-3 py-1.5 rounded-md text-sm font-medium transition-all ${filterType === 'despesa' ? 'bg-white dark:bg-slate-700 text-red-500 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+             >
+               Saídas
+             </button>
+          </div>
+        </div>
+
+        {/* 3. Actions (Right) */}
+        <div className="flex gap-2 w-full lg:w-auto flex-shrink-0">
              <button 
                 onClick={() => setIsExportModal(true)}
                 className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm flex-1 md:flex-none justify-center"
@@ -645,19 +697,6 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
             Nova Transação
             </button>
         </div>
-      </div>
-
-      {/* Date Navigation */}
-      <div className="flex items-center justify-center gap-4 bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm w-full md:w-fit mx-auto">
-         <button onClick={handlePrevMonth} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500">
-             <span className="material-icons">chevron_left</span>
-         </button>
-         <span className="text-lg font-bold text-slate-800 dark:text-white capitalize min-w-[140px] text-center">
-             {monthNames[currentMonth]} {currentYear}
-         </span>
-         <button onClick={handleNextMonth} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500">
-             <span className="material-icons">chevron_right</span>
-         </button>
       </div>
 
       {/* Summary Cards (New Model) */}
@@ -711,43 +750,6 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                 <p className="text-xs font-bold uppercase text-slate-300 truncate">Caixa Projetado do Mês</p>
                 <p className={`text-xl font-bold truncate ${caixaProjetado >= 0 ? 'text-white' : 'text-red-300'}`}>R$ {caixaProjetado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Bar */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row gap-4 justify-between items-center">
-        <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-          <div className="relative w-full md:w-64">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons">search</span>
-            <input 
-              type="text" 
-              placeholder="Buscar lançamento..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
-            />
-          </div>
-          
-          <div className="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-1 self-start md:self-auto w-full md:w-auto overflow-x-auto">
-             <button 
-              onClick={() => setFilterType('all')}
-              className={`flex-1 md:flex-none px-3 py-1.5 rounded-md text-sm font-medium transition-all ${filterType === 'all' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
-             >
-               Todos
-             </button>
-             <button 
-              onClick={() => setFilterType('receita')}
-              className={`flex-1 md:flex-none px-3 py-1.5 rounded-md text-sm font-medium transition-all ${filterType === 'receita' ? 'bg-white dark:bg-slate-700 text-green-500 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
-             >
-               Entradas
-             </button>
-             <button 
-              onClick={() => setFilterType('despesa')}
-              className={`flex-1 md:flex-none px-3 py-1.5 rounded-md text-sm font-medium transition-all ${filterType === 'despesa' ? 'bg-white dark:bg-slate-700 text-red-500 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
-             >
-               Saídas
-             </button>
           </div>
         </div>
       </div>
