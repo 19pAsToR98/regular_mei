@@ -32,7 +32,7 @@ import VirtualAssistantButton from './components/VirtualAssistantButton';
 import AssistantChat from './components/AssistantChat';
 import LandingPage from './components/LandingPage';
 import CnpjConsultPage from "./components/CnpjConsultPage";
-import AuthDebugLog from './components/AuthDebugLog'; // IMPORTADO
+import AuthDebugLog from './components/AuthDebugLog';
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -1830,25 +1830,40 @@ const App: React.FC = () => {
   // If not logged in, show LandingPage or AuthPage
   if (!user) {
       if (activeTab === 'auth') {
-          return <AuthPage 
-              onLogin={handleLogin} 
-              onForgotPassword={handleForgotPassword} 
-              onNavigate={setActiveTab} 
-              onBackToLanding={handleBackToLanding}
-          />;
+          return (
+              <>
+                  <AuthPage 
+                      onLogin={handleLogin} 
+                      onForgotPassword={handleForgotPassword} 
+                      onNavigate={setActiveTab} 
+                      onBackToLanding={handleBackToLanding}
+                  />
+                  <AuthDebugLog user={user} loadingAuth={loadingAuth} activeTab={activeTab} />
+              </>
+          );
       }
       // Default to LandingPage
-      return <LandingPage 
-          onGetStarted={handleLandingGetStarted} 
-          onLogin={handleLandingLogin} 
-          onViewBlog={handleViewBlog} 
-          onConsultCnpj={handleStartCnpjFlow}
-          news={news} // PASSING NEWS DATA HERE
-      />;
+      return (
+          <>
+              <LandingPage 
+                  onGetStarted={handleLandingGetStarted} 
+                  onLogin={handleLandingLogin} 
+                  onViewBlog={handleViewBlog} 
+                  onConsultCnpj={handleStartCnpjFlow}
+                  news={news} // PASSING NEWS DATA HERE
+              />
+              <AuthDebugLog user={user} loadingAuth={loadingAuth} activeTab={activeTab} />
+          </>
+      );
   }
 
   if (!user.isSetupComplete) {
-      return <OnboardingPage user={user} onComplete={handleOnboardingComplete} />;
+      return (
+          <>
+              <OnboardingPage user={user} onComplete={handleOnboardingComplete} />
+              <AuthDebugLog user={user} loadingAuth={loadingAuth} activeTab={activeTab} />
+          </>
+      );
   }
   
   // Logged in user: Redirect if on a public-only tab
@@ -2096,7 +2111,7 @@ const App: React.FC = () => {
           </>
       )}
       
-      {/* DEBUG LOG */}
+      {/* DEBUG LOG (Rendered outside main structure for z-index control) */}
       <AuthDebugLog user={user} loadingAuth={loadingAuth} activeTab={activeTab} />
     </div>
   );
