@@ -102,7 +102,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [userForm, setUserForm] = useState<Partial<User>>({
-      name: '', email: '', phone: '', role: 'user', status: 'active', cnpj: ''
+      name: '', email: '', phone: '', role: 'user', status: 'active', cnpj: '', receiveWeeklySummary: true
   });
   
   // User Filters & Pagination
@@ -250,7 +250,8 @@ const AdminPage: React.FC<AdminPageProps> = ({
           phone: user.phone || '',
           cnpj: user.cnpj || '',
           role: user.role || 'user',
-          status: user.status || 'active'
+          status: user.status || 'active',
+          receiveWeeklySummary: user.receiveWeeklySummary ?? true
       });
       setUserModalOpen(true);
   };
@@ -267,10 +268,10 @@ const AdminPage: React.FC<AdminPageProps> = ({
       await new Promise(r => setTimeout(r, 1000));
 
       const now = new Date().toISOString();
+      const originalUser = users.find(u => u.id === editingUserId);
+      const isNewUser = !editingUserId;
       
       const payload: User = {
-          id: editingUserId || Date.now().toString(),
-          name: userForm.name || '',
           id: editingUserId || Date.now().toString(),
           name: userForm.name || '',
           email: userForm.email || '',
@@ -278,9 +279,11 @@ const AdminPage: React.FC<AdminPageProps> = ({
           cnpj: userForm.cnpj,
           role: userForm.role as 'admin' | 'user',
           status: userForm.status as 'active' | 'inactive' | 'suspended',
-          isSetupComplete: true, // Assuming manual admin creation implies setup
-          lastActive: editingUserId ? (users.find(u => u.id === editingUserId)?.lastActive) : now,
-          joinedAt: editingUserId ? (users.find(u => u.id === editingUserId)?.joinedAt) : now
+          // Preservar o status de setup se estiver editando, ou forçar false se for novo
+          isSetupComplete: isNewUser ? false : (originalUser?.isSetupComplete ?? false),
+          lastActive: originalUser?.lastActive || now,
+          joinedAt: originalUser?.joinedAt || now,
+          receiveWeeklySummary: userForm.receiveWeeklySummary ?? (originalUser?.receiveWeeklySummary ?? true)
       };
 
       if (editingUserId) {
@@ -291,7 +294,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
       setIsSubmitting(false);
       setUserModalOpen(false);
       setEditingUserId(null);
-      setUserForm({ name: '', email: '', phone: '', role: 'user', status: 'active', cnpj: '' });
+      setUserForm({ name: '', email: '', phone: '', role: 'user', status: 'active', cnpj: '', receiveWeeklySummary: true });
   };
 
   // --- NEWS LOGIC & HANDLERS ---
@@ -806,7 +809,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                           <button 
                               onClick={() => {
                                   setEditingUserId(null);
-                                  setUserForm({ name: '', email: '', phone: '', role: 'user', status: 'active', cnpj: '' });
+                                  setUserForm({ name: '', email: '', phone: '', role: 'user', status: 'active', cnpj: '', receiveWeeklySummary: true });
                                   setUserModalOpen(true);
                               }}
                               className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm transition-colors whitespace-nowrap"
@@ -1004,6 +1007,21 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                   </div>
                               </div>
                               
+                              {/* NEW: Receive Weekly Summary Toggle */}
+                              <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Receber Resumo Semanal</label>
+                                  <button 
+                                      type="button"
+                                      onClick={() => setUserForm(prev => ({
+                                          ...prev,
+                                          receiveWeeklySummary: !prev.receiveWeeklySummary
+                                      }))}
+                                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${userForm.receiveWeeklySummary ? 'bg-green-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+                                  >
+                                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${userForm.receiveWeeklySummary ? 'translate-x-6' : 'translate-x-1'}`} />
+                                  </button>
+                              </div>
+
                               <div className="flex justify-end gap-3 pt-4">
                                   <button 
                                       type="button" 
