@@ -101,8 +101,9 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <>
     <header className="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 px-4 md:px-8 h-[72px] flex justify-between items-center transition-all">
-      <div className="flex items-center gap-4">
-        {/* Logo discreta no mobile, Título no desktop */}
+      
+      {/* Left Group (Logo/Title on Desktop, Logo on Mobile) */}
+      <div className="flex items-center gap-4 flex-shrink-0">
         <img 
             src="https://regularmei.com.br/wp-content/uploads/2024/07/REGULAR-500-x-200-px.png" 
             alt="Regular MEI" 
@@ -113,16 +114,19 @@ const Header: React.FC<HeaderProps> = ({
           <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white leading-none">{getPageTitle()}</h2>
           <p className="hidden md:block text-xs text-slate-500 dark:text-slate-400 mt-1">{getPageSubtitle()}</p>
         </div>
-        
-        {/* Título no mobile (apenas se não for dashboard) */}
-        <div className="lg:hidden flex-1 text-center">
-            {activeTab !== 'dashboard' && (
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-none">{getPageTitle()}</h2>
-            )}
-        </div>
       </div>
 
-      <div className="flex items-center gap-4 md:gap-6">
+      {/* Center Title (Mobile Only) */}
+      <div className="absolute left-1/2 transform -translate-x-1/2 lg:hidden">
+          {activeTab !== 'dashboard' && (
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-none whitespace-nowrap">
+                  {getPageTitle()}
+              </h2>
+          )}
+      </div>
+
+      {/* Right Group (Notifications/Profile) */}
+      <div className="flex items-center gap-4 md:gap-6 flex-shrink-0">
         
         {/* Notification Bell */}
         <div className="relative" ref={notifRef}>
