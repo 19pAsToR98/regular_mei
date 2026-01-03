@@ -446,14 +446,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                         </div>
                     </div>
                     
-                    {/* Weekly Summary Preference (NEW SECTION) */}
+                    {/* Weekly Summary Preference (IMPROVED SECTION) */}
                     <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-                        <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Preferências de Notificação</h4>
+                        <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                            <span className="material-icons text-orange-500">notifications_active</span>
+                            Preferências de Notificação
+                        </h4>
                         <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
                             <div className="flex items-center gap-3">
-                                <span className="material-icons text-xl text-green-600">whatsapp</span>
+                                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+                                    <span className="material-icons text-xl text-green-600">whatsapp</span>
+                                </div>
                                 <div>
-                                    <p className="font-medium text-slate-800 dark:text-white">Resumo Semanal (WhatsApp)</p>
+                                    <p className="font-medium text-slate-800 dark:text-white">Resumo Semanal de Contas</p>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">Receber resumo de contas a pagar/receber todo domingo.</p>
                                 </div>
                             </div>
