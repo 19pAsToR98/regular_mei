@@ -257,31 +257,36 @@ const App: React.FC = () => {
 
 
   const loadAllUsers = async () => {
-      const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('joined_at', { ascending: false });
+      // Se o usuário for admin, usamos a função RPC para buscar todos os perfis,
+      // contornando o RLS que causa recursão.
+      if (userRef.current?.role === 'admin') {
+          const { data, error } = await supabase.rpc('get_all_profiles');
 
-      if (error) {
-          console.error('Error fetching all users:', error);
-          return [];
+          if (error) {
+              console.error('Error fetching all users via RPC:', error);
+              showError('Erro ao carregar usuários. Verifique as permissões do banco de dados.');
+              return [];
+          }
+          
+          const mappedUsers: User[] = (data as any[]).map(p => ({
+              id: p.id,
+              name: p.name || p.email,
+              email: p.email,
+              phone: p.phone,
+              cnpj: p.cnpj,
+              isSetupComplete: p.is_setup_complete,
+              role: p.role as 'admin' | 'user',
+              status: p.status as 'active' | 'inactive' | 'suspended',
+              joinedAt: p.joined_at,
+              lastActive: p.last_active,
+              receiveWeeklySummary: p.receive_weekly_summary ?? true
+          }));
+          setAllUsers(mappedUsers);
+          return mappedUsers;
       }
       
-      const mappedUsers: User[] = data.map(p => ({
-          id: p.id,
-          name: p.name || p.email,
-          email: p.email,
-          phone: p.phone,
-          cnpj: p.cnpj,
-          isSetupComplete: p.is_setup_complete,
-          role: p.role as 'admin' | 'user',
-          status: p.status as 'active' | 'inactive' | 'suspended',
-          joinedAt: p.joined_at,
-          lastActive: p.last_active,
-          receiveWeeklySummary: p.receive_weekly_summary ?? true
-      }));
-      setAllUsers(mappedUsers);
-      return mappedUsers;
+      // Se não for admin, retorna apenas o usuário logado (já carregado)
+      return userRef.current ? [userRef.current] : [];
   };
 
   const loadTransactions = async (userId: string) => {
@@ -467,9 +472,9 @@ const App: React.FC = () => {
     }
     
     // 3. Collect all unique voter IDs for Admin view
-    if (user?.role === 'admin') {
+    if (userRef.current?.role === 'admin') {
         notifData.forEach(n => {
-            if (n.poll_votes) {
+            if (n.poll_options) { // Only process votes if it's a poll
                 (n.poll_votes as any[]).forEach(v => {
                     if (v.user_id && !allVoterIds.includes(v.user_id)) {
                         allVoterIds.push(v.user_id);
@@ -482,15 +487,15 @@ const App: React.FC = () => {
     // 4. Fetch profile data for all voters (Admin only)
     let voterProfiles: Record<string, { name: string, email: string }> = {};
     if (allVoterIds.length > 0) {
+        // Use RPC to fetch profiles if admin, to avoid RLS issues on profile lookup
         const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
-            .select('id, name, email')
-            .in('id', allVoterIds);
+            .rpc('get_all_profiles')
+            .in('id', allVoterIds); // Filter the RPC result
 
         if (profilesError) {
-            console.error('Error fetching voter profiles:', profilesError);
+            console.error('Error fetching voter profiles via RPC:', profilesError);
         } else {
-            profilesData.forEach(p => {
+            (profilesData as any[]).forEach(p => {
                 voterProfiles[p.id] = { name: p.name || 'Usuário Desconhecido', email: p.email || 'Email Desconhecido' };
             });
         }
