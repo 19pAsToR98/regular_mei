@@ -633,6 +633,61 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
       
+      {/* Summary Cards (New Model) - MOVIDO PARA O TOPO */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 1. Caixa Atual */}
+        <div className="bg-white dark:bg-slate-900 p-3 lg:p-4 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="p-1 bg-blue-100 dark:bg-blue-900/50 rounded-md flex-shrink-0">
+              <span className="material-icons text-lg lg:text-xl text-primary dark:text-blue-400">account_balance_wallet</span>
+            </div>
+            <div className="min-w-0">
+                 <p className="text-[10px] lg:text-xs font-bold uppercase text-slate-400 truncate">Caixa Atual</p>
+            </div>
+          </div>
+          <p className={`text-base lg:text-xl font-bold truncate ${caixaAtual >= 0 ? 'text-slate-800 dark:text-white' : 'text-red-600'}`}>R$ {caixaAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+        </div>
+        
+        {/* 2. A Receber */}
+        <div className="bg-white dark:bg-slate-900 p-3 lg:p-4 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden shadow-sm">
+           <div className="flex items-center gap-2 mb-1">
+            <div className="p-1 bg-green-100 dark:bg-green-900/50 rounded-md flex-shrink-0">
+              <span className="material-icons text-lg lg:text-xl text-green-500 dark:text-green-400">arrow_upward</span>
+            </div>
+            <div className="min-w-0">
+                <p className="text-[10px] lg:text-xs font-bold uppercase text-slate-400 truncate">A Receber</p>
+            </div>
+          </div>
+          <p className="text-base lg:text-xl font-bold text-green-600 dark:text-green-400 truncate">R$ {aReceber.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+        </div>
+
+        {/* 3. A Pagar */}
+        <div className="bg-white dark:bg-slate-900 p-3 lg:p-4 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+           <div className="flex items-center gap-2 mb-1">
+            <div className="p-1 bg-red-100 dark:bg-red-900/50 rounded-md flex-shrink-0">
+              <span className="material-icons text-lg lg:text-xl text-red-500 dark:text-red-400">arrow_downward</span>
+            </div>
+            <div className="min-w-0">
+                <p className="text-[10px] lg:text-xs font-bold uppercase text-slate-400 truncate">A Pagar</p>
+            </div>
+          </div>
+          <p className="text-base lg:text-xl font-bold text-red-600 dark:text-red-400 truncate">R$ {aPagar.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+        </div>
+
+        {/* 4. Caixa Projetado do Mês (Destaque) */}
+         <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-3 lg:p-4 rounded-lg border border-slate-600 ring-1 ring-slate-500 shadow-lg text-white flex flex-col justify-center">
+           <div className="flex items-center gap-2 mb-1">
+            <div className="p-1 bg-white/20 rounded-md flex-shrink-0">
+              <span className="material-icons text-lg lg:text-xl text-white">query_stats</span>
+            </div>
+            <div className="min-w-0">
+                <p className="text-[10px] lg:text-xs font-bold uppercase text-slate-300 truncate">Projetado</p>
+            </div>
+          </div>
+          <p className={`text-base lg:text-xl font-bold truncate ${caixaProjetado >= 0 ? 'text-white' : 'text-red-300'}`}>R$ {caixaProjetado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+        </div>
+      </div>
+
       {/* --- HEADER BAR: Date Navigation, Filters, and Actions --- */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row gap-4 justify-between items-center">
         
@@ -652,8 +707,8 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
         {/* 2. Filters (Center) */}
         <div className="flex flex-col md:flex-row gap-4 w-full lg:w-auto flex-1 lg:flex-none">
           
-          {/* Search Input (Visible on Desktop, Conditional on Mobile) */}
-          <div className="relative w-full md:w-64 hidden md:block">
+          {/* Search Input (Visible on Desktop) */}
+          <div className="relative w-full md:w-64 hidden lg:block">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons">search</span>
             <input 
               type="text" 
@@ -664,45 +719,34 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
             />
           </div>
           
-          {/* Mobile Search Toggle */}
-          <div className="md:hidden flex items-center gap-2 w-full">
-              <button 
-                  onClick={() => setIsSearchOpen(!isSearchOpen)}
-                  className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
-                  title="Buscar"
-              >
-                  <span className="material-icons">search</span>
-              </button>
-              
-              {/* Mobile Search Input (Conditional) */}
-              {isSearchOpen && (
-                  <input 
-                      type="text" 
-                      placeholder="Buscar lançamento..." 
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  />
-              )}
-          </div>
+          {/* Mobile Search Input (Conditional) */}
+          {isSearchOpen && (
+              <input 
+                  type="text" 
+                  placeholder="Buscar lançamento..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 md:hidden"
+              />
+          )}
 
           {/* Type Filters */}
-          <div className="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-1 self-start md:self-auto w-full md:w-auto overflow-x-auto">
+          <div className="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-1 self-start md:self-auto w-full lg:w-auto overflow-x-auto">
              <button 
               onClick={() => setFilterType('all')}
-              className={`flex-1 md:flex-none px-3 py-1.5 rounded-md text-sm font-medium transition-all ${filterType === 'all' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+              className={`flex-1 lg:flex-none px-3 py-1.5 rounded-md text-sm font-medium transition-all ${filterType === 'all' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
              >
                Todos
              </button>
              <button 
               onClick={() => setFilterType('receita')}
-              className={`flex-1 md:flex-none px-3 py-1.5 rounded-md text-sm font-medium transition-all ${filterType === 'receita' ? 'bg-white dark:bg-slate-700 text-green-500 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+              className={`flex-1 lg:flex-none px-3 py-1.5 rounded-md text-sm font-medium transition-all ${filterType === 'receita' ? 'bg-white dark:bg-slate-700 text-green-500 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
              >
                Entradas
              </button>
              <button 
               onClick={() => setFilterType('despesa')}
-              className={`flex-1 md:flex-none px-3 py-1.5 rounded-md text-sm font-medium transition-all ${filterType === 'despesa' ? 'bg-white dark:bg-slate-700 text-red-500 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+              className={`flex-1 lg:flex-none px-3 py-1.5 rounded-md text-sm font-medium transition-all ${filterType === 'despesa' ? 'bg-white dark:bg-slate-700 text-red-500 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
              >
                Saídas
              </button>
@@ -711,75 +755,28 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
 
         {/* 3. Actions (Right) - Compacted for Mobile */}
         <div className="flex gap-2 w-full lg:w-auto flex-shrink-0">
+             {/* Mobile Search Toggle (Moved here, hidden on desktop) */}
+             <button 
+                  onClick={() => setIsSearchOpen(!isSearchOpen)}
+                  className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex-shrink-0 lg:hidden"
+                  title="Buscar"
+              >
+                  <span className="material-icons">search</span>
+              </button>
              <button 
                 onClick={() => setIsExportModal(true)}
-                className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-white px-3 py-2 rounded-lg font-medium transition-colors shadow-sm flex-1 md:flex-none justify-center md:px-4 md:py-2"
+                className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-white px-3 py-2 rounded-lg font-medium transition-colors shadow-sm flex-1 lg:flex-none justify-center lg:px-4 lg:py-2"
             >
                 <span className="material-icons text-xl">file_download</span>
-                <span className="hidden md:inline">Relatórios</span>
+                <span className="hidden lg:inline">Relatórios</span>
             </button>
             <button 
                 onClick={openAddModal}
-                className="flex items-center gap-2 bg-primary hover:bg-blue-600 text-white px-3 py-2 rounded-lg font-medium transition-colors shadow-sm flex-1 md:flex-none justify-center md:px-4 md:py-2"
+                className="flex items-center gap-2 bg-primary hover:bg-blue-600 text-white px-3 py-2 rounded-lg font-medium transition-colors shadow-sm flex-1 lg:flex-none justify-center lg:px-4 lg:py-2"
             >
             <span className="material-icons text-xl">add</span>
-            <span className="hidden md:inline">Nova Transação</span>
+            <span className="hidden lg:inline">Nova Transação</span>
             </button>
-        </div>
-      </div>
-
-      {/* Summary Cards (New Model) - Compacted for Mobile */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* 1. Caixa Atual */}
-        <div className="bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden shadow-sm">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="p-1 bg-blue-100 dark:bg-blue-900/50 rounded-md flex-shrink-0">
-              <span className="material-icons text-lg text-primary dark:text-blue-400">account_balance_wallet</span>
-            </div>
-            <div className="min-w-0">
-                 <p className="text-[10px] font-bold uppercase text-slate-400 truncate">Caixa Atual</p>
-            </div>
-          </div>
-          <p className={`text-base font-bold truncate ${caixaAtual >= 0 ? 'text-slate-800 dark:text-white' : 'text-red-600'}`}>R$ {caixaAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-        </div>
-        
-        {/* 2. A Receber */}
-        <div className="bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden shadow-sm">
-           <div className="flex items-center gap-2 mb-1">
-            <div className="p-1 bg-green-100 dark:bg-green-900/50 rounded-md flex-shrink-0">
-              <span className="material-icons text-lg text-green-500 dark:text-green-400">arrow_upward</span>
-            </div>
-            <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase text-slate-400 truncate">A Receber</p>
-            </div>
-          </div>
-          <p className="text-base font-bold text-green-600 dark:text-green-400 truncate">R$ {aReceber.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-        </div>
-
-        {/* 3. A Pagar */}
-        <div className="bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
-           <div className="flex items-center gap-2 mb-1">
-            <div className="p-1 bg-red-100 dark:bg-red-900/50 rounded-md flex-shrink-0">
-              <span className="material-icons text-lg text-red-500 dark:text-red-400">arrow_downward</span>
-            </div>
-            <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase text-slate-400 truncate">A Pagar</p>
-            </div>
-          </div>
-          <p className="text-base font-bold text-red-600 dark:text-red-400 truncate">R$ {aPagar.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-        </div>
-
-        {/* 4. Caixa Projetado do Mês (Destaque) - CORRIGIDO */}
-         <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-3 rounded-lg border border-slate-600 ring-1 ring-slate-500 shadow-lg text-white flex flex-col justify-center">
-           <div className="flex items-center gap-2 mb-1">
-            <div className="p-1 bg-white/20 rounded-md flex-shrink-0">
-              <span className="material-icons text-lg text-white">query_stats</span>
-            </div>
-            <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase text-slate-300 truncate">Projetado</p>
-            </div>
-          </div>
-          <p className={`text-base font-bold truncate ${caixaProjetado >= 0 ? 'text-white' : 'text-red-300'}`}>R$ {caixaProjetado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
       </div>
 
