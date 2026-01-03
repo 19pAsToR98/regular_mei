@@ -1236,36 +1236,35 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                     <div 
                         ref={budgetRef} 
                         id="budget-preview"
-                        // CORREÇÃO: Usar max-w-full no mobile e definir o tamanho A4 no desktop
-                        className={`bg-white text-slate-900 shadow-2xl mx-auto relative w-full lg:max-w-[210mm] lg:min-h-[297mm] ${budget.template === 'modern' ? 'border-t-8 ' + colors[budget.color].split(' ')[1] : ''}`} 
-                        style={{ padding: '15mm' }}
+                        // CORREÇÃO: Removendo dimensões fixas no mobile e ajustando padding
+                        className={`bg-white text-slate-900 shadow-2xl mx-auto relative w-full lg:max-w-[210mm] lg:min-h-[297mm] p-4 md:p-8 lg:p-[15mm] ${budget.template === 'modern' ? 'border-t-8 ' + colors[budget.color].split(' ')[1] : ''}`} 
                     >
                         
                         {/* HEADER */}
-                        <div className={`flex justify-between items-start mb-12 ${budget.template === 'modern' ? 'border-b-2 pb-6 ' + colors[budget.color].split(' ')[1].replace('text-', 'border-') : ''} ${budget.template === 'classic' ? 'border-b border-slate-200 pb-6' : ''} ${budget.template === 'minimal' ? 'border-b border-slate-200 pb-6' : ''}`}>
+                        <div className={`flex justify-between items-start mb-6 lg:mb-12 ${budget.template === 'modern' ? 'border-b-2 pb-4 lg:pb-6 ' + colors[budget.color].split(' ')[1].replace('text-', 'border-') : ''} ${budget.template === 'classic' ? 'border-b border-slate-200 pb-4 lg:pb-6' : ''} ${budget.template === 'minimal' ? 'border-b border-slate-200 pb-4 lg:pb-6' : ''}`}>
                             <div>
-                                <h1 className={`text-4xl font-bold uppercase tracking-tight mb-2 ${budget.template === 'minimal' ? 'text-slate-900' : colors[budget.color].split(' ')[0]}`}>Orçamento</h1>
+                                <h1 className={`text-2xl md:text-4xl font-bold uppercase tracking-tight mb-1 lg:mb-2 ${budget.template === 'minimal' ? 'text-slate-900' : colors[budget.color].split(' ')[0]}`}>Orçamento</h1>
                                 {/* Removendo o número do orçamento */}
                                 {/* <p className="text-slate-500 font-mono text-sm">#{budget.number}</p> */}
                             </div>
-                            <div className="text-right">
-                                <h2 className="font-bold text-xl text-slate-900 dark:text-slate-900">{budget.issuerName || 'Sua Empresa'}</h2>
-                                <p className="text-sm text-slate-500 dark:text-slate-500">{budget.issuerCnpj}</p>
-                                <p className="text-sm text-slate-500 dark:text-slate-500">{budget.issuerEmail}</p>
-                                <p className="text-sm text-slate-500 dark:text-slate-500">{budget.issuerPhone}</p>
+                            <div className="text-right text-xs md:text-sm">
+                                <h2 className="font-bold text-base md:text-xl text-slate-900 dark:text-slate-900">{budget.issuerName || 'Sua Empresa'}</h2>
+                                <p className="text-xs md:text-sm text-slate-500 dark:text-slate-500">{budget.issuerCnpj}</p>
+                                <p className="text-xs md:text-sm text-slate-500 dark:text-slate-500">{budget.issuerEmail}</p>
+                                <p className="text-xs md:text-sm text-slate-500 dark:text-slate-500">{budget.issuerPhone}</p>
                             </div>
                         </div>
 
                         {/* INFO GRID */}
-                        <div className="grid grid-cols-2 gap-8 mb-12">
+                        <div className="grid grid-cols-2 gap-4 lg:gap-8 mb-6 lg:mb-12 text-xs md:text-sm">
                             <div>
                                 <p className="text-xs font-bold text-slate-400 dark:text-slate-400 uppercase mb-1">Cliente</p>
-                                <p className="font-bold text-lg text-slate-900 dark:text-slate-900">{budget.clientName || 'Nome do Cliente'}</p>
-                                {budget.clientCnpj && <p className="text-sm text-slate-600 dark:text-slate-600">{budget.clientCnpj}</p>}
-                                {budget.clientEmail && <p className="text-sm text-slate-600 dark:text-slate-600">{budget.clientEmail}</p>}
+                                <p className="font-bold text-sm md:text-lg text-slate-900 dark:text-slate-900">{budget.clientName || 'Nome do Cliente'}</p>
+                                {budget.clientCnpj && <p className="text-xs md:text-sm text-slate-600 dark:text-slate-600">{budget.clientCnpj}</p>}
+                                {budget.clientEmail && <p className="text-xs md:text-sm text-slate-600 dark:text-slate-600">{budget.clientEmail}</p>}
                             </div>
                             <div className="text-right">
-                                <div className="mb-2">
+                                <div className="mb-1 lg:mb-2">
                                     <span className="text-xs font-bold text-slate-400 dark:text-slate-400 uppercase mr-2">Data de Emissão:</span>
                                     <span className="font-medium text-slate-900 dark:text-slate-900">{new Date(budget.date).toLocaleDateString('pt-BR')}</span>
                                 </div>
@@ -1277,33 +1276,33 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                         </div>
 
                         {/* TABLE */}
-                        <table className="w-full mb-12">
+                        <table className="w-full mb-6 lg:mb-12">
                             <thead>
                                 <tr className={`${budget.template === 'classic' ? 'bg-slate-100 border-y border-slate-200' : ''} ${budget.template === 'modern' ? bgColors[budget.color] : ''} ${budget.template === 'minimal' ? 'border-b border-slate-900' : ''}`}>
-                                    <th className="py-3 px-4 text-left text-xs font-bold uppercase text-slate-500">Descrição</th>
-                                    <th className="py-3 px-4 text-center text-xs font-bold uppercase text-slate-500 w-24">Qtd</th>
-                                    <th className="py-3 px-4 text-right text-xs font-bold uppercase text-slate-500 w-32">Preço Unit.</th>
-                                    <th className="py-3 px-4 text-right text-xs font-bold uppercase text-slate-500 w-32">Total</th>
+                                    <th className="py-2 px-2 lg:py-3 lg:px-4 text-left text-[10px] lg:text-xs font-bold uppercase text-slate-500">Descrição</th>
+                                    <th className="py-2 px-2 lg:py-3 lg:px-4 text-center text-[10px] lg:text-xs font-bold uppercase text-slate-500 w-16 lg:w-24">Qtd</th>
+                                    <th className="py-2 px-2 lg:py-3 lg:px-4 text-right text-[10px] lg:text-xs font-bold uppercase text-slate-500 w-20 lg:w-32">Preço Unit.</th>
+                                    <th className="py-2 px-2 lg:py-3 lg:px-4 text-right text-[10px] lg:text-xs font-bold uppercase text-slate-500 w-20 lg:w-32">Total</th>
                                 </tr>
                             </thead>
-                            <tbody className="text-sm">
+                            <tbody className="text-xs md:text-sm">
                                 {items.map((item) => (
                                     <tr key={item.id} className="border-b border-slate-100">
-                                        <td className="py-3 px-4 font-medium text-slate-900 dark:text-slate-900">{item.desc || 'Item sem descrição'}</td>
-                                        <td className="py-3 px-4 text-center text-slate-600 dark:text-slate-600">{item.qty}</td>
-                                        <td className="py-3 px-4 text-right text-slate-600 dark:text-slate-600">R$ {item.price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                                        <td className="py-3 px-4 text-right font-bold text-slate-900 dark:text-slate-900">R$ {(item.qty * item.price).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                                        <td className="py-2 px-2 lg:py-3 lg:px-4 font-medium text-slate-900 dark:text-slate-900">{item.desc || 'Item sem descrição'}</td>
+                                        <td className="py-2 px-2 lg:py-3 lg:px-4 text-center text-slate-600 dark:text-slate-600">{item.qty}</td>
+                                        <td className="py-2 px-2 lg:py-3 lg:px-4 text-right text-slate-600 dark:text-slate-600">R$ {item.price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                                        <td className="py-2 px-2 lg:py-3 lg:px-4 text-right font-bold text-slate-900 dark:text-slate-900">R$ {(item.qty * item.price).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
 
                         {/* TOTALS */}
-                        <div className="flex justify-end mb-12">
-                            <div className="w-64 space-y-2">
-                                <div className={`flex justify-between items-center py-3 border-t-2 ${colors[budget.color].split(' ')[1].replace('text-', 'border-')}`}>
-                                    <span className="font-bold text-lg uppercase text-slate-900 dark:text-slate-900">Total</span>
-                                    <span className={`font-bold text-2xl ${colors[budget.color].split(' ')[0]}`}>
+                        <div className="flex justify-end mb-6 lg:mb-12">
+                            <div className="w-full max-w-xs space-y-2">
+                                <div className={`flex justify-between items-center py-2 lg:py-3 border-t-2 ${colors[budget.color].split(' ')[1].replace('text-', 'border-')}`}>
+                                    <span className="font-bold text-base lg:text-lg uppercase text-slate-900 dark:text-slate-900">Total</span>
+                                    <span className={`font-bold text-xl lg:text-2xl ${colors[budget.color].split(' ')[0]}`}>
                                         R$ {total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
                                     </span>
                                 </div>
@@ -1312,13 +1311,13 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
 
                         {/* FOOTER / NOTES */}
                         {budget.notes && (
-                            <div className="bg-slate-50 p-6 rounded-lg border border-slate-100 text-sm text-slate-600 leading-relaxed print:bg-transparent print:border-slate-200">
-                                <p className="font-bold text-xs uppercase text-slate-400 dark:text-slate-400 mb-2">Observações & Termos</p>
+                            <div className="bg-slate-50 p-4 lg:p-6 rounded-lg border border-slate-100 text-xs md:text-sm text-slate-600 leading-relaxed print:bg-transparent print:border-slate-200">
+                                <p className="font-bold text-[10px] uppercase text-slate-400 dark:text-slate-400 mb-1 lg:mb-2">Observações & Termos</p>
                                 <p className="text-slate-600 dark:text-slate-600">{budget.notes}</p>
                             </div>
                         )}
 
-                        <div className="absolute bottom-12 left-0 w-full text-center text-xs text-slate-300">
+                        <div className="absolute bottom-4 left-0 w-full text-center text-[8px] text-slate-300">
                             Gerado via Regular MEI
                         </div>
                     </div>
