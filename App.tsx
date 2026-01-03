@@ -32,7 +32,6 @@ import VirtualAssistantButton from './components/VirtualAssistantButton';
 import AssistantChat from './components/AssistantChat';
 import LandingPage from './components/LandingPage';
 import CnpjConsultPage from "./components/CnpjConsultPage";
-import AuthDebugLog from './components/AuthDebugLog';
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -586,7 +585,6 @@ const App: React.FC = () => {
 
   const loadUserProfile = async (supabaseUser: any) => {
     // Optimization: Check if the user is already fully loaded and set up based on the ref
-    // We only skip if the user is already loaded AND setup is complete.
     if (userRef.current && userRef.current.id === supabaseUser.id && userRef.current.isSetupComplete) {
         setLoadingAuth(false);
         return;
@@ -615,7 +613,7 @@ const App: React.FC = () => {
         setLoadingAuth(false);
         return;
     }
-    
+
     const appUser: User = {
         id: profileData.id,
         name: profileData.name || supabaseUser.email,
@@ -750,8 +748,7 @@ const App: React.FC = () => {
       const isUserAlreadyLoaded = currentUser && currentUser.id === session?.user?.id;
 
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-        // Only reload profile if user is new or if the existing user hasn't completed setup
-        if (!isUserAlreadyLoaded || !currentUser?.isSetupComplete) {
+        if (!isUserAlreadyLoaded) {
             loadUserProfile(session.user);
         } else {
             setLoadingAuth(false);
@@ -815,7 +812,7 @@ const App: React.FC = () => {
           return;
       }
 
-      // 2. Update Local State (Crucial step for immediate UI change)
+      // 2. Update Local State
       const updatedUser = { 
           ...user, 
           isSetupComplete: true, 
@@ -825,7 +822,7 @@ const App: React.FC = () => {
           receiveWeeklySummary: receiveWeeklySummary
       };
       setCnpj(newCnpj);
-      setUser(updatedUser); // <-- Set local state immediately
+      setUser(updatedUser);
       
       // 3. Apply Theme
       if (theme === 'dark') {
@@ -1739,7 +1736,6 @@ const App: React.FC = () => {
       return (
           <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
               <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-              <AuthDebugLog user={user} loadingAuth={loadingAuth} activeTab={activeTab} />
           </div>
       );
   }
@@ -1748,7 +1744,7 @@ const App: React.FC = () => {
   if (isEmbedView) {
       return (
           <div className="w-full h-full bg-background-light dark:bg-background-dark overflow-hidden">
-              <div className="max-w-7xl mx-auto p-4">
+              <div className="max-w-full mx-auto p-4">
                   <NewsSlider news={news} onViewNews={handleViewNews} />
               </div>
           </div>
@@ -1830,40 +1826,25 @@ const App: React.FC = () => {
   // If not logged in, show LandingPage or AuthPage
   if (!user) {
       if (activeTab === 'auth') {
-          return (
-              <>
-                  <AuthPage 
-                      onLogin={handleLogin} 
-                      onForgotPassword={handleForgotPassword} 
-                      onNavigate={setActiveTab} 
-                      onBackToLanding={handleBackToLanding}
-                  />
-                  <AuthDebugLog user={user} loadingAuth={loadingAuth} activeTab={activeTab} />
-              </>
-          );
+          return <AuthPage 
+              onLogin={handleLogin} 
+              onForgotPassword={handleForgotPassword} 
+              onNavigate={setActiveTab} 
+              onBackToLanding={handleBackToLanding}
+          />;
       }
       // Default to LandingPage
-      return (
-          <>
-              <LandingPage 
-                  onGetStarted={handleLandingGetStarted} 
-                  onLogin={handleLandingLogin} 
-                  onViewBlog={handleViewBlog} 
-                  onConsultCnpj={handleStartCnpjFlow}
-                  news={news} // PASSING NEWS DATA HERE
-              />
-              <AuthDebugLog user={user} loadingAuth={loadingAuth} activeTab={activeTab} />
-          </>
-      );
+      return <LandingPage 
+          onGetStarted={handleLandingGetStarted} 
+          onLogin={handleLandingLogin} 
+          onViewBlog={handleViewBlog} 
+          onConsultCnpj={handleStartCnpjFlow}
+          news={news} // PASSING NEWS DATA HERE
+      />;
   }
 
   if (!user.isSetupComplete) {
-      return (
-          <>
-              <OnboardingPage user={user} onComplete={handleOnboardingComplete} />
-              <AuthDebugLog user={user} loadingAuth={loadingAuth} activeTab={activeTab} />
-          </>
-      );
+      return <OnboardingPage user={user} onComplete={handleOnboardingComplete} />;
   }
   
   // Logged in user: Redirect if on a public-only tab
@@ -2110,9 +2091,6 @@ const App: React.FC = () => {
               )}
           </>
       )}
-      
-      {/* DEBUG LOG (Rendered outside main structure for z-index control) */}
-      <AuthDebugLog user={user} loadingAuth={loadingAuth} activeTab={activeTab} />
     </div>
   );
 };
