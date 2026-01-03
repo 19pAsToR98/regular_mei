@@ -58,6 +58,9 @@ const defaultExpenseCats: Category[] = [
 ];
 
 const App: React.FC = () => {
+  // --- INTRO STATE ---
+  const [showIntro, setShowIntro] = useState(false); // <-- FIX: Added missing state
+  
   // --- AUTH STATE ---
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
