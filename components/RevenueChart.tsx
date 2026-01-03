@@ -1,16 +1,28 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Transaction } from '../types';
 
 interface RevenueChartProps {
   transactions: Transaction[];
+  globalViewMode: 'monthly' | 'annual'; // NEW PROP
 }
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
 
-const RevenueChart: React.FC<RevenueChartProps> = ({ transactions }) => {
-  const [viewMode, setViewMode] = useState<'evolution' | 'distribution' | 'general'>('general');
+const RevenueChart: React.FC<RevenueChartProps> = ({ transactions, globalViewMode }) => {
+  // Internal view mode state, initialized based on the global view mode
+  const [viewMode, setViewMode] = useState<'evolution' | 'distribution' | 'general'>(
+      globalViewMode === 'annual' ? 'general' : 'evolution'
+  );
   const [distributionType, setDistributionType] = useState<'despesa' | 'receita'>('despesa');
+  
+  // Sync internal view mode with global view mode if the user hasn't selected a specific detailed view (like 'distribution')
+  useEffect(() => {
+      if (viewMode !== 'distribution') {
+          setViewMode(globalViewMode === 'annual' ? 'general' : 'evolution');
+      }
+  }, [globalViewMode]);
+
 
   // Helper para filtrar transações realizadas e não recorrentes/parceladas
   const filterRealizedNonRecurring = (t: Transaction) => {
@@ -53,6 +65,8 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ transactions }) => {
 
     const relevantTrans = transactions.filter(t => {
       const tDate = new Date(t.date);
+      
+      // Distribution view always focuses on the current month's expected/realized budget
       return tDate.getMonth() === currentMonth && 
              tDate.getFullYear() === currentYear && 
              t.type === distributionType;

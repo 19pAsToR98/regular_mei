@@ -4,9 +4,10 @@ import { Transaction } from '../types';
 interface RecentTransactionsProps {
   transactions: Transaction[];
   onNavigate: (tab: string) => void;
+  viewMode: 'monthly' | 'annual'; // NEW PROP
 }
 
-const RecentTransactions: React.FC<RecentTransactionsProps> = ({ transactions, onNavigate }) => {
+const RecentTransactions: React.FC<RecentTransactionsProps> = ({ transactions, onNavigate, viewMode }) => {
   // Sort by creation date desc and take top 5
   const recent = [...transactions]
     .sort((a, b) => {
@@ -52,7 +53,7 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ transactions, o
                   {recent.map(t => (
                       <div key={t.id} className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
                           <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-full ${t.type === 'receita' ? 'bg-green-100 text-green-600 dark:bg-green-900/30' : 'bg-red-100 text-red-600 dark:bg-red-900/30'}`}>
+                              <div className={`p-2 rounded-full ${t.type === 'receita' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
                                   <span className="material-icons text-lg">
                                       {t.type === 'receita' ? 'arrow_upward' : 'arrow_downward'}
                                   </span>

@@ -34,6 +34,7 @@ import LandingPage from './components/LandingPage';
 import CnpjConsultPage from "./components/CnpjConsultPage";
 import MobileBottomNav from './components/MobileBottomNav';
 import MorePage from './components/MorePage'; // NEW IMPORT
+import DashboardViewSelector from './components/DashboardViewSelector'; // NEW IMPORT
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -92,9 +93,10 @@ const App: React.FC = () => {
     setActiveTabState(tab);
     localStorage.setItem('activeTab', tab);
   };
-
-  // Removed isSidebarOpen and toggleSidebar state/logic
   
+  // --- DASHBOARD VIEW MODE STATE ---
+  const [dashboardViewMode, setDashboardViewMode] = useState<'monthly' | 'annual'>('monthly');
+
   // --- ASSISTANT STATE ---
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   
@@ -616,24 +618,35 @@ const App: React.FC = () => {
     const cYear = today.getFullYear();
     const todayStr = today.toISOString().split('T')[0];
 
-    const monthlyTransactions = transactions.filter(t => {
-      const [y, m] = t.date.split('-').map(Number);
-      return (m - 1) === cMonth && y === cYear;
+    // 1. Filter transactions based on the current view mode
+    const relevantTransactions = transactions.filter(t => {
+        const [y, m] = t.date.split('-').map(Number);
+        const tYear = y;
+        const tMonth = m - 1;
+
+        if (tYear !== cYear) return false;
+
+        if (dashboardViewMode === 'monthly') {
+            // Monthly: Only include current month transactions
+            return tMonth === cMonth;
+        }
+        // Annual: Include all transactions from the current year
+        return true;
     });
 
     // Realized (Paid Only)
-    const realizedRevenue = monthlyTransactions
+    const realizedRevenue = relevantTransactions
       .filter(t => t.type === 'receita' && t.status === 'pago')
       .reduce((acc, t) => acc + (t.amount || 0), 0);
 
-    const realizedExpense = monthlyTransactions
+    const realizedExpense = relevantTransactions
       .filter(t => t.type === 'despesa' && t.status === 'pago')
       .reduce((acc, t) => acc + (t.amount || 0), 0);
 
     const caixaAtual = realizedRevenue - realizedExpense;
 
-    // Pending Transactions
-    const pendingTrans = monthlyTransactions.filter(t => t.status === 'pendente');
+    // Pending Transactions (Filtered by view mode)
+    const pendingTrans = relevantTransactions.filter(t => t.status === 'pendente');
 
     // A Receber (Pending Revenue)
     const aReceber = pendingTrans
@@ -654,6 +667,8 @@ const App: React.FC = () => {
     let emAtraso = 0;
     let aVencer = 0;
 
+    // Overdue/Upcoming calculation is typically only relevant for the current month/short term, 
+    // but we apply the viewMode filter for consistency in the metric calculation context.
     pendingTrans
       .forEach(t => {
         if (t.date < todayStr) {
@@ -677,7 +692,7 @@ const App: React.FC = () => {
       totalExpectedRevenue,
       totalExpectedExpense,
     };
-  }, [transactions]);
+  }, [transactions, dashboardViewMode]);
 
   // --- AUTH MONITORING ---
   useEffect(() => {
@@ -823,9 +838,25 @@ const App: React.FC = () => {
   };
   
   const handleViewBlog = (id: number) => {
-      setIsPublicView(true);
-      setReadingNewsId(id);
-      setActiveTab('news'); // Ensure the tab is set correctly for public view rendering
+    console.log('Attempting to view news ID:', id); // DEBUG LOG
+    
+    // If in embed view, force parent navigation
+    if (isEmbedView) {
+        const baseUrl = window.location.origin;
+        const publicUrl = `${baseUrl}/?page=news&articleId=${id}`;
+        
+        // Use window.top.location.href to break out of the iframe and navigate the parent window
+        if (window.top) {
+            window.top.location.href = publicUrl;
+        } else {
+            window.location.href = publicUrl;
+        }
+        return;
+    }
+    
+    // If in dashboard or public view, update internal state
+    setReadingNewsId(id);
+    setActiveTab('news');
   };
   
   const handleBackToLanding = () => {
@@ -1135,28 +1166,6 @@ const App: React.FC = () => {
   };
 
   // --- NEWS HANDLERS ---
-  const handleViewNews = (id: number) => {
-    console.log('Attempting to view news ID:', id); // DEBUG LOG
-    
-    // If in embed view, force parent navigation
-    if (isEmbedView) {
-        const baseUrl = window.location.origin;
-        const publicUrl = `${baseUrl}/?page=news&articleId=${id}`;
-        
-        // Use window.top.location.href to break out of the iframe and navigate the parent window
-        if (window.top) {
-            window.top.location.href = publicUrl;
-        } else {
-            window.location.href = publicUrl;
-        }
-        return;
-    }
-    
-    // If in dashboard or public view, update internal state
-    setReadingNewsId(id);
-    setActiveTab('news');
-  };
-
   const handleAddNews = async (newItem: NewsItem) => {
     const payload = {
         category: newItem.category,
@@ -1878,7 +1887,7 @@ const App: React.FC = () => {
                    <div className="mt-6">
                       <h3 className="text-sm font-bold text-slate-500 uppercase mb-4 px-2">Últimas Movimentações</h3>
                       <div className="h-[400px]">
-                         <RecentTransactions transactions={transactions} onNavigate={setActiveTab} />
+                         <RecentTransactions transactions={transactions} onNavigate={setActiveTab} viewMode={dashboardViewMode} />
                       </div>
                    </div>
 
@@ -1889,6 +1898,20 @@ const App: React.FC = () => {
 
                 {/* --- DESKTOP LAYOUT --- */}
                 <div className="hidden md:block space-y-6">
+                  
+                  {/* TOP BAR: Selector and Quick Actions */}
+                  <div className="flex justify-between items-center gap-4">
+                      <DashboardViewSelector viewMode={dashboardViewMode} setViewMode={setDashboardViewMode} />
+                      <div className="flex gap-4">
+                          <button className="bg-emerald-500 hover:bg-emerald-600 text-white p-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm font-bold text-sm">
+                              <span className="material-icons text-lg">arrow_upward</span> Nova Receita
+                          </button>
+                          <button className="bg-rose-500 hover:bg-rose-600 text-white p-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm font-bold text-sm">
+                              <span className="material-icons text-lg">arrow_downward</span> Nova Despesa
+                          </button>
+                      </div>
+                  </div>
+
                   {/* STAT CARDS MOVED HERE */}
                   <DashboardSummaryCards metrics={dashboardMetrics} />
                   
@@ -1900,7 +1923,7 @@ const App: React.FC = () => {
                   
                   <div className="grid grid-cols-12 gap-6">
                     <div className="col-span-12 xl:col-span-8 h-full">
-                      <RevenueChart transactions={transactions} />
+                      <RevenueChart transactions={transactions} globalViewMode={dashboardViewMode} />
                     </div>
                     <div className="col-span-12 xl:col-span-4 h-full">
                         <Reminders transactions={transactions} appointments={appointments} fiscalData={fiscalData} onNavigate={setActiveTab} />
@@ -1909,19 +1932,19 @@ const App: React.FC = () => {
 
                   <div className="grid grid-cols-12 gap-6">
                     <div className="col-span-12 xl:col-span-4 h-full">
-                        <FinancialScore transactions={transactions} />
+                        <FinancialScore transactions={transactions} viewMode={dashboardViewMode} />
                     </div>
                     <div className="col-span-12 xl:col-span-4 h-full">
                         <Thermometer transactions={transactions} />
                     </div>
                     <div className="col-span-12 xl:col-span-4 h-full">
-                        <BalanceForecastCard transactions={transactions} />
+                        <BalanceForecastCard transactions={transactions} viewMode={dashboardViewMode} />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-12 gap-6">
                     <div className="col-span-12 h-full">
-                        <RecentTransactions transactions={transactions} onNavigate={setActiveTab} />
+                        <RecentTransactions transactions={transactions} onNavigate={setActiveTab} viewMode={dashboardViewMode} />
                     </div>
                   </div>
 

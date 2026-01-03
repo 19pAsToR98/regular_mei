@@ -1,10 +1,10 @@
-
 import React, { useMemo } from 'react';
 import { ResponsiveContainer, RadialBarChart, RadialBar, PolarAngleAxis } from 'recharts';
 import { Transaction } from '../types';
 
 interface FinancialScoreProps {
   transactions: Transaction[];
+  viewMode: 'monthly' | 'annual'; // NEW PROP
 }
 
 interface ScoreFactor {
@@ -13,20 +13,30 @@ interface ScoreFactor {
   impact: string;
 }
 
-const FinancialScore: React.FC<FinancialScoreProps> = ({ transactions }) => {
+const FinancialScore: React.FC<FinancialScoreProps> = ({ transactions, viewMode }) => {
   const analysis = useMemo(() => {
-    // 1. Calculate Metrics based on current month
+    // 1. Calculate Metrics based on viewMode
     const today = new Date();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
     
-    const monthlyTrans = transactions.filter(t => {
+    const relevantTrans = transactions.filter(t => {
         const d = new Date(t.date);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear && t.status === 'pago';
+        const tYear = d.getFullYear();
+        
+        if (tYear !== currentYear) return false;
+        
+        if (viewMode === 'monthly') {
+            // Filter for current month only
+            return d.getMonth() === currentMonth && t.status === 'pago';
+        } else {
+            // Filter for current year (paid only)
+            return t.status === 'pago';
+        }
     });
 
-    const revenue = monthlyTrans.filter(t => t.type === 'receita').reduce((acc, t) => acc + t.amount, 0);
-    const expense = monthlyTrans.filter(t => t.type === 'despesa').reduce((acc, t) => acc + t.amount, 0);
+    const revenue = relevantTrans.filter(t => t.type === 'receita').reduce((acc, t) => acc + t.amount, 0);
+    const expense = relevantTrans.filter(t => t.type === 'despesa').reduce((acc, t) => acc + t.amount, 0);
     const balance = revenue - expense;
     
     // Avoid division by zero
@@ -35,16 +45,20 @@ const FinancialScore: React.FC<FinancialScoreProps> = ({ transactions }) => {
     // 2. Score Algorithm & Feedback Generation
     let score = 50; // Base score
     const factors: ScoreFactor[] = [];
+    
+    // Adjust thresholds based on viewMode (Annual thresholds are higher)
+    const balanceThreshold = viewMode === 'annual' ? 5000 : 500;
+    const revenueThreshold = viewMode === 'annual' ? 25000 : 2000;
 
     // Check 1: Balance Health (+30 / -30)
-    if (balance > 0) {
+    if (balance > balanceThreshold) {
         score += 30;
-        factors.push({ label: 'Saldo em caixa positivo', type: 'positive', impact: '+30' });
+        factors.push({ label: `Saldo em caixa positivo (${viewMode === 'annual' ? 'Anual' : 'Mensal'})`, type: 'positive', impact: '+30' });
     } else if (balance < 0) {
         score -= 30;
         factors.push({ label: 'Conta fechando no vermelho', type: 'negative', impact: '-30' });
     } else {
-        factors.push({ label: 'Saldo zerado ou sem dados', type: 'neutral', impact: '0' });
+        factors.push({ label: 'Saldo zerado ou baixo', type: 'neutral', impact: '0' });
     }
 
     // Check 2: Efficiency (Revenue vs Expense) (+10 / -20)
@@ -64,11 +78,11 @@ const FinancialScore: React.FC<FinancialScoreProps> = ({ transactions }) => {
     }
 
     // Check 4: Consistency / Volume (+10)
-    if (revenue > 2000) {
+    if (revenue > revenueThreshold) {
         score += 10;
-        factors.push({ label: 'Faturamento consistente', type: 'positive', impact: '+10' });
+        factors.push({ label: `Faturamento consistente (${viewMode === 'annual' ? 'Alto Volume' : 'Bom Mês'})`, type: 'positive', impact: '+10' });
     } else if (revenue === 0) {
-        factors.push({ label: 'Sem faturamento este mês', type: 'neutral', impact: '0' });
+        factors.push({ label: `Sem faturamento neste ${viewMode === 'annual' ? 'ano' : 'mês'}`, type: 'neutral', impact: '0' });
     }
 
     // Clamp score 0-100
@@ -90,7 +104,7 @@ const FinancialScore: React.FC<FinancialScoreProps> = ({ transactions }) => {
     }
 
     return { score, status, color, factors };
-  }, [transactions]);
+  }, [transactions, viewMode]);
 
   const chartData = [
     { name: 'Score', value: analysis.score, fill: analysis.color }
@@ -99,7 +113,7 @@ const FinancialScore: React.FC<FinancialScoreProps> = ({ transactions }) => {
   return (
     <div className="bg-white dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col h-full">
       <div className="flex justify-between items-start mb-4">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white">Saúde Financeira</h3>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white">Saúde Financeira ({viewMode === 'annual' ? 'Anual' : 'Mensal'})</h3>
           <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${
               analysis.status === 'Excelente' ? 'bg-green-100 text-green-700' :
               analysis.status === 'Bom' ? 'bg-blue-100 text-blue-700' :
