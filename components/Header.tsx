@@ -116,14 +116,14 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Center Title (Mobile Only) */}
-      <div className="absolute left-1/2 transform -translate-x-1/2 lg:hidden">
+      {/* Center Title (Mobile Only) - REMOVIDO */}
+      {/* <div className="absolute left-1/2 transform -translate-x-1/2 lg:hidden">
           {activeTab !== 'dashboard' && (
               <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-none whitespace-nowrap">
                   {getPageTitle()}
               </h2>
           )}
-      </div>
+      </div> */}
 
       {/* Right Group (Notifications/Profile) */}
       <div className="flex items-center gap-4 md:gap-6 flex-shrink-0">
