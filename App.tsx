@@ -616,12 +616,6 @@ const App: React.FC = () => {
         return;
     }
     
-    // --- DIAGNOSTIC LOG ---
-    console.log('--- PROFILE DATA FROM SUPABASE ---');
-    console.log('is_setup_complete (DB):', profileData.is_setup_complete);
-    console.log('----------------------------------');
-    // --- END DIAGNOSTIC LOG ---
-
     const appUser: User = {
         id: profileData.id,
         name: profileData.name || supabaseUser.email,
@@ -1754,7 +1748,7 @@ const App: React.FC = () => {
   if (isEmbedView) {
       return (
           <div className="w-full h-full bg-background-light dark:bg-background-dark overflow-hidden">
-              <div className="max-w-full mx-auto p-4">
+              <div className="max-w-7xl mx-auto p-4">
                   <NewsSlider news={news} onViewNews={handleViewNews} />
               </div>
           </div>
