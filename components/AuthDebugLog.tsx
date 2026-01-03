@@ -22,7 +22,7 @@ const AuthDebugLog: React.FC<AuthDebugLogProps> = ({ user, loadingAuth, activeTa
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 z-[100] w-full bg-slate-900 text-green-400 p-2 font-mono text-[10px] shadow-2xl border-t border-green-800 overflow-x-auto">
+    <div className="fixed bottom-0 left-0 z-[999] w-full bg-slate-900 text-green-400 p-2 font-mono text-[10px] shadow-2xl border-t border-green-800 overflow-x-auto">
       <p className="font-bold mb-1 uppercase text-white">Auth/Onboarding Debug Log</p>
       <div className="flex gap-4">
         {logEntries.map((entry, index) => (
