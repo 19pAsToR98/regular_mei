@@ -257,49 +257,30 @@ const App: React.FC = () => {
 
 
   const loadAllUsers = async () => {
-      
-      if (userRef.current?.role === 'admin') {
-          console.log('loadAllUsers: User is admin. Starting profile fetch...');
-          
-          const { data: profiles, error: fetchError } = await supabase
-              .from('profiles')
-              .select('*');
+      const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('joined_at', { ascending: false });
 
-          if (fetchError) {
-              console.error('loadAllUsers: ERROR fetching all profiles (Admin):', fetchError);
-              showError(`Erro ao carregar usuários: ${fetchError.message}`);
-              return [];
-          }
-          
-          if (!profiles || profiles.length === 0) {
-              console.log('loadAllUsers: Query returned 0 profiles.');
-              setAllUsers([]);
-              return [];
-          }
-          
-          console.log(`loadAllUsers: Successfully fetched ${profiles.length} profiles. Mapping data...`);
-
-          const mappedUsers: User[] = (profiles as any[]).map(p => ({
-              id: p.id,
-              name: p.name || p.email,
-              email: p.email,
-              phone: p.phone,
-              cnpj: p.cnpj,
-              isSetupComplete: p.is_setup_complete,
-              role: p.role as 'admin' | 'user',
-              status: p.status as 'active' | 'inactive' | 'suspended',
-              joinedAt: p.joined_at,
-              lastActive: p.last_active,
-              receiveWeeklySummary: p.receive_weekly_summary ?? true
-          }));
-          
-          console.log(`loadAllUsers: Mapped ${mappedUsers.length} users. Setting state.`);
-          setAllUsers(mappedUsers);
-          return mappedUsers;
+      if (error) {
+          console.error('Error fetching all users:', error);
+          return;
       }
       
-      // Se não for admin, retorna apenas o usuário logado (já carregado)
-      return userRef.current ? [userRef.current] : [];
+      const mappedUsers: User[] = data.map(p => ({
+          id: p.id,
+          name: p.name || p.email,
+          email: p.email,
+          phone: p.phone,
+          cnpj: p.cnpj,
+          isSetupComplete: p.is_setup_complete,
+          role: p.role as 'admin' | 'user',
+          status: p.status as 'active' | 'inactive' | 'suspended',
+          joinedAt: p.joined_at,
+          lastActive: p.last_active,
+          receiveWeeklySummary: p.receive_weekly_summary ?? true
+      }));
+      setAllUsers(mappedUsers);
   };
 
   const loadTransactions = async (userId: string) => {
@@ -455,6 +436,7 @@ const App: React.FC = () => {
                 user_id, voted_option_id, voted_at
             )
         `)
+        // REMOVED .eq('active', true) to fetch all notifications for Admin management
         .order('created_at', { ascending: false });
     
     if (notifError) {
@@ -463,7 +445,6 @@ const App: React.FC = () => {
     }
 
     let userInteractions: Record<number, { is_read: boolean, voted_option_id: number | null }> = {};
-    let allVoterIds: string[] = [];
 
     // 2. If user is logged in, fetch their specific interactions
     if (userId) {
@@ -483,57 +464,22 @@ const App: React.FC = () => {
             });
         }
     }
-    
-    // 3. Collect all unique voter IDs for Admin view
-    if (userRef.current?.role === 'admin') {
-        notifData.forEach(n => {
-            if (n.poll_options) { // Only process votes if it's a poll
-                (n.poll_votes as any[]).forEach(v => {
-                    if (v.user_id && !allVoterIds.includes(v.user_id)) {
-                        allVoterIds.push(v.user_id);
-                    }
-                });
-            }
-        });
-    }
-    
-    // 4. Fetch profile data for all voters (Admin only)
-    let voterProfiles: Record<string, { name: string, email: string }> = {};
-    if (allVoterIds.length > 0) {
-        console.log(`loadNotifications: Admin fetching ${allVoterIds.length} voter profiles.`);
-        // Use the standard client call, which is now permitted by RLS for admins
-        const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
-            .select('id, name, email')
-            .in('id', allVoterIds);
-        
-        if (profilesError) {
-            console.error('loadNotifications: Error fetching voter profiles:', profilesError);
-        } else {
-            console.log(`loadNotifications: Successfully fetched ${profilesData.length} voter profiles.`);
-            (profilesData as any[]).forEach(p => {
-                voterProfiles[p.id] = { name: p.name || 'Usuário Desconhecido', email: p.email || 'Email Desconhecido' };
-            });
-        }
-    }
 
-    // 5. Process and map notifications
+    // 3. Process and map notifications
     const processedNotifications: AppNotification[] = notifData
         .map(n => {
             const interaction = userInteractions[n.id];
             
-            // Process poll votes for Admin view
-            const pollVotes: PollVote[] = (n.poll_votes || []).map((v: any) => {
-                const profile = voterProfiles[v.user_id] || { name: 'N/A', email: 'N/A' };
-                return {
-                    userId: v.user_id,
-                    optionId: v.voted_option_id,
-                    votedAt: v.voted_at,
-                    userName: profile.name, // Now includes name
-                    userEmail: profile.email, // Now includes email
-                    optionText: n.poll_options?.find((opt: any) => opt.id === v.voted_option_id)?.text || 'N/A'
-                };
-            });
+            // Process poll votes for Admin view (if needed)
+            const pollVotes: PollVote[] = (n.poll_votes || []).map((v: any) => ({
+                userId: v.user_id,
+                optionId: v.voted_option_id,
+                votedAt: v.voted_at,
+                // Note: userName/userEmail are not fetched here for simplicity/RLS reasons
+                userName: 'N/A', 
+                userEmail: 'N/A',
+                optionText: n.poll_options?.find((opt: any) => opt.id === v.voted_option_id)?.text || 'N/A'
+            }));
 
             // Update poll options with current vote counts for Admin view
             const pollOptionsWithCounts = n.poll_options?.map((opt: any) => ({
@@ -1185,6 +1131,8 @@ const App: React.FC = () => {
 
   // --- NEWS HANDLERS ---
   const handleViewNews = (id: number) => {
+    console.log('Attempting to view news ID:', id); // DEBUG LOG
+    
     // If in embed view, force parent navigation
     if (isEmbedView) {
         const baseUrl = window.location.origin;
@@ -1290,7 +1238,7 @@ const App: React.FC = () => {
           active: true,
       };
       
-      // console.log('Payload de Inserção de Notificação:', payload);
+      console.log('Payload de Inserção de Notificação:', payload);
 
       const { error } = await supabase
           .from('notifications')
@@ -1319,7 +1267,7 @@ const App: React.FC = () => {
           active: item.active,
       };
       
-      // console.log('Payload de Atualização de Notificação:', payload);
+      console.log('Payload de Atualização de Notificação:', payload);
 
       const { error } = await supabase
           .from('notifications')
@@ -1362,6 +1310,7 @@ const App: React.FC = () => {
         .upsert({
             user_id: user.id,
             notification_id: id,
+            is_read: true,
         }, { onConflict: 'user_id, notification_id' });
 
     if (error) {
