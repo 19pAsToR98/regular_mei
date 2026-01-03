@@ -320,9 +320,28 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   return (
      <div className="space-y-6 animate-in fade-in duration-500 pb-20 md:pb-8 flex flex-col md:flex-row gap-6 max-w-6xl mx-auto items-start">
         
-        {/* SIDEBAR NAVIGATION */}
-        <div className="w-full md:w-64 flex-shrink-0 flex flex-col gap-2 md:sticky md:top-0 z-20 bg-background-light dark:bg-background-dark py-2 md:py-0">
-            {/* Mobile Horizontal / Desktop Vertical Menu */}
+        {/* --- MOBILE/TABLET TABS (Visible on small screens) --- */}
+        <div className="w-full lg:hidden flex flex-col gap-4">
+            <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
+                {menuItems.map((item) => (
+                    <button
+                        key={item.id}
+                        onClick={() => setActiveSection(item.id as SettingsSection)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all flex-shrink-0 border ${
+                            activeSection === item.id 
+                                ? 'bg-primary text-white border-primary shadow-md' 
+                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                        }`}
+                    >
+                        <span className="material-icons text-lg">{item.icon}</span>
+                        {item.label}
+                    </button>
+                ))}
+            </div>
+        </div>
+
+        {/* --- DESKTOP SIDEBAR (Hidden on Mobile) --- */}
+        <div className="hidden lg:flex w-full lg:w-64 flex-shrink-0 flex-col gap-2 md:sticky md:top-0 z-20 py-2 md:py-0">
             <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-visible gap-2 pb-2 md:pb-0 scrollbar-hide sticky top-0 md:static">
               {menuItems.map((item) => (
                 <button
@@ -349,8 +368,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         {/* CONTENT AREA */}
         <div className="flex-1 w-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
            
-           {/* Header do Content */}
-           <div className="px-6 py-4 md:px-8 md:py-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+           {/* Header do Content (Hidden on Mobile if using tabs) */}
+           <div className="px-6 py-4 md:px-8 md:py-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 hidden lg:block">
               <h3 className="text-lg md:text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
                 <span className="material-icons text-slate-400">
                   {menuItems.find(i => i.id === activeSection)?.icon}
@@ -371,6 +390,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Nome Completo</label>
                             <input 
                                 type="text" 
+                                required
                                 value={profileForm.name}
                                 onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
                                 className="w-full px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none"
@@ -610,6 +630,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               {/* --- APPEARANCE SECTION --- */}
               {activeSection === 'appearance' && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                     <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-4 lg:hidden">Aparência</h2>
                      <p className="text-slate-500 dark:text-slate-400">Escolha como você prefere visualizar a plataforma.</p>
                      
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl">
@@ -653,9 +674,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               {/* --- CATEGORIES SECTION --- */}
               {activeSection === 'categories' && (
                  <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-4 lg:hidden">Categorias</h2>
                     
                     {/* Tabs and Add Button */}
-                    <div className="flex justify-between items-center gap-4">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl inline-flex w-full md:w-auto">
                             <button
                                 onClick={() => setActiveCatTab('receita')}
