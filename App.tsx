@@ -35,6 +35,7 @@ import CnpjConsultPage from "./components/CnpjConsultPage";
 import MobileBottomNav from './components/MobileBottomNav';
 import MorePage from './components/MorePage'; // NEW IMPORT
 import DashboardViewSelector from './components/DashboardViewSelector'; // NEW IMPORT
+import TransactionQuickAddModal from './components/TransactionQuickAddModal'; // NEW IMPORT
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -179,6 +180,9 @@ const App: React.FC = () => {
     assistantGifUrl: undefined, // NEW FIELD
     assistantIconSize: 'w-12 h-12', // NEW FIELD
   });
+  
+  // --- QUICK ADD MODAL STATE ---
+  const [quickAddModalType, setQuickAddModalType] = useState<'receita' | 'despesa' | null>(null);
 
   // --- DATA FETCHING FUNCTIONS ---
 
@@ -1277,7 +1281,7 @@ const App: React.FC = () => {
           text: item.text,
           type: item.type,
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          expires_at: expiresAtAtValue, 
+          expires_at: expiresAtValue, 
           active: item.active,
       };
       
@@ -1903,10 +1907,16 @@ const App: React.FC = () => {
                   <div className="flex justify-between items-center gap-4">
                       <DashboardViewSelector viewMode={dashboardViewMode} setViewMode={setDashboardViewMode} />
                       <div className="flex gap-4">
-                          <button className="bg-emerald-500 hover:bg-emerald-600 text-white p-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm font-bold text-sm">
+                          <button 
+                              onClick={() => setQuickAddModalType('receita')}
+                              className="bg-emerald-500 hover:bg-emerald-600 text-white p-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm font-bold text-sm"
+                          >
                               <span className="material-icons text-lg">arrow_upward</span> Nova Receita
                           </button>
-                          <button className="bg-rose-500 hover:bg-rose-600 text-white p-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm font-bold text-sm">
+                          <button 
+                              onClick={() => setQuickAddModalType('despesa')}
+                              className="bg-rose-500 hover:bg-rose-600 text-white p-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm font-bold text-sm"
+                          >
                               <span className="material-icons text-lg">arrow_downward</span> Nova Despesa
                           </button>
                       </div>
@@ -2100,6 +2110,18 @@ const App: React.FC = () => {
               activeTab={activeTab} 
               setActiveTab={setActiveTab} 
               userRole={user.role} 
+          />
+      )}
+      
+      {/* QUICK ADD TRANSACTION MODAL */}
+      {quickAddModalType && (
+          <TransactionQuickAddModal
+              type={quickAddModalType}
+              isOpen={!!quickAddModalType}
+              onClose={() => setQuickAddModalType(null)}
+              onSave={handleAddTransaction}
+              revenueCats={revenueCats}
+              expenseCats={expenseCats}
           />
       )}
     </div>
