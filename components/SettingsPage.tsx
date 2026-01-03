@@ -745,7 +745,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
            </div>
         </div>
 
-        /* Category Modal */
+        {/* Category Modal */}
         <CategoryModal 
             type={activeCatTab}
             isOpen={isCategoryModalOpen}
@@ -753,7 +753,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             onSave={onAddCategory}
         />
 
-        /* Verification Modal */
+        {/* Verification Modal */}
         {isVerifyingEmail && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
                 <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 border border-slate-200 dark:border-slate-800">
