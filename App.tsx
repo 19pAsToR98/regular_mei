@@ -585,6 +585,7 @@ const App: React.FC = () => {
 
   const loadUserProfile = async (supabaseUser: any) => {
     // Optimization: Check if the user is already fully loaded and set up based on the ref
+    // We only skip if the user is already loaded AND setup is complete.
     if (userRef.current && userRef.current.id === supabaseUser.id && userRef.current.isSetupComplete) {
         setLoadingAuth(false);
         return;
@@ -748,7 +749,8 @@ const App: React.FC = () => {
       const isUserAlreadyLoaded = currentUser && currentUser.id === session?.user?.id;
 
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-        if (!isUserAlreadyLoaded) {
+        // Only reload profile if user is new or if the existing user hasn't completed setup
+        if (!isUserAlreadyLoaded || !currentUser?.isSetupComplete) {
             loadUserProfile(session.user);
         } else {
             setLoadingAuth(false);
@@ -812,7 +814,7 @@ const App: React.FC = () => {
           return;
       }
 
-      // 2. Update Local State
+      // 2. Update Local State (Crucial step for immediate UI change)
       const updatedUser = { 
           ...user, 
           isSetupComplete: true, 
@@ -822,7 +824,7 @@ const App: React.FC = () => {
           receiveWeeklySummary: receiveWeeklySummary
       };
       setCnpj(newCnpj);
-      setUser(updatedUser);
+      setUser(updatedUser); // <-- Set local state immediately
       
       // 3. Apply Theme
       if (theme === 'dark') {
