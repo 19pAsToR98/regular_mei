@@ -32,7 +32,8 @@ import VirtualAssistantButton from './components/VirtualAssistantButton';
 import AssistantChat from './components/AssistantChat';
 import LandingPage from './components/LandingPage';
 import CnpjConsultPage from "./components/CnpjConsultPage";
-import MobileBottomNav from './components/MobileBottomNav'; // NEW IMPORT
+import MobileBottomNav from './components/MobileBottomNav';
+import MorePage from './components/MorePage'; // NEW IMPORT
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -1997,6 +1998,8 @@ const App: React.FC = () => {
               onDeleteAccount={handleDeleteAccount}
               onChangePassword={handleChangePassword}
             />;
+          case 'more': // NEW CASE
+            return <MorePage onNavigate={setActiveTab} />;
           case 'terms': return <TermsPage />;
           case 'privacy': return <PrivacyPage />;
           default: return null;

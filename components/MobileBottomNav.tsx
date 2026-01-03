@@ -12,12 +12,12 @@ const navItems: NavItem[] = [
   { id: 'cashflow', label: 'Caixa', icon: 'swap_horiz', href: '#' },
   { id: 'cnpj', label: 'CNPJ', icon: 'business', href: '#' },
   { id: 'tools', label: 'Ferramentas', icon: 'build', href: '#' },
-  { id: 'settings', label: 'Ajustes', icon: 'settings', href: '#' },
+  { id: 'more', label: 'Mais', icon: 'more_horiz', href: '#' }, // NOVO ITEM
 ];
 
 const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeTab, setActiveTab, userRole }) => {
   
-  // Filtra itens de navegação (Admin não é necessário aqui, mas Settings é essencial)
+  // Filtra itens de navegação (Admin não é necessário aqui)
   const filteredNavItems = navItems.filter(item => 
     item.id !== 'admin' || userRole === 'admin'
   );
@@ -30,8 +30,8 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeTab, setActiveT
         {filteredNavItems.map((item) => {
           const isActive = activeTab === item.id;
           
-          // Ajusta o ícone para 'settings' se for a aba ativa
-          const icon = item.id === 'settings' ? 'settings' : item.icon;
+          // O ícone 'more' usa 'more_horiz'
+          const icon = item.icon;
 
           return (
             <button
