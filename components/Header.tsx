@@ -76,6 +76,7 @@ const Header: React.FC<HeaderProps> = ({
       case 'offers': return 'Ofertas e Cupons';
       case 'admin': return 'Administração';
       case 'settings': return 'Configurações';
+      case 'more': return 'Mais Opções';
       default: return 'Dashboard';
     }
   };
@@ -92,6 +93,7 @@ const Header: React.FC<HeaderProps> = ({
       case 'offers': return 'Benefícios exclusivos.';
       case 'admin': return 'Gestão da plataforma.';
       case 'settings': return 'Preferências do sistema.';
+      case 'more': return 'Acesse funcionalidades adicionais.';
       default: return '';
     }
   };
@@ -113,9 +115,9 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         
         {/* Título no mobile (apenas se não for dashboard) */}
-        <div className="lg:hidden">
+        <div className="lg:hidden flex-1 text-center">
             {activeTab !== 'dashboard' && (
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-none">{getPageTitle()}</h2>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-none">{getPageTitle()}</h2>
             )}
         </div>
       </div>
