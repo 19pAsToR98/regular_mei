@@ -26,6 +26,9 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [currentDate, setCurrentDate] = useState(new Date());
 
+  // NEW STATE for search visibility on mobile
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
   // NEW STATE for bulk actions
   const [selectedTransactions, setSelectedTransactions] = useState<number[]>([]);
 
@@ -348,6 +351,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                 category: formData.category,
                 type: formData.type as 'receita' | 'despesa',
                 amount: amountValue,
+                expectedAmount: amountValue,
                 date: dateStr,
                 status: (formData.recurrenceType !== 'none' && i > 0) ? 'pendente' : (formData.status as 'pago' | 'pendente'),
                 isRecurring: formData.recurrenceType === 'recurring',
@@ -647,7 +651,9 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
 
         {/* 2. Filters (Center) */}
         <div className="flex flex-col md:flex-row gap-4 w-full lg:w-auto flex-1 lg:flex-none">
-          <div className="relative w-full md:w-64">
+          
+          {/* Search Input (Visible on Desktop, Conditional on Mobile) */}
+          <div className="relative w-full md:w-64 hidden md:block">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons">search</span>
             <input 
               type="text" 
@@ -658,6 +664,29 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
             />
           </div>
           
+          {/* Mobile Search Toggle */}
+          <div className="md:hidden flex items-center gap-2 w-full">
+              <button 
+                  onClick={() => setIsSearchOpen(!isSearchOpen)}
+                  className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
+                  title="Buscar"
+              >
+                  <span className="material-icons">search</span>
+              </button>
+              
+              {/* Mobile Search Input (Conditional) */}
+              {isSearchOpen && (
+                  <input 
+                      type="text" 
+                      placeholder="Buscar lançamento..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+              )}
+          </div>
+
+          {/* Type Filters */}
           <div className="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-1 self-start md:self-auto w-full md:w-auto overflow-x-auto">
              <button 
               onClick={() => setFilterType('all')}
@@ -680,77 +709,77 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
           </div>
         </div>
 
-        {/* 3. Actions (Right) */}
+        {/* 3. Actions (Right) - Compacted for Mobile */}
         <div className="flex gap-2 w-full lg:w-auto flex-shrink-0">
              <button 
                 onClick={() => setIsExportModal(true)}
-                className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm flex-1 md:flex-none justify-center"
+                className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-white px-3 py-2 rounded-lg font-medium transition-colors shadow-sm flex-1 md:flex-none justify-center md:px-4 md:py-2"
             >
                 <span className="material-icons text-xl">file_download</span>
-                <span className="hidden sm:inline">Relatórios</span>
+                <span className="hidden md:inline">Relatórios</span>
             </button>
             <button 
                 onClick={openAddModal}
-                className="flex items-center gap-2 bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm flex-1 md:flex-none justify-center"
+                className="flex items-center gap-2 bg-primary hover:bg-blue-600 text-white px-3 py-2 rounded-lg font-medium transition-colors shadow-sm flex-1 md:flex-none justify-center md:px-4 md:py-2"
             >
             <span className="material-icons text-xl">add</span>
-            Nova Transação
+            <span className="hidden md:inline">Nova Transação</span>
             </button>
         </div>
       </div>
 
-      {/* Summary Cards (New Model) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* Summary Cards (New Model) - Compacted for Mobile */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 1. Caixa Atual */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-              <span className="material-icons text-primary dark:text-blue-400">account_balance_wallet</span>
+        <div className="bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="p-1 bg-blue-100 dark:bg-blue-900/50 rounded-md flex-shrink-0">
+              <span className="material-icons text-lg text-primary dark:text-blue-400">account_balance_wallet</span>
             </div>
             <div className="min-w-0">
-                 <p className="text-xs font-bold uppercase text-slate-400 truncate">Caixa Atual</p>
-                 <p className={`text-xl font-bold truncate ${caixaAtual >= 0 ? 'text-slate-800 dark:text-white' : 'text-red-600'}`}>R$ {caixaAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                 <p className="text-[10px] font-bold uppercase text-slate-400 truncate">Caixa Atual</p>
             </div>
           </div>
+          <p className={`text-base font-bold truncate ${caixaAtual >= 0 ? 'text-slate-800 dark:text-white' : 'text-red-600'}`}>R$ {caixaAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
         
         {/* 2. A Receber */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden shadow-sm">
-           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
-              <span className="material-icons text-green-500 dark:text-green-400">arrow_upward</span>
+        <div className="bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 relative overflow-hidden shadow-sm">
+           <div className="flex items-center gap-2 mb-1">
+            <div className="p-1 bg-green-100 dark:bg-green-900/50 rounded-md flex-shrink-0">
+              <span className="material-icons text-lg text-green-500 dark:text-green-400">arrow_upward</span>
             </div>
             <div className="min-w-0">
-                <p className="text-xs font-bold uppercase text-slate-400 truncate">A Receber (Previsto)</p>
-                <p className="text-xl font-bold text-green-600 dark:text-green-400 truncate">R$ {aReceber.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                <p className="text-[10px] font-bold uppercase text-slate-400 truncate">A Receber</p>
             </div>
           </div>
+          <p className="text-base font-bold text-green-600 dark:text-green-400 truncate">R$ {aReceber.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
 
         {/* 3. A Pagar */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
-           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-red-100 dark:bg-red-900/50 rounded-lg">
-              <span className="material-icons text-red-500 dark:text-red-400">arrow_downward</span>
+        <div className="bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+           <div className="flex items-center gap-2 mb-1">
+            <div className="p-1 bg-red-100 dark:bg-red-900/50 rounded-md flex-shrink-0">
+              <span className="material-icons text-lg text-red-500 dark:text-red-400">arrow_downward</span>
             </div>
             <div className="min-w-0">
-                <p className="text-xs font-bold uppercase text-slate-400 truncate">A Pagar (Pendente)</p>
-                <p className="text-xl font-bold text-red-600 dark:text-red-400 truncate">R$ {aPagar.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                <p className="text-[10px] font-bold uppercase text-slate-400 truncate">A Pagar</p>
             </div>
           </div>
+          <p className="text-base font-bold text-red-600 dark:text-red-400 truncate">R$ {aPagar.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
 
         {/* 4. Caixa Projetado do Mês (Destaque) - CORRIGIDO */}
-         <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-4 rounded-lg border border-slate-600 ring-1 ring-slate-500 shadow-lg text-white flex flex-col justify-center min-h-[100px]">
-           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-lg">
-              <span className="material-icons text-white">query_stats</span>
+         <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-3 rounded-lg border border-slate-600 ring-1 ring-slate-500 shadow-lg text-white flex flex-col justify-center">
+           <div className="flex items-center gap-2 mb-1">
+            <div className="p-1 bg-white/20 rounded-md flex-shrink-0">
+              <span className="material-icons text-lg text-white">query_stats</span>
             </div>
             <div className="min-w-0">
-                <p className="text-xs font-bold uppercase text-slate-300 truncate">Caixa Projetado do Mês</p>
-                <p className={`text-xl font-bold truncate ${caixaProjetado >= 0 ? 'text-white' : 'text-red-300'}`}>R$ {caixaProjetado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                <p className="text-[10px] font-bold uppercase text-slate-300 truncate">Projetado</p>
             </div>
           </div>
+          <p className={`text-base font-bold truncate ${caixaProjetado >= 0 ? 'text-white' : 'text-red-300'}`}>R$ {caixaProjetado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
       </div>
 
@@ -872,7 +901,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                 </div>
             </div>
 
-            {/* MOBILE CARD VIEW (Grouped) - Need to add checkbox here too */}
+            {/* MOBILE CARD VIEW (Grouped) - Full width, smaller font, more text */}
             <div className="md:hidden space-y-4">
                 {sortedDates.map(dateKey => (
                     <div key={dateKey} className="space-y-2">
@@ -882,7 +911,7 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                         {groupedTransactions[dateKey].map(t => {
                             const isSelected = selectedTransactions.includes(t.id);
                             return (
-                            <div key={t.id} className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4 shadow-sm flex flex-col gap-3">
+                            <div key={t.id} className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4 shadow-sm flex flex-col gap-3 w-full">
                                 <div className="flex justify-between items-start">
                                     <div className="flex items-center gap-3">
                                         {/* Checkbox for mobile */}
@@ -895,8 +924,9 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
                                         <div className={`p-2 rounded-full flex-shrink-0 ${t.type === 'receita' ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-red-100 dark:bg-red-900/30 text-red-500'}`}>
                                             <span className="material-icons text-xl">{getCategoryIcon(t.category, t.type)}</span>
                                         </div>
-                                        <div>
-                                            <p className="font-bold text-slate-800 dark:text-white leading-tight line-clamp-1">{t.description}</p>
+                                        <div className="flex flex-col min-w-0">
+                                            {/* Adjusted font size and removed line-clamp-1 */}
+                                            <p className="font-bold text-slate-800 dark:text-white leading-tight text-sm">{t.description}</p>
                                             <span className="text-xs text-slate-500 dark:text-slate-400">{t.category}</span>
                                         </div>
                                     </div>
