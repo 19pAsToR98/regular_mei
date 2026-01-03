@@ -8,7 +8,8 @@ interface AuthDebugLogProps {
 }
 
 const AuthDebugLog: React.FC<AuthDebugLogProps> = ({ user, loadingAuth, activeTab }) => {
-  if (!loadingAuth && user?.isSetupComplete) return null;
+  // Removida a condição de ocultação para fixar o log na tela
+  // if (!loadingAuth && user?.isSetupComplete) return null;
 
   const logEntries = [
     `Status de Carregamento: ${loadingAuth ? 'Carregando...' : 'Concluído'}`,
