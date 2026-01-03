@@ -259,20 +259,25 @@ const App: React.FC = () => {
   const loadAllUsers = async () => {
       
       if (userRef.current?.role === 'admin') {
-          console.log('loadAllUsers: User is admin. Attempting to fetch all profiles.');
-          // Admin: Use standard Supabase client call. RLS policy 'Admins can view all profiles' 
-          // now uses the secure public.is_admin() function to grant access.
+          console.log('loadAllUsers: User is admin. Starting profile fetch...');
+          
           const { data: profiles, error: fetchError } = await supabase
               .from('profiles')
               .select('*');
 
           if (fetchError) {
-              console.error('loadAllUsers: Error fetching all profiles (Admin):', fetchError);
+              console.error('loadAllUsers: ERROR fetching all profiles (Admin):', fetchError);
               showError(`Erro ao carregar usuários: ${fetchError.message}`);
               return [];
           }
           
-          console.log(`loadAllUsers: Successfully fetched ${profiles.length} profiles.`);
+          if (!profiles || profiles.length === 0) {
+              console.log('loadAllUsers: Query returned 0 profiles.');
+              setAllUsers([]);
+              return [];
+          }
+          
+          console.log(`loadAllUsers: Successfully fetched ${profiles.length} profiles. Mapping data...`);
 
           const mappedUsers: User[] = (profiles as any[]).map(p => ({
               id: p.id,
@@ -287,6 +292,8 @@ const App: React.FC = () => {
               lastActive: p.last_active,
               receiveWeeklySummary: p.receive_weekly_summary ?? true
           }));
+          
+          console.log(`loadAllUsers: Mapped ${mappedUsers.length} users. Setting state.`);
           setAllUsers(mappedUsers);
           return mappedUsers;
       }
@@ -1308,7 +1315,7 @@ const App: React.FC = () => {
           text: item.text,
           type: item.type,
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          expires_at: expiresAtAtValue, 
+          expires_at: expiresAtValue, 
           active: item.active,
       };
       
