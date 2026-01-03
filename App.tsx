@@ -35,7 +35,7 @@ import CnpjConsultPage from "./components/CnpjConsultPage";
 import MobileBottomNav from './components/MobileBottomNav';
 import MorePage from './components/MorePage'; // NEW IMPORT
 import DashboardViewSelector from './components/DashboardViewSelector'; // NEW IMPORT
-import TransactionQuickAddModal from './components/TransactionQuickAddModal'; // NEW IMPORT
+import TransactionModal from './components/TransactionModal'; // UPDATED IMPORT
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -2113,15 +2113,17 @@ const App: React.FC = () => {
           />
       )}
       
-      {/* QUICK ADD TRANSACTION MODAL */}
+      {/* QUICK ADD / EDIT TRANSACTION MODAL */}
       {quickAddModalType && (
-          <TransactionQuickAddModal
+          <TransactionModal
               type={quickAddModalType}
               isOpen={!!quickAddModalType}
               onClose={() => setQuickAddModalType(null)}
               onSave={handleAddTransaction}
               revenueCats={revenueCats}
               expenseCats={expenseCats}
+              editingTransaction={null} // Always null for quick add
+              forcedType={quickAddModalType}
           />
       )}
     </div>

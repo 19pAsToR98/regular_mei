@@ -3,6 +3,7 @@ import { Transaction, Category } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import RecurrenceDeleteModal from './RecurrenceDeleteModal';
 import PendingMetricsCard from './PendingMetricsCard'; // IMPORTED
+import TransactionModal from './TransactionModal'; // NEW IMPORT
 import { showSuccess, showLoading, dismissToast } from '../utils/toastUtils';
 
 interface CashFlowPageProps {
@@ -35,25 +36,11 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModal] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null); // Use Transaction object for editing
   
   // Recurrence Delete State
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   
-  // Form State (Simplified: No expectedAmount)
-  const [formData, setFormData] = useState({
-    description: '',
-    category: '',
-    type: 'receita',
-    amount: '', // Single Amount Field
-    date: new Date().toISOString().split('T')[0],
-    status: 'pago',
-    
-    // Repetition logic
-    recurrenceType: 'none', // none, installment, recurring
-    recurrenceCount: 2, // Total installments or months
-  });
-
   // --- FILTER LOGIC ---
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
@@ -260,116 +247,35 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
   };
 
   const openAddModal = () => {
-    setEditingId(null);
-    setFormData({
-        description: '',
-        category: '',
-        type: 'receita',
-        amount: '', // Single Amount Field
-        date: new Date().toISOString().split('T')[0],
-        status: 'pago',
-        
-        // Repetition logic
-        recurrenceType: 'none', // none, installment, recurring
-        recurrenceCount: 2, // Total installments or months
-    });
+    setEditingTransaction(null);
     setIsModalOpen(true);
   };
 
   const openEditModal = (t: Transaction) => {
-    setEditingId(t.id);
-    setFormData({
-        description: t.description,
-        category: t.category,
-        type: t.type,
-        amount: t.amount.toString(),
-        date: t.date,
-        status: t.status,
-        recurrenceType: 'none',
-        recurrenceCount: 2
-    });
+    setEditingTransaction(t);
     setIsModalOpen(true);
   };
 
   const handleDuplicateTransaction = (t: Transaction) => {
-      setEditingId(null); // Ensure it's a new entry
-      setFormData({
-          description: t.description,
-          category: t.category,
-          type: t.type,
-          amount: t.amount.toString(),
-          date: new Date().toISOString().split('T')[0], // Reset to today
-          status: 'pendente', // Default duplicate to pending
-          recurrenceType: 'none',
-          recurrenceCount: 2
-      });
+      setEditingTransaction({ ...t, id: Date.now() }); // Use a copy with a new ID
       setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.description || !formData.category) return;
-
-    const amountValue = parseFloat(formData.amount) || 0;
-
-    // Single Update
-    if (editingId) {
-        const payload: Transaction = {
-            id: editingId,
-            description: formData.description,
-            category: formData.category,
-            type: formData.type as 'receita' | 'despesa',
-            amount: amountValue,
-            date: formData.date,
-            status: formData.status as 'pago' | 'pendente',
-            // Preserve recurrence data from original transaction
-            installments: transactions.find(t => t.id === editingId)?.installments,
-            isRecurring: transactions.find(t => t.id === editingId)?.isRecurring
-        };
-        onUpdateTransaction(payload);
-    } 
-    // Create New
-    else {
-        const transactionsToCreate: Transaction[] = [];
-        const [y, m, d] = formData.date.split('-').map(Number);
-        const startDate = new Date(y, m - 1, d, 12, 0, 0);
-        
-        const count = formData.recurrenceType === 'none' ? 1 : Math.max(1, formData.recurrenceCount);
-
-        for (let i = 0; i < count; i++) {
-            const itemDate = new Date(startDate);
-            itemDate.setMonth(startDate.getMonth() + i);
-            
-            const year = itemDate.getFullYear();
-            const month = String(itemDate.getMonth() + 1).padStart(2, '0');
-            const day = String(itemDate.getDate()).padStart(2, '0');
-            const dateStr = `${year}-${month}-${day}`;
-
-            const t: Transaction = {
-                id: Date.now() + i,
-                description: formData.description,
-                category: formData.category,
-                type: formData.type as 'receita' | 'despesa',
-                amount: amountValue,
-                expectedAmount: amountValue,
-                date: dateStr,
-                status: (formData.recurrenceType !== 'none' && i > 0) ? 'pendente' : (formData.status as 'pago' | 'pendente'),
-                isRecurring: formData.recurrenceType === 'recurring',
-                installments: formData.recurrenceType === 'installment' ? { current: i + 1, total: count } : undefined
-            };
-            transactionsToCreate.push(t);
-        }
-
-        onAddTransaction(transactionsToCreate);
-
-        // AUTO-NAVIGATE: If the added transaction date is not in current view, switch view
-        const [firstY, firstM] = formData.date.split('-').map(Number);
-        // Note: firstM is 1-indexed (e.g., 05 for May), currentMonth is 0-indexed (e.g., 4 for May)
-        if (firstY !== currentYear || (firstM - 1) !== currentMonth) {
-            setCurrentDate(new Date(firstY, firstM - 1, 1));
-        }
-    }
-    setIsModalOpen(false);
+  const handleSaveTransaction = (t: Transaction | Transaction[]) => {
+      // If it's a single transaction and we are editing, call update
+      if (!Array.isArray(t) && editingTransaction) {
+          onUpdateTransaction(t);
+      } else {
+          // If it's a new transaction or an array (recurrence), call add
+          onAddTransaction(t);
+          
+          // Auto-navigate if the added transaction date is not in current view
+          const firstTransaction = Array.isArray(t) ? t[0] : t;
+          const [firstY, firstM] = firstTransaction.date.split('-').map(Number);
+          if (firstY !== currentYear || (firstM - 1) !== currentMonth) {
+              setCurrentDate(new Date(firstY, firstM - 1, 1));
+          }
+      }
   };
 
   const handleDeleteClick = (t: Transaction) => {
@@ -1107,194 +1013,16 @@ const CashFlowPage: React.FC<CashFlowPageProps> = ({
           </div>
       )}
 
-      {/* Add/Edit Modal */}
+      {/* Add/Edit Modal (Now using TransactionModal) */}
       {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-              <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-                  <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800 sticky top-0 z-10">
-                      <h3 className="font-bold text-lg text-slate-800 dark:text-white">
-                          {editingId ? 'Editar Transação' : 'Nova Transação'}
-                      </h3>
-                      <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                          <span className="material-icons">close</span>
-                      </button>
-                  </div>
-                  
-                  <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                      {/* TYPE SELECTOR */}
-                      <div>
-                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo</label>
-                          <div className="flex gap-2">
-                              <button 
-                                  type="button"
-                                  onClick={() => setFormData({...formData, type: 'receita', category: ''})}
-                                  className={`flex-1 py-2 rounded-lg font-medium border ${formData.type === 'receita' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-600'}`}
-                              >Receita</button>
-                              <button 
-                                  type="button"
-                                  onClick={() => setFormData({...formData, type: 'despesa', category: ''})}
-                                  className={`flex-1 py-2 rounded-lg font-medium border ${formData.type === 'despesa' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-600'}`}
-                              >Despesa</button>
-                          </div>
-                      </div>
-
-                      <div>
-                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descrição</label>
-                          <input 
-                              type="text" 
-                              required
-                              value={formData.description}
-                              onChange={e => setFormData({...formData, description: e.target.value})}
-                              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none"
-                              placeholder="Ex: Venda de Produto"
-                          />
-                      </div>
-
-                      <div>
-                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                            Valor (R$)
-                          </label>
-                          <input 
-                              type="number" 
-                              step="0.01"
-                              required
-                              value={formData.amount}
-                              onChange={e => setFormData({...formData, amount: e.target.value})}
-                              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none text-lg font-bold"
-                              placeholder="0,00"
-                          />
-                          <p className="text-xs text-slate-500 mt-1">
-                              Se o status for <b>Pendente</b>, este valor será considerado uma previsão.
-                          </p>
-                      </div>
-                      
-                      {/* Total calculation help text */}
-                      {formData.recurrenceType === 'installment' && formData.amount && (
-                         <div className="text-xs text-slate-500 bg-slate-50 dark:bg-slate-800 p-2 rounded">
-                            Valor Total da Compra: <b>R$ {(parseFloat(formData.amount) * formData.recurrenceCount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b>
-                         </div>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Categoria</label>
-                          <select 
-                              required
-                              value={formData.category}
-                              onChange={e => setFormData({...formData, category: e.target.value})}
-                              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none"
-                          >
-                              <option value="">Selecione...</option>
-                              {(formData.type === 'receita' ? revenueCats : expenseCats).map((cat, idx) => (
-                                  <option key={idx} value={cat.name}>{cat.name}</option>
-                              ))}
-                          </select>
-                        </div>
-                        <div>
-                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Data</label>
-                              <input 
-                                  type="date" 
-                                  required
-                                  value={formData.date}
-                                  onChange={e => setFormData({...formData, date: e.target.value})}
-                                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none"
-                              />
-                        </div>
-                      </div>
-                      
-                      {/* Repetition Options (Only for new) */}
-                      {!editingId && (
-                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Repetição</label>
-                            
-                            {/* Segmented Control Style */}
-                            <div className="flex mb-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setFormData({...formData, recurrenceType: 'none'})}
-                                    className={`flex-1 py-2 text-sm font-medium transition-colors ${formData.recurrenceType === 'none' ? 'bg-slate-800 text-white dark:bg-slate-700' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                                >
-                                    Única
-                                </button>
-                                <div className="w-px bg-slate-300 dark:bg-slate-700"></div>
-                                <button 
-                                    type="button" 
-                                    onClick={() => setFormData({...formData, recurrenceType: 'installment'})}
-                                    className={`flex-1 py-2 text-sm font-medium transition-colors ${formData.recurrenceType === 'installment' ? 'bg-slate-800 text-white dark:bg-slate-700' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                                >
-                                    Parcelado
-                                </button>
-                                <div className="w-px bg-slate-300 dark:bg-slate-700"></div>
-                                <button 
-                                    type="button" 
-                                    onClick={() => setFormData({...formData, recurrenceType: 'recurring'})}
-                                    className={`flex-1 py-2 text-sm font-medium transition-colors ${formData.recurrenceType === 'recurring' ? 'bg-slate-800 text-white dark:bg-slate-700' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                                >
-                                    Fixo
-                                </button>
-                            </div>
-                            
-                            {formData.recurrenceType !== 'none' && (
-                                <div className="animate-in fade-in slide-in-from-top-2">
-                                     <label className="block text-xs font-medium text-slate-500 mb-1">
-                                        {formData.recurrenceType === 'installment' ? 'Número de Parcelas' : 'Repetir por quantos meses?'}
-                                     </label>
-                                     <input 
-                                        type="number" 
-                                        min="2" max="60"
-                                        value={formData.recurrenceCount}
-                                        onChange={e => setFormData({...formData, recurrenceCount: parseInt(e.target.value)})}
-                                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm"
-                                     />
-                                </div>
-                            )}
-                        </div>
-                      )}
-
-                      <div>
-                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
-                          <div className="flex gap-4">
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                  <input 
-                                      type="radio" 
-                                      name="status" 
-                                      checked={formData.status === 'pago'}
-                                      onChange={() => setFormData({...formData, status: 'pago'})}
-                                      className="text-primary focus:ring-primary"
-                                  />
-                                  <span className="text-slate-700 dark:text-slate-300">Pago / Recebido</span>
-                              </label>
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                  <input 
-                                      type="radio" 
-                                      name="status" 
-                                      checked={formData.status === 'pendente'}
-                                      onChange={() => setFormData({...formData, status: 'pendente'})}
-                                      className="text-primary focus:ring-primary"
-                                  />
-                                  <span className="text-slate-700 dark:text-slate-300">Pendente (Previsto)</span>
-                              </label>
-                          </div>
-                      </div>
-
-                      <div className="pt-2 flex gap-3 sticky bottom-0 bg-white dark:bg-slate-900 pb-2">
-                          <button 
-                              type="button" 
-                              onClick={() => setIsModalOpen(false)}
-                              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                          >
-                              Cancelar
-                          </button>
-                          <button 
-                              type="submit" 
-                              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm font-medium"
-                          >
-                              {editingId ? 'Salvar Alterações' : 'Adicionar'}
-                          </button>
-                      </div>
-                  </form>
-              </div>
-          </div>
+          <TransactionModal
+              isOpen={isModalOpen}
+              onClose={() => setIsModalOpen(false)}
+              onSave={handleSaveTransaction}
+              revenueCats={revenueCats}
+              expenseCats={expenseCats}
+              editingTransaction={editingTransaction}
+          />
       )}
       
       {/* Recurrence Delete Modal */}
