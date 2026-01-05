@@ -124,7 +124,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
 
     if (existingPhone) {
         // MENSAGEM DE ERRO MELHORADA PARA TELEFONE DUPLICADO
-        setAuthError('Este número de telefone já está cadastrado. Por favor, use outro número ou contate o suporte.');
+        setAuthError('Este número de telefone já está cadastrado. Se você já tem uma conta, tente fazer login ou contate o suporte.');
         setIsLoading(false);
         return;
     }
