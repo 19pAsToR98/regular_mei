@@ -117,14 +117,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
 
     if (phoneCheckError) {
         console.error('Phone check error:', phoneCheckError);
-        // Refinando a mensagem de erro para o usuário
         setAuthError('Erro ao verificar telefone. Por favor, tente novamente ou contate o suporte.');
         setIsLoading(false);
         return;
     }
 
     if (existingPhone) {
-        setAuthError('Este número de telefone já está cadastrado em outra conta.');
+        // MENSAGEM DE ERRO MELHORADA PARA TELEFONE DUPLICADO
+        setAuthError('Este número de telefone já está cadastrado. Por favor, use outro número ou contate o suporte.');
         setIsLoading(false);
         return;
     }
@@ -144,7 +144,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
     setIsLoading(false);
 
     if (error) {
-        setAuthError(error.message);
+        // Melhorando a mensagem de erro do Supabase
+        let errorMessage = error.message;
+        if (errorMessage.includes('User already registered')) {
+            // MENSAGEM DE ERRO MELHORADA PARA EMAIL DUPLICADO
+            errorMessage = 'Este e-mail já está cadastrado. Tente fazer login ou use a opção "Esqueceu a senha?".';
+        } else if (errorMessage.includes('Password should be at least 6 characters')) {
+            errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
+        }
+        setAuthError(errorMessage);
     } else {
         // Supabase sends a confirmation email by default.
         setAuthSuccess("Cadastro realizado! Verifique seu e-mail para confirmar sua conta antes de fazer login.");
