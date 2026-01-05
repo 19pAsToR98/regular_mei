@@ -155,6 +155,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
         setAuthError(errorMessage);
     } else {
         // Supabase sends a confirmation email by default.
+        // Se não houve erro, exibe a mensagem de sucesso e muda para login.
         setAuthSuccess("Cadastro realizado! Verifique seu e-mail para confirmar sua conta antes de fazer login.");
         setMode('login');
     }
