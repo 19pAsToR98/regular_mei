@@ -128,13 +128,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
     }
 
     if (existingPhone) {
-        // MENSAGEM DE ERRO MELHORADA PARA TELEFONE DUPLICADO
-        setAuthError('Este número de telefone já está cadastrado. Se você já tem uma conta, tente fazer login ou contate o suporte.');
+        // Telefone duplicado encontrado
+        setAuthError('Este número de telefone já está cadastrado. Se você já tem uma conta, tente fazer login ou use a opção "Esqueceu a senha?".');
         setIsLoading(false);
         return;
     }
 
     // 3. Proceed with Supabase Sign Up
+    // Supabase will automatically check for email duplication here.
     const { error } = await supabase.auth.signUp({
         email: regEmail,
         password: regPassword,
@@ -153,7 +154,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
         // Melhorando a mensagem de erro do Supabase
         let errorMessage = error.message;
         if (errorMessage.includes('User already registered')) {
-            // MENSAGEM DE ERRO MELHORADA PARA EMAIL DUPLICADO
+            // E-mail duplicado encontrado pelo Supabase
             errorMessage = 'Este e-mail já está cadastrado. Tente fazer login ou use a opção "Esqueceu a senha?".';
         } else if (errorMessage.includes('Password should be at least 6 characters')) {
             errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
