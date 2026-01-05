@@ -144,14 +144,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
     setIsLoading(false);
 
     if (error) {
-        // Melhorando a mensagem de erro do Supabase
-        let errorMessage = error.message;
-        if (errorMessage.includes('User already registered')) {
-            errorMessage = 'Este e-mail já está cadastrado. Tente fazer login ou recuperar a senha.';
-        } else if (errorMessage.includes('Password should be at least 6 characters')) {
-            errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
-        }
-        setAuthError(errorMessage);
+        setAuthError(error.message);
     } else {
         // Supabase sends a confirmation email by default.
         setAuthSuccess("Cadastro realizado! Verifique seu e-mail para confirmar sua conta antes de fazer login.");
