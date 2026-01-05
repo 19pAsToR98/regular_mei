@@ -133,9 +133,33 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
         setIsLoading(false);
         return;
     }
+    
+    // 3. Check if email already exists in profiles table (for faster feedback)
+    const { data: existingEmail, error: emailCheckError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', regEmail)
+        .maybeSingle();
+        
+    console.log('DEBUG: Email Check Error:', emailCheckError);
+    console.log('DEBUG: Existing Email Data:', existingEmail);
 
-    // 3. Proceed with Supabase Sign Up
-    // Supabase will automatically check for email duplication here.
+    if (emailCheckError && emailCheckError.code !== 'PGRST116') {
+        console.error('Email check error:', emailCheckError);
+        setAuthError('Erro ao verificar e-mail. Por favor, tente novamente ou contate o suporte.');
+        setIsLoading(false);
+        return;
+    }
+
+    if (existingEmail) {
+        // E-mail duplicado encontrado
+        setAuthError('Este e-mail já está cadastrado. Tente fazer login ou use a opção "Esqueceu a senha?".');
+        setIsLoading(false);
+        return;
+    }
+
+
+    // 4. Proceed with Supabase Sign Up
     const { error } = await supabase.auth.signUp({
         email: regEmail,
         password: regPassword,
@@ -154,10 +178,13 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
         // Melhorando a mensagem de erro do Supabase
         let errorMessage = error.message;
         if (errorMessage.includes('User already registered')) {
-            // E-mail duplicado encontrado pelo Supabase
+            // E-mail duplicado encontrado pelo Supabase (fallback se a checagem do profiles falhar)
             errorMessage = 'Este e-mail já está cadastrado. Tente fazer login ou use a opção "Esqueceu a senha?".';
         } else if (errorMessage.includes('Password should be at least 6 characters')) {
             errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
+        } else if (errorMessage.includes('Database error saving new user')) {
+            // Se o erro de DB ocorrer, é provável que seja uma falha no trigger por duplicidade de telefone/email
+            errorMessage = 'Erro ao salvar o usuário. O telefone ou e-mail pode já estar em uso.';
         }
         setAuthError(errorMessage);
     } else {
