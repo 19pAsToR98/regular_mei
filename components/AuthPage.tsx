@@ -102,6 +102,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
     
     // 1. Clean and Validate Phone Number
     const cleanPhone = phone.replace(/[^\d]/g, '');
+    console.log('DEBUG: Clean Phone:', cleanPhone);
+    
     if (cleanPhone.length < 10 || cleanPhone.length > 11) { // Requires 10 (DDD + 8 digitos) or 11 (DDD + 9 digitos)
         setAuthError("Número de telefone inválido. O DDD e o número são obrigatórios.");
         setIsLoading(false);
@@ -115,7 +117,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
         .eq('phone', cleanPhone) // Use cleanPhone for lookup
         .maybeSingle();
 
-    if (phoneCheckError) {
+    console.log('DEBUG: Phone Check Error:', phoneCheckError);
+    console.log('DEBUG: Existing Phone Data:', existingPhone);
+
+    if (phoneCheckError && phoneCheckError.code !== 'PGRST116') { // PGRST116 is 'no rows found'
         console.error('Phone check error:', phoneCheckError);
         setAuthError('Erro ao verificar telefone. Por favor, tente novamente ou contate o suporte.');
         setIsLoading(false);
@@ -142,6 +147,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
     });
     
     setIsLoading(false);
+    console.log('DEBUG: Supabase Sign Up Error:', error);
 
     if (error) {
         // Melhorando a mensagem de erro do Supabase
