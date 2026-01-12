@@ -28,20 +28,21 @@ export interface ForecastItem {
   iconColorClass: string;
 }
 
-export interface Offer {
-  id: number;
-  partnerName: string;
-  partnerColor: string; // Tailwind color class for logo bg
-  partnerIcon: string;
-  discount: string;
-  title: string;
-  description: string;
-  category: string;
-  code?: string;
-  link?: string;
-  expiry: string;
-  isExclusive?: boolean;
-  isFeatured?: boolean;
+// REMOVIDO: export interface Offer { ... }
+
+export interface CnaeProduct {
+  id: string;
+  cnaeCode: string;
+  productName: string;
+  description?: string;
+  link: string;
+  imageUrl: string;
+  currentPrice: number;
+  freeShipping: boolean;
+  unitsSold?: number;
+  isFull?: boolean;
+  partnerName?: string;
+  updatedAt: string;
 }
 
 export interface NewsItem {

@@ -35,6 +35,7 @@ import MobileBottomNav from './components/MobileBottomNav';
 import MorePage from './components/MorePage'; // NEW IMPORT
 import DashboardViewSelector from './components/DashboardViewSelector'; // NEW IMPORT
 import TransactionModal from './components/TransactionModal'; // UPDATED IMPORT
+import ProductsByCnaePage from './components/ProductsByCnaePage'; // NEW IMPORT
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote, CNPJResponse } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -537,6 +538,21 @@ const App: React.FC = () => {
         });
     }
   };
+  
+  // NEW: Function to load all user-specific data after login/onboarding
+  const loadAllUserData = async (userId: string, userRole: 'admin' | 'user') => {
+    setLoadingAuth(true);
+    await Promise.all([
+        loadTransactions(userId).then(setTransactions),
+        loadAppointments(userId).then(setAppointments),
+        loadUserCategories(userId),
+        loadNotifications(userId),
+        // Only load all users if admin
+        ...(userRole === 'admin' ? [loadAllUsers()] : []),
+    ]);
+    setLoadingAuth(false);
+  };
+
 
   const loadUserProfile = async (supabaseUser: any) => {
     // Optimization: Check if the user is already fully loaded and set up based on the ref
@@ -1067,15 +1083,15 @@ const App: React.FC = () => {
 
   // --- OFFERS HANDLERS (REMOVED) ---
   const handleAddOffer = async (newOffer: Offer) => {
-    showError('Funcionalidade de Ofertas desativada.');
+    showError('Funcionalidade de Produtos desativada.');
   };
 
   const handleUpdateOffer = async (updatedOffer: Offer) => {
-    showError('Funcionalidade de Ofertas desativada.');
+    showError('Funcionalidade de Produtos desativada.');
   };
 
   const handleDeleteOffer = async (id: number) => {
-    showError('Funcionalidade de Ofertas desativada.');
+    showError('Funcionalidade de Produtos desativada.');
   };
 
   // --- NEWS HANDLERS ---
@@ -1954,7 +1970,7 @@ const App: React.FC = () => {
             />;
           case 'tools': return <ToolsPage user={user} />;
           case 'news': return <NewsPage news={news} readingId={readingNewsId} onSelectNews={(id) => setReadingNewsId(id)} />;
-          case 'offers': return <OffersPage offers={offers} />;
+          case 'offers': return <ProductsByCnaePage user={user} />; // SUBSTITUÍDO
           case 'admin':
             return <AdminPage 
                 offers={offers}
