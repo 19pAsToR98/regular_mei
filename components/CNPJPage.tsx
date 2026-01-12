@@ -6,6 +6,7 @@ interface CNPJPageProps {
   fiscalData: FiscalData | null;
   onUpdateFiscalData: (data: FiscalData) => void;
   connectionConfig: ConnectionConfig; // ADICIONADO
+  cnpjData?: CNPJResponse | null; // NEW PROP
 }
 
 // Redefining servicesData locally for CNPJPage to function independently
@@ -54,7 +55,7 @@ const servicesData: ServiceCTA[] = [
   }
 ];
 
-const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalData, connectionConfig }) => {
+const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalData, connectionConfig, cnpjData }) => {
   // --- DADOS CADASTRAIS STATE ---
   const [loadingData, setLoadingData] = useState(false);
   const [lastUpdateData, setLastUpdateData] = useState('');
@@ -85,8 +86,30 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
   const timerRef = useRef<any>(null);
 
   const [activeTab, setActiveTab] = useState<'das' | 'dasn'>('das');
+  
+  // Helper function to process the raw CNPJ response into companyData state
+  const processCompanyResult = (data: CNPJResponse, cleanCnpj: string) => {
+      setCompanyData({
+          cnpj: data.estabelecimento?.cnpj || cleanCnpj, 
+          razaoSocial: data.razao_social || '',
+          nomeFantasia: data.estabelecimento?.nome_fantasia || data.razao_social || '',
+          situacao: data.estabelecimento?.situacao_cadastral || 'Indisponível',
+          dataAbertura: data.estabelecimento?.data_inicio_atividade 
+            ? new Date(data.estabelecimento.data_inicio_atividade).toLocaleDateString('pt-BR') 
+            : '-',
+          cnae: data.estabelecimento?.atividade_principal 
+            ? `${data.estabelecimento.atividade_principal.id} - ${data.estabelecimento.atividade_principal.descricao}` 
+            : '-',
+          endereco: data.estabelecimento 
+            ? `${data.estabelecimento.tipo_logradouro} ${data.estabelecimento.logradouro}, ${data.estabelecimento.numero} ${data.estabelecimento.complemento ? '- ' + data.estabelecimento.complemento : ''} - ${data.estabelecimento.bairro}, ${data.estabelecimento.cidade?.nome || ''} - ${data.estabelecimento.estado?.sigla || ''}`
+            : '-',
+          naturezaJuridica: data.natureza_juridica 
+            ? `${data.natureza_juridica.id} - ${data.natureza_juridica.descricao}` 
+            : '-',
+      });
+  };
 
-  // Load from LocalStorage on mount or when CNPJ changes
+  // Load from LocalStorage/Props on mount or when CNPJ changes
   useEffect(() => {
     if (cnpj) {
       const cleanCnpj = cnpj.replace(/[^\d]/g, '');
@@ -102,10 +125,18 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
         }
       }
       
-      // Load company data
-      fetchCompanyData();
+      // 2. Load Company Data from persisted state or fetch
+      if (cnpjData) {
+          // Use persisted data if available
+          processCompanyResult(cnpjData, cleanCnpj);
+          setLastUpdateData('Persistido');
+          addLog("Dados cadastrais carregados do perfil.");
+      } else {
+          // Fallback to fetching if no persisted data
+          fetchCompanyData();
+      }
     }
-  }, [cnpj]);
+  }, [cnpj, cnpjData]); // Added cnpjData dependency
 
   // Auto-scroll logs
   useEffect(() => {
@@ -182,24 +213,7 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
         
         const data: CNPJResponse = json;
         
-        setCompanyData({
-          cnpj: data.estabelecimento?.cnpj || cleanCnpj, 
-          razaoSocial: data.razao_social || '',
-          nomeFantasia: data.estabelecimento?.nome_fantasia || data.razao_social || '',
-          situacao: data.estabelecimento?.situacao_cadastral || 'Indisponível',
-          dataAbertura: data.estabelecimento?.data_inicio_atividade 
-            ? new Date(data.estabelecimento.data_inicio_atividade).toLocaleDateString('pt-BR') 
-            : '-',
-          cnae: data.estabelecimento?.atividade_principal 
-            ? `${data.estabelecimento.atividade_principal.id} - ${data.estabelecimento.atividade_principal.descricao}` 
-            : '-',
-          endereco: data.estabelecimento 
-            ? `${data.estabelecimento.tipo_logradouro} ${data.estabelecimento.logradouro}, ${data.estabelecimento.numero} ${data.estabelecimento.complemento ? '- ' + data.estabelecimento.complemento : ''} - ${data.estabelecimento.bairro}, ${data.estabelecimento.cidade?.nome || ''} - ${data.estabelecimento.estado?.sigla || ''}`
-            : '-',
-          naturezaJuridica: data.natureza_juridica 
-            ? `${data.natureza_juridica.id} - ${data.natureza_juridica.descricao}` 
-            : '-',
-        });
+        processCompanyResult(data, cleanCnpj);
 
         const now = new Date();
         setLastUpdateData(`${now.toLocaleDateString()} às ${now.toLocaleTimeString().slice(0, 5)}`);

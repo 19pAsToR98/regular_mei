@@ -175,6 +175,7 @@ export interface User {
   cnpj?: string;
   isSetupComplete: boolean;
   receiveWeeklySummary?: boolean; // NEW FIELD
+  cnpjData?: CNPJResponse | null; // NEW FIELD: Store detailed CNPJ data as JSONB
   // Admin Fields
   role?: 'admin' | 'user';
   status?: 'active' | 'inactive' | 'suspended';

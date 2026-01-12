@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { User, CNPJResponse } from '../types';
 
 interface OnboardingPageProps {
-  user: User;
-  onComplete: (cnpj: string, theme: 'light' | 'dark', companyName: string, receiveWeeklySummary: boolean) => void;
+  onComplete: (cnpj: string, theme: 'light' | 'dark', companyName: string, receiveWeeklySummary: boolean, cnpjData: CNPJResponse | null) => void;
 }
 
 const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => {
@@ -15,6 +14,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => 
   // CNPJ Fetch State
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [fetchedCompany, setFetchedCompany] = useState<{name: string, tradeName: string, status: string} | null>(null);
+  const [rawCnpjData, setRawCnpjData] = useState<CNPJResponse | null>(null); // NEW STATE for persistence
   const [cnpjError, setCnpjError] = useState<string | null>(null);
   
   // Finish Loading State
@@ -46,7 +46,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => 
     await new Promise(r => setTimeout(r, 1500)); // Simulate processing
     // Pass the fetched company name (Razão Social) or fallback to trade name/empty
     const companyName = fetchedCompany?.name || fetchedCompany?.tradeName || '';
-    onComplete(cnpj, theme, companyName, receiveWeeklySummary); // PASS NEW STATE
+    onComplete(cnpj, theme, companyName, receiveWeeklySummary, rawCnpjData); // UPDATED CALL
   };
 
   const fetchCompanyData = async () => {
@@ -59,6 +59,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => 
     setLoadingCnpj(true);
     setCnpjError(null);
     setFetchedCompany(null);
+    setRawCnpjData(null); // Reset raw data
 
     const targetUrl = `https://publica.cnpj.ws/cnpj/${cleanCnpj}`;
     const endpoints = [
@@ -88,6 +89,11 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ user, onComplete }) => 
             }
 
             const data: CNPJResponse = json;
+            
+            // Store raw data for persistence
+            setRawCnpjData(data);
+
+            // Store simplified data for UI
             setFetchedCompany({
                 name: data.razao_social || '',
                 tradeName: data.estabelecimento?.nome_fantasia || data.razao_social || '',

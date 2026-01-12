@@ -36,7 +36,7 @@ import MobileBottomNav from './components/MobileBottomNav';
 import MorePage from './components/MorePage'; // NEW IMPORT
 import DashboardViewSelector from './components/DashboardViewSelector'; // NEW IMPORT
 import TransactionModal from './components/TransactionModal'; // UPDATED IMPORT
-import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote } from './types';
+import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote, CNPJResponse } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
 import { scheduleTransactionReminder, scheduleAppointmentReminder, deleteScheduledReminder } from './utils/whatsappUtils';
@@ -288,7 +288,8 @@ const App: React.FC = () => {
           status: p.status as 'active' | 'inactive' | 'suspended',
           joinedAt: p.joined_at,
           lastActive: p.last_active,
-          receiveWeeklySummary: p.receive_weekly_summary ?? true
+          receiveWeeklySummary: p.receive_weekly_summary ?? true,
+          cnpjData: p.cnpj_data, // NEW: Load CNPJ data
       }));
       setAllUsers(mappedUsers);
   };
@@ -602,7 +603,8 @@ const App: React.FC = () => {
         status: profileData.status as 'active' | 'inactive' | 'suspended',
         joinedAt: profileData.joined_at,
         lastActive: profileData.last_active, // Keep existing last_active from DB
-        receiveWeeklySummary: profileData.receive_weekly_summary ?? true
+        receiveWeeklySummary: profileData.receive_weekly_summary ?? true,
+        cnpjData: profileData.cnpj_data, // NEW: Load CNPJ data
     };
 
     setUser(appUser);
@@ -780,7 +782,7 @@ const App: React.FC = () => {
       return true;
   }
 
-  const handleOnboardingComplete = async (newCnpj: string, theme: 'light' | 'dark', companyName: string, receiveWeeklySummary: boolean) => {
+  const handleOnboardingComplete = async (newCnpj: string, theme: 'light' | 'dark', companyName: string, receiveWeeklySummary: boolean, cnpjData: CNPJResponse | null) => {
       if (!user) return;
       
       // 1. Update Supabase Profile
@@ -792,7 +794,8 @@ const App: React.FC = () => {
               name: companyName || user.name, 
               is_setup_complete: true,
               last_active: now, // Set last_active on completion
-              receive_weekly_summary: receiveWeeklySummary
+              receive_weekly_summary: receiveWeeklySummary,
+              cnpj_data: cnpjData // NEW: Save the full CNPJ data
           })
           .eq('id', user.id);
 
@@ -803,13 +806,14 @@ const App: React.FC = () => {
       }
 
       // 2. Update Local State
-      const updatedUser = { 
+      const updatedUser: User = { 
           ...user, 
           isSetupComplete: true, 
           cnpj: newCnpj,
           name: companyName || user.name,
           lastActive: now,
-          receiveWeeklySummary: receiveWeeklySummary
+          receiveWeeklySummary: receiveWeeklySummary,
+          cnpjData: cnpjData // NEW: Update local user state
       };
       setCnpj(newCnpj);
       setUser(updatedUser);
@@ -881,7 +885,8 @@ const App: React.FC = () => {
               cnpj: updatedUser.cnpj,
               role: updatedUser.role,
               status: updatedUser.status,
-              receive_weekly_summary: updatedUser.receiveWeeklySummary
+              receive_weekly_summary: updatedUser.receiveWeeklySummary,
+              cnpj_data: updatedUser.cnpjData // NEW: Update CNPJ data
           })
           .eq('id', updatedUser.id);
 
@@ -1989,7 +1994,7 @@ const App: React.FC = () => {
                 onDeleteAppointment={handleDeleteAppointment}
                 userId={user.id}
             />;
-          case 'cnpj': return <CNPJPage cnpj={cnpj} fiscalData={fiscalData} onUpdateFiscalData={setFiscalData} connectionConfig={connectionConfig} />;
+          case 'cnpj': return <CNPJPage cnpj={cnpj} fiscalData={fiscalData} onUpdateFiscalData={setFiscalData} connectionConfig={connectionConfig} cnpjData={user?.cnpjData} />;
           case 'tools': return <ToolsPage user={user} />;
           case 'news': return <NewsPage news={news} readingId={readingNewsId} onSelectNews={(id) => setReadingNewsId(id)} />;
           case 'offers': return <OffersPage offers={offers} />;
