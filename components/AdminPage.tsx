@@ -125,15 +125,15 @@ const AdminPage: React.FC<AdminPageProps> = ({
   const [newsPage, setNewsPage] = useState(1);
   const newsPerPage = 5;
 
-  // --- OFFERS STATE ---
-  const initialOfferForm: Omit<Offer, 'id'> = {
-    partnerName: '', partnerColor: 'bg-blue-500', partnerIcon: 'store', discount: '',
-    title: '', description: '', category: 'Finanças', code: '', link: '',
-    expiry: '', isExclusive: false, isFeatured: false
-  };
-  const [offerForm, setOfferForm] = useState(initialOfferForm);
-  const [editingOfferId, setEditingOfferId] = useState<number | null>(null);
-  const [showIconPicker, setShowIconPicker] = useState(false);
+  // --- OFFERS STATE (REMOVED) ---
+  // const initialOfferForm: Omit<Offer, 'id'> = {
+  //   partnerName: '', partnerColor: 'bg-blue-500', partnerIcon: 'store', discount: '',
+  //   title: '', description: '', category: 'Finanças', code: '', link: '',
+  //   expiry: '', isExclusive: false, isFeatured: false
+  // };
+  // const [offerForm, setOfferForm] = useState(initialOfferForm);
+  // const [editingOfferId, setEditingOfferId] = useState<number | null>(null);
+  // const [showIconPicker, setShowIconPicker] = useState(false);
 
   // --- NOTIFICATIONS STATE ---
   const initialNotifForm: {
@@ -368,46 +368,46 @@ const AdminPage: React.FC<AdminPageProps> = ({
   // Prepare content for preview (Quill output is already HTML)
   const previewContent = useMemo(() => newsForm.content, [newsForm.content]);
 
-  // --- OFFERS HANDLERS ---
-  const handleEditOfferClick = (e: React.MouseEvent, offer: Offer) => {
-    e.stopPropagation();
-    setEditingOfferId(offer.id);
-    setOfferForm({
-        partnerName: offer.partnerName, partnerColor: offer.partnerColor, partnerIcon: offer.partnerIcon,
-        discount: offer.discount, title: offer.title, description: offer.description, category: offer.category,
-        code: offer.code || '', link: offer.link || '', expiry: offer.expiry,
-        isExclusive: offer.isExclusive || false, isFeatured: offer.isFeatured || false
-    });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  // --- OFFERS HANDLERS (REMOVED) ---
+  // const handleEditOfferClick = (e: React.MouseEvent, offer: Offer) => {
+  //   e.stopPropagation();
+  //   setEditingOfferId(offer.id);
+  //   setOfferForm({
+  //       partnerName: offer.partnerName, partnerColor: offer.partnerColor, partnerIcon: offer.partnerIcon,
+  //       discount: offer.discount, title: offer.title, description: offer.description, category: offer.category,
+  //       code: offer.code || '', link: offer.link || '', expiry: offer.expiry,
+  //       isExclusive: offer.isExclusive || false, isFeatured: offer.isFeatured || false
+  //   });
+  //   window.scrollTo({ top: 0, behavior: 'smooth' });
+  // };
 
-  const handleCancelOfferEdit = () => {
-      setEditingOfferId(null);
-      setOfferForm(initialOfferForm);
-  };
+  // const handleCancelOfferEdit = () => {
+  //     setEditingOfferId(null);
+  //     setOfferForm(initialOfferForm);
+  // };
 
-  const handleSaveOffer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 1000));
+  // const handleSaveOffer = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setIsSubmitting(true);
+  //   await new Promise(r => setTimeout(r, 1000));
 
-    if (editingOfferId) {
-        onUpdateOffer({ id: editingOfferId, ...offerForm });
-    } else {
-        onAddOffer({ id: Date.now(), ...offerForm });
-    }
-    setIsSubmitting(false);
-    handleCancelOfferEdit();
-  };
+  //   if (editingOfferId) {
+  //       onUpdateOffer({ id: editingOfferId, ...offerForm });
+  //   } else {
+  //       onAddOffer({ id: Date.now(), ...offerForm });
+  //   }
+  //   setIsSubmitting(false);
+  //   handleCancelOfferEdit();
+  // };
 
-  const handleDeleteOfferClick = (e: React.MouseEvent, id: number) => {
-      e.stopPropagation();
-      e.preventDefault();
-      if(window.confirm('Tem certeza que deseja excluir esta oferta?')) {
-          onDeleteOffer(id);
-          if (editingOfferId === id) handleCancelOfferEdit();
-      }
-  }
+  // const handleDeleteOfferClick = (e: React.MouseEvent, id: number) => {
+  //     e.stopPropagation();
+  //     e.preventDefault();
+  //     if(window.confirm('Tem certeza que deseja excluir esta oferta?')) {
+  //         onDeleteOffer(id);
+  //         if (editingOfferId === id) handleCancelOfferEdit();
+  //     }
+  // }
 
   // --- NOTIFICATION HANDLERS ---
   const handleAddPollOption = () => {
@@ -726,7 +726,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
           Notícias
         </button>
         <button onClick={() => setActiveTab('offers')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'offers' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
-          Ofertas
+          Produtos
         </button>
         <button onClick={() => setActiveTab('notifications')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'notifications' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>
           Notificações
@@ -1171,84 +1171,23 @@ const AdminPage: React.FC<AdminPageProps> = ({
         </div>
       )}
 
-      {/* --- CONTENT: OFFERS --- */}
+      {/* --- CONTENT: PRODUCTS (REPLACING OFFERS) --- */}
       {activeTab === 'offers' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Offers Form */}
-          <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
-            {/* ... Offer Form Content ... */}
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">
-                {editingOfferId ? 'Editar Oferta Existente' : 'Cadastrar Oferta ou Cupom'}
-            </h3>
-            
-            {editingOfferId && (
-                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 rounded-lg flex justify-between items-center">
-                    <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">Editando oferta...</span>
-                    <button type="button" onClick={handleCancelOfferEdit} className="text-xs font-bold text-blue-600 hover:underline">Cancelar</button>
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white">Gerenciamento de Produtos por CNAE</h3>
+            <div className="p-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <p className="text-slate-500 dark:text-slate-400">
+                    Esta seção será substituída pela gestão de produtos por CNAE. O conteúdo será preenchido por uma automação externa.
+                </p>
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-900/50 text-sm text-blue-700 dark:text-blue-300">
+                    <p className="font-bold mb-1">Próximos Passos:</p>
+                    <ul className="list-disc list-inside ml-4">
+                        <li>Criar a tabela `cnae_products` no Supabase.</li>
+                        <li>Criar a Edge Function `get-active-cnaes` para o webhook externo.</li>
+                        <li>Criar a página `ProductsByCnaePage.tsx` para exibir os produtos.</li>
+                    </ul>
                 </div>
-            )}
-
-            <form onSubmit={handleSaveOffer} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="md:col-span-2 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Identidade do Parceiro</label>
-                    <div className="flex gap-4 items-center">
-                        <button type="button" onClick={() => setShowIconPicker(!showIconPicker)} className={`w-12 h-12 rounded-lg ${offerForm.partnerColor} text-white flex items-center justify-center`}><span className="material-icons">{offerForm.partnerIcon}</span></button>
-                         {showIconPicker && (
-                         <div className="absolute mt-16 p-2 bg-white border rounded shadow-xl z-50 grid grid-cols-5 gap-1 h-32 overflow-y-auto">
-                           {availableIcons.map(icon => <button key={icon} type="button" onClick={() => { setOfferForm({...offerForm, partnerIcon: icon}); setShowIconPicker(false); }} className="p-1 hover:bg-slate-100"><span className="material-icons text-sm">{icon}</span></button>)}
-                         </div>
-                       )}
-                        <div className="flex flex-wrap gap-1">
-                            {tailwindColors.map(c => <button key={c.name} type="button" onClick={() => setOfferForm({...offerForm, partnerColor: c.class})} className={`w-6 h-6 rounded-full ${c.class} ring-1 ring-offset-1 ${offerForm.partnerColor === c.class ? 'ring-slate-400' : 'ring-transparent'}`}></button>)}
-                        </div>
-                    </div>
-                 </div>
-                 {/* ... Other inputs ... */}
-                 <div className="md:col-span-1"><label className="text-sm block mb-1">Parceiro</label><input type="text" required value={offerForm.partnerName} onChange={e => setOfferForm({...offerForm, partnerName: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
-                 <div className="md:col-span-1"><label className="text-sm block mb-1">Desconto</label><input type="text" required value={offerForm.discount} onChange={e => setOfferForm({...offerForm, discount: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
-                 <div className="md:col-span-2"><label className="text-sm block mb-1">Título</label><input type="text" required value={offerForm.title} onChange={e => setOfferForm({...offerForm, title: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
-                 <div className="md:col-span-2"><label className="text-sm block mb-1">Descrição</label><textarea required rows={2} value={offerForm.description} onChange={e => setOfferForm({...offerForm, description: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
-                 <div className="md:col-span-1"><label className="text-sm block mb-1">Cupom</label><input type="text" value={offerForm.code} onChange={e => setOfferForm({...offerForm, code: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
-                 <div className="md:col-span-1"><label className="text-sm block mb-1">Validade</label><input type="text" required value={offerForm.expiry} onChange={e => setOfferForm({...offerForm, expiry: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
-                 <div className="md:col-span-1"><label className="text-sm block mb-1">Link</label><input type="text" value={offerForm.link} onChange={e => setOfferForm({...offerForm, link: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800" /></div>
-                 <div className="md:col-span-1"><label className="text-sm block mb-1">Categoria</label><select value={offerForm.category} onChange={e => setOfferForm({...offerForm, category: e.target.value})} className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-800"><option>Finanças</option><option>Software</option><option>Serviços</option><option>Educação</option></select></div>
-                 <div className="md:col-span-2 flex gap-4">
-                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={offerForm.isExclusive} onChange={e => setOfferForm({...offerForm, isExclusive: e.target.checked})} /> Exclusivo</label>
-                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={offerForm.isFeatured} onChange={e => setOfferForm({...offerForm, isFeatured: e.target.checked})} /> Destaque</label>
-                 </div>
-              </div>
-              <div className="flex justify-end pt-2 gap-3">
-                <button 
-                    type="submit" 
-                    disabled={isSubmitting}
-                    className="bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2"
-                >
-                    {isSubmitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : null}
-                    {editingOfferId ? 'Atualizar' : 'Salvar'}
-                </button>
-              </div>
-            </form>
-          </div>
-          
-          {/* Offers List */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm h-fit">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Ofertas Ativas</h3>
-            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
-              {offers.map(offer => (
-                <div key={offer.id} onClick={(e) => handleEditOfferClick(e, offer)} className={`p-3 rounded-lg border cursor-pointer flex justify-between items-center group ${editingOfferId === offer.id ? 'bg-blue-50 border-blue-200' : 'border-slate-100 hover:bg-slate-50'}`}>
-                  <div className="flex items-center gap-3">
-                     <div className={`w-8 h-8 rounded ${offer.partnerColor} flex items-center justify-center text-white text-xs`}><span className="material-icons text-sm">{offer.partnerIcon}</span></div>
-                     <div><h4 className="font-semibold text-slate-800 dark:text-white text-sm line-clamp-1">{offer.title}</h4></div>
-                  </div>
-                  <div className="flex gap-1">
-                      <button type="button" onClick={(e) => handleEditOfferClick(e, offer)} className="p-1 text-slate-400 hover:text-primary"><span className="material-icons text-sm">edit</span></button>
-                      <button type="button" onClick={(e) => handleDeleteOfferClick(e, offer.id)} className="p-1 text-slate-400 hover:text-red-500"><span className="material-icons text-sm">delete</span></button>
-                  </div>
-                </div>
-              ))}
             </div>
-          </div>
         </div>
       )}
 
@@ -1591,7 +1530,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                           </button>
                       </div>
                   </div>
-                  
+
                   {/* WhatsApp API */}
                   <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                       <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">

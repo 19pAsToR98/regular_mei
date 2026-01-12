@@ -14,7 +14,6 @@ import CalendarPage from './components/CalendarPage';
 import CNPJPage from './components/CNPJPage';
 import ToolsPage from './components/ToolsPage';
 import NewsPage from './components/NewsPage';
-import OffersPage from './components/OffersPage';
 import SettingsPage from './components/SettingsPage';
 import AdminPage from './components/AdminPage';
 import MaintenanceOverlay from './components/MaintenanceOverlay';
@@ -103,7 +102,6 @@ const App: React.FC = () => {
   
   // --- APP STATE ---
   const [cnpj, setCnpj] = useState('');
-  const [offers, setOffers] = useState<Offer[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [readingNewsId, setReadingNewsId] = useState<number | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -183,6 +181,9 @@ const App: React.FC = () => {
   
   // --- QUICK ADD MODAL STATE ---
   const [quickAddModalType, setQuickAddModalType] = useState<'receita' | 'despesa' | null>(null);
+  
+  // --- OFFERS STATE (REMOVED) ---
+  const [offers, setOffers] = useState<Offer[]>([]); // Kept for loadNewsAndOffers compatibility, will be removed later
 
   // --- DATA FETCHING FUNCTIONS ---
 
@@ -410,32 +411,32 @@ const App: React.FC = () => {
         console.error('Error fetching news:', newsError);
     }
 
-    // Offers (Publicly readable via RLS)
-    const { data: offersData, error: offersError } = await supabase
-        .from('offers')
-        .select('*')
-        .order('is_featured', { ascending: false });
+    // Offers (REMOVED LOGIC)
+    // const { data: offersData, error: offersError } = await supabase
+    //     .from('offers')
+    //     .select('*')
+    //     .order('is_featured', { ascending: false });
     
-    if (!offersError) {
-        const mappedOffers: Offer[] = offersData.map(o => ({
-            id: o.id,
-            partnerName: o.partner_name,
-            partnerColor: o.partner_color,
-            partnerIcon: o.partner_icon,
-            discount: o.discount,
-            title: o.title,
-            description: o.description,
-            category: o.category,
-            code: o.code,
-            link: o.link,
-            expiry: o.expiry,
-            isExclusive: o.is_exclusive,
-            isFeatured: o.is_featured,
-        }));
-        setOffers(mappedOffers);
-    } else {
-        console.error('Error fetching offers:', offersError);
-    }
+    // if (!offersError) {
+    //     const mappedOffers: Offer[] = offersData.map(o => ({
+    //         id: o.id,
+    //         partnerName: o.partner_name,
+    //         partnerColor: o.partner_color,
+    //         partnerIcon: o.partner_icon,
+    //         discount: o.discount,
+    //         title: o.title,
+    //         description: o.description,
+    //         category: o.category,
+    //         code: o.code,
+    //         link: o.link,
+    //         expiry: o.expiry,
+    //         isExclusive: o.is_exclusive,
+    //         isFeatured: o.is_featured,
+    //     }));
+    //     setOffers(mappedOffers);
+    // } else {
+    //     console.error('Error fetching offers:', offersError);
+    // }
   };
 
   const loadNotifications = async (userId?: string) => {
@@ -549,7 +550,6 @@ const App: React.FC = () => {
     const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', supabaseUser.id)
         .single();
 
     if (profileError) {
@@ -1065,92 +1065,17 @@ const App: React.FC = () => {
       setActiveTab('home'); // Explicitly navigate to home view
   };
 
-  // --- OFFERS HANDLERS ---
+  // --- OFFERS HANDLERS (REMOVED) ---
   const handleAddOffer = async (newOffer: Offer) => {
-    // Ensure expiry is null if empty string
-    const expiryValue = newOffer.expiry && newOffer.expiry.trim() !== '' ? newOffer.expiry : null;
-
-    const payload = {
-        partner_name: newOffer.partnerName,
-        partner_color: newOffer.partnerColor,
-        partner_icon: newOffer.partnerIcon,
-        discount: newOffer.discount,
-        title: newOffer.title,
-        description: newOffer.description,
-        category: newOffer.category,
-        code: newOffer.code,
-        link: newOffer.link,
-        expiry_text: expiryValue,
-        is_exclusive: newOffer.isExclusive,
-        is_featured: newOffer.isFeatured,
-    };
-    
-    console.log('ADD OFFER PAYLOAD:', payload);
-
-    const { error } = await supabase
-        .from('offers')
-        .insert(payload);
-
-    if (error) {
-        console.error('Error adding offer:', error);
-        showError(`Erro ao adicionar oferta: ${error.message}`);
-        return;
-    }
-    
-    showSuccess('Oferta adicionada!');
-    loadNewsAndOffers();
+    showError('Funcionalidade de Ofertas desativada.');
   };
 
   const handleUpdateOffer = async (updatedOffer: Offer) => {
-    // Ensure expiry is null if empty string
-    const expiryValue = updatedOffer.expiry && updatedOffer.expiry.trim() !== '' ? updatedOffer.expiry : null;
-
-    const payload = {
-        partner_name: updatedOffer.partnerName,
-        partner_color: updatedOffer.partnerColor,
-        partner_icon: updatedOffer.partnerIcon,
-        discount: updatedOffer.discount,
-        title: updatedOffer.title,
-        description: updatedOffer.description,
-        category: updatedOffer.category,
-        code: updatedOffer.code,
-        link: updatedOffer.link,
-        expiry_text: expiryValue,
-        is_exclusive: updatedOffer.isExclusive,
-        is_featured: updatedOffer.isFeatured,
-    };
-    
-    console.log('UPDATE OFFER PAYLOAD:', payload);
-
-    const { error } = await supabase
-        .from('offers')
-        .update(payload)
-        .eq('id', updatedOffer.id);
-
-    if (error) {
-        console.error('Error updating offer:', error);
-        showError(`Erro ao atualizar oferta: ${error.message}`);
-        return;
-    }
-    
-    showSuccess('Oferta atualizada!');
-    loadNewsAndOffers();
+    showError('Funcionalidade de Ofertas desativada.');
   };
 
   const handleDeleteOffer = async (id: number) => {
-    const { error } = await supabase
-        .from('offers')
-        .delete()
-        .eq('id', id);
-
-    if (error) {
-        console.error('Error deleting offer:', error);
-        showError('Erro ao excluir oferta.');
-        return;
-    }
-    
-    showSuccess('Oferta excluída.');
-    loadNewsAndOffers();
+    showError('Funcionalidade de Ofertas desativada.');
   };
 
   // --- NEWS HANDLERS ---
@@ -1265,7 +1190,7 @@ const App: React.FC = () => {
           text: item.text,
           type: item.type,
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          expires_at: expiresAtAtValue, 
+          expires_at: expiresAtValue, 
           active: item.active,
       };
       

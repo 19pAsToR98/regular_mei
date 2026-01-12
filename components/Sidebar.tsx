@@ -9,7 +9,7 @@ const navItems: NavItem[] = [
   { id: 'cnpj', label: 'Meu CNPJ', icon: 'business', href: '#' },
   { id: 'tools', label: 'Ferramentas', icon: 'build', href: '#' },
   { id: 'news', label: 'Notícias', icon: 'article', href: '#' },
-  { id: 'offers', label: 'Ofertas', icon: 'local_offer', href: '#' },
+  { id: 'offers', label: 'Produtos', icon: 'local_offer', href: '#' }, // RENOMEADO
   // { id: 'admin', label: 'Admin', icon: 'admin_panel_settings', href: '#' }, // REMOVIDO
 ];
 
