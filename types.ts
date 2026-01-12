@@ -176,6 +176,7 @@ export interface User {
   isSetupComplete: boolean;
   receiveWeeklySummary?: boolean; // NEW FIELD
   cnpjData?: CNPJResponse | null; // NEW FIELD: Store detailed CNPJ data as JSONB
+  fiscalSummary?: FiscalData | null; // NEW FIELD: Store fiscal summary
   // Admin Fields
   role?: 'admin' | 'user';
   status?: 'active' | 'inactive' | 'suspended';

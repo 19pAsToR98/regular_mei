@@ -290,6 +290,7 @@ const App: React.FC = () => {
           lastActive: p.last_active,
           receiveWeeklySummary: p.receive_weekly_summary ?? true,
           cnpjData: p.cnpj_data, // NEW: Load CNPJ data
+          fiscalSummary: p.fiscal_summary, // NEW: Load fiscal summary
       }));
       setAllUsers(mappedUsers);
   };
@@ -536,31 +537,6 @@ const App: React.FC = () => {
     }
   };
 
-  const loadAllUserData = async (userId: string, userRole: 'admin' | 'user') => {
-      
-      const promises = [
-          loadTransactions(userId),
-          loadAppointments(userId),
-          loadUserCategories(userId), // Load user-specific categories
-          loadNewsAndOffers(),
-          loadNotifications(userId), // Pass userId to load interactions
-          loadConnectionConfig() // Load connection config unconditionally
-      ];
-
-      if (userRole === 'admin') {
-          promises.push(loadAllUsers() as any);
-      }
-
-      const [trans, appts] = await Promise.all(promises);
-
-      setTransactions(trans as Transaction[]);
-      setAppointments(appts as Appointment[]);
-      setLoadingAuth(false);
-      
-      // Call updateLastActive after all data is loaded and user is confirmed active
-      updateLastActive(userId); 
-  };
-
   const loadUserProfile = async (supabaseUser: any) => {
     // Optimization: Check if the user is already fully loaded and set up based on the ref
     if (userRef.current && userRef.current.id === supabaseUser.id && userRef.current.isSetupComplete) {
@@ -605,10 +581,12 @@ const App: React.FC = () => {
         lastActive: profileData.last_active, // Keep existing last_active from DB
         receiveWeeklySummary: profileData.receive_weekly_summary ?? true,
         cnpjData: profileData.cnpj_data, // NEW: Load CNPJ data
+        fiscalSummary: profileData.fiscal_summary, // NEW: Load fiscal summary
     };
 
     setUser(appUser);
     setCnpj(appUser.cnpj || '');
+    setFiscalData(appUser.fiscalSummary || null); // Initialize fiscal data from profile
     
     if (appUser.isSetupComplete) {
         loadAllUserData(appUser.id, appUser.role || 'user');
@@ -886,7 +864,8 @@ const App: React.FC = () => {
               role: updatedUser.role,
               status: updatedUser.status,
               receive_weekly_summary: updatedUser.receiveWeeklySummary,
-              cnpj_data: updatedUser.cnpjData // NEW: Update CNPJ data
+              cnpj_data: updatedUser.cnpjData, // NEW: Update CNPJ data
+              fiscal_summary: updatedUser.fiscalSummary, // NEW: Update fiscal summary
           })
           .eq('id', updatedUser.id);
 
@@ -1286,7 +1265,7 @@ const App: React.FC = () => {
           text: item.text,
           type: item.type,
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          expires_at: expiresAtValue, 
+          expires_at: expiresAtAtValue, 
           active: item.active,
       };
       
@@ -1720,6 +1699,51 @@ const App: React.FC = () => {
     // Optimistic update + reload to ensure consistency
     loadUserCategories(user.id);
   };
+  
+  // --- CNPJ/FISCAL DATA HANDLERS (NEW PERSISTENCE LOGIC) ---
+  
+  const handleUpdateCnpjData = async (data: CNPJResponse) => {
+      if (!user) return;
+      
+      const { error } = await supabase
+          .from('profiles')
+          .update({ cnpj_data: data })
+          .eq('id', user.id);
+
+      if (error) {
+          console.error('Error updating CNPJ data:', error);
+          showError('Erro ao salvar dados cadastrais do CNPJ.');
+          return;
+      }
+      
+      // Update local user state
+      setUser(prev => prev ? { ...prev, cnpjData: data } : null);
+      showSuccess('Dados cadastrais atualizados!');
+  };
+
+  const handleUpdateFiscalData = async (data: FiscalData) => {
+      if (!user) return;
+      
+      // 1. Update local state first
+      setFiscalData(data);
+      
+      // 2. Persist to Supabase
+      const { error } = await supabase
+          .from('profiles')
+          .update({ fiscal_summary: data })
+          .eq('id', user.id);
+
+      if (error) {
+          console.error('Error updating fiscal summary:', error);
+          showError('Erro ao salvar diagnóstico fiscal.');
+          return;
+      }
+      
+      // Update local user state
+      setUser(prev => prev ? { ...prev, fiscalSummary: data } : null);
+      showSuccess('Diagnóstico fiscal atualizado!');
+  };
+
 
   // --- RENDER LOGIC ---
   
@@ -1994,7 +2018,15 @@ const App: React.FC = () => {
                 onDeleteAppointment={handleDeleteAppointment}
                 userId={user.id}
             />;
-          case 'cnpj': return <CNPJPage cnpj={cnpj} fiscalData={fiscalData} onUpdateFiscalData={setFiscalData} connectionConfig={connectionConfig} cnpjData={user?.cnpjData} />;
+          case 'cnpj': 
+            return <CNPJPage 
+                cnpj={cnpj} 
+                fiscalData={fiscalData} 
+                onUpdateFiscalData={handleUpdateFiscalData} 
+                onUpdateCnpjData={handleUpdateCnpjData} // NEW PROP
+                connectionConfig={connectionConfig} 
+                cnpjData={user?.cnpjData} 
+            />;
           case 'tools': return <ToolsPage user={user} />;
           case 'news': return <NewsPage news={news} readingId={readingNewsId} onSelectNews={(id) => setReadingNewsId(id)} />;
           case 'offers': return <OffersPage offers={offers} />;

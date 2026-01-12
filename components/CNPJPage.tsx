@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CNPJResponse, DasItem, DasnItem, Mei360Response, FiscalData, ServiceCTA, ConnectionConfig } from '../types';
+import { CNPJResponse, DasItem, DasnItem, FiscalData, ServiceCTA, ConnectionConfig } from '../types';
+import { showSuccess, showError } from '../utils/toastUtils';
 
 interface CNPJPageProps {
   cnpj?: string;
   fiscalData: FiscalData | null;
   onUpdateFiscalData: (data: FiscalData) => void;
-  connectionConfig: ConnectionConfig; // ADICIONADO
-  cnpjData?: CNPJResponse | null; // NEW PROP
+  onUpdateCnpjData: (data: CNPJResponse) => void; // <--- NEW PROP
+  connectionConfig: ConnectionConfig;
+  cnpjData?: CNPJResponse | null;
 }
 
 // Redefining servicesData locally for CNPJPage to function independently
@@ -55,7 +57,68 @@ const servicesData: ServiceCTA[] = [
   }
 ];
 
-const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalData, connectionConfig, cnpjData }) => {
+// --- HOLIDAY CALCULATION HELPERS (Copied from Reminders.tsx for DAS calculation) ---
+const getEasterDate = (year: number): Date => {
+    const a = year % 19;
+    const b = Math.floor(year / 100);
+    const c = year % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(year, month, day);
+};
+
+const getBrazilianHolidays = (year: number) => {
+    const easter = getEasterDate(year);
+    const carnival = new Date(easter); carnival.setDate(easter.getDate() - 47);
+    const goodFriday = new Date(easter); goodFriday.setDate(easter.getDate() - 2);
+    const corpusChristi = new Date(easter); corpusChristi.setDate(easter.getDate() + 60);
+
+    return [
+        new Date(year, 0, 1),
+        carnival,
+        goodFriday,
+        easter,
+        new Date(year, 3, 21),
+        new Date(year, 4, 1),
+        corpusChristi,
+        new Date(year, 8, 7),
+        new Date(year, 9, 12),
+        new Date(year, 10, 2),
+        new Date(year, 10, 15),
+        new Date(year, 11, 25),
+    ];
+};
+
+const isHolidayOrWeekend = (date: Date): boolean => {
+    const day = date.getDay();
+    if (day === 0 || day === 6) return true; // Sunday or Saturday
+    
+    const holidays = getBrazilianHolidays(date.getFullYear());
+    return holidays.some(h => 
+        h.getDate() === date.getDate() && h.getMonth() === date.getMonth()
+    );
+};
+
+const getNextBusinessDay = (date: Date): Date => {
+    let checkDate = new Date(date);
+    while (isHolidayOrWeekend(checkDate)) {
+        checkDate.setDate(checkDate.getDate() + 1);
+    }
+    return checkDate;
+};
+// --- END HOLIDAY HELPERS ---
+
+
+const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalData, onUpdateCnpjData, connectionConfig, cnpjData }) => {
   // --- DADOS CADASTRAIS STATE ---
   const [loadingData, setLoadingData] = useState(false);
   const [lastUpdateData, setLastUpdateData] = useState('');
@@ -214,6 +277,7 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
         const data: CNPJResponse = json;
         
         processCompanyResult(data, cleanCnpj);
+        onUpdateCnpjData(data); // <--- PERSIST RAW DATA
 
         const now = new Date();
         setLastUpdateData(`${now.toLocaleDateString()} às ${now.toLocaleTimeString().slice(0, 5)}`);
@@ -497,7 +561,7 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
             isEstimated
         };
 
-        onUpdateFiscalData(finalData);
+        onUpdateFiscalData(finalData); // <--- PERSIST FISCAL SUMMARY
         // Save to cache
         localStorage.setItem(`fiscal_cache_${cleanCnpj}`, JSON.stringify(finalData));
         addLog("Resultados salvos localmente.");
