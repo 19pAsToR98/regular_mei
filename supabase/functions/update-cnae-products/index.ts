@@ -19,13 +19,18 @@ serve(async (req) => {
       return authResult.response!;
   }
   
-  try {
-    const { products } = await req.json();
+  let products: any[] = [];
 
-    if (!Array.isArray(products) || products.length === 0) {
-        // Se o array estiver vazio, ainda excluímos o catálogo, mas não inserimos nada.
-        console.warn("[update-cnae-products] Received empty products array. Will clear existing catalog.");
-    }
+  try {
+    // Tenta ler o corpo da requisição JSON
+    const body = await req.json();
+    products = body.products || [];
+  } catch (e) {
+    // Se falhar ao ler o JSON (ex: corpo vazio), loga e continua com products = []
+    console.warn("[update-cnae-products] Failed to parse JSON body. Assuming empty products array.", e);
+  }
+  
+  try {
     
     // Initialize Supabase client with Service Role Key (Admin access)
     const supabaseAdmin = createClient(
@@ -38,7 +43,7 @@ serve(async (req) => {
     const { error: deleteError } = await supabaseAdmin
         .from('cnae_products')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows (using a dummy condition that is always true)
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
 
     if (deleteError) {
         console.error('[update-cnae-products] Delete error:', deleteError);
