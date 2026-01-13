@@ -569,9 +569,11 @@ const App: React.FC = () => {
     
     setLoadingAuth(true);
     
+    // FIX: Adicionando filtro pelo ID do usuário autenticado para garantir que apenas 1 perfil seja retornado.
     const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
+        .eq('id', supabaseUser.id) // <-- CORREÇÃO AQUI
         .single();
 
     if (profileError) {
@@ -621,6 +623,7 @@ const App: React.FC = () => {
     setFiscalData(appUser.fiscalSummary || null); // Initialize fiscal data from profile
     
     if (appUser.isSetupComplete) {
+        console.log('[loadUserProfile] Setup complete. Loading user data.');
         loadAllUserData(appUser.id, appUser.role || 'user');
     } else {
         console.log('[loadUserProfile] Setup not complete. Showing onboarding.');
