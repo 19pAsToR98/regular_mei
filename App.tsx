@@ -178,6 +178,7 @@ const App: React.FC = () => {
     assistantWebhookUrl: 'https://n8nauto.portalmei360.com/webhook-test/d5c69353-a50b-471b-b518-919af0ced726', // NEW DEFAULT URL
     assistantGifUrl: undefined, // NEW FIELD
     assistantIconSize: 'w-12 h-12', // NEW FIELD
+    productRedirectWebhookUrl: 'https://n8nwebhook.portalmei360.com/webhook-test/product-redirect-placeholder', // NEW FIELD
   });
   
   // --- QUICK ADD MODAL STATE ---
@@ -286,7 +287,7 @@ const App: React.FC = () => {
           phone: p.phone,
           cnpj: p.cnpj,
           isSetupComplete: p.is_setup_complete,
-          role: p.role as 'admin' | 'user',
+          role: (p.role || 'user') as 'admin' | 'user',
           status: p.status as 'active' | 'inactive' | 'suspended',
           joinedAt: p.joined_at,
           lastActive: p.last_active,
@@ -591,7 +592,7 @@ const App: React.FC = () => {
         phone: profileData.phone,
         cnpj: profileData.cnpj,
         isSetupComplete: profileData.is_setup_complete,
-        role: profileData.role as 'admin' | 'user',
+        role: (profileData.role || 'user') as 'admin' | 'user', // FIX: Ensure role is a string, defaulting to 'user'
         status: profileData.status as 'active' | 'inactive' | 'suspended',
         joinedAt: profileData.joined_at,
         lastActive: profileData.last_active, // Keep existing last_active from DB
