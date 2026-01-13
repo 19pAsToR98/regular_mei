@@ -15,8 +15,11 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
   // Extrai o CNAE principal do usuário
   const userCnae = useMemo(() => {
     // CNAE está aninhado em cnpjData.estabelecimento.atividade_principal.id
-    return user.cnpjData?.estabelecimento?.atividade_principal?.id || user.cnpj;
-  }, [user.cnpjData, user.cnpj]);
+    // Usamos o CNAE principal (9 dígitos)
+    const fullCnae = user.cnpjData?.estabelecimento?.atividade_principal?.id;
+    // Retorna o CNAE completo (ex: 4751201) ou null
+    return fullCnae || null;
+  }, [user.cnpjData]);
   
   const cnaeDescription = useMemo(() => {
     return user.cnpjData?.estabelecimento?.atividade_principal?.descricao || 'seu negócio';
@@ -52,7 +55,8 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
           description: p.description,
           link: p.link,
           imageUrl: p.image_url,
-          currentPrice: parseFloat(p.current_price),
+          // Conversão robusta: garante que o valor seja um número, mesmo que venha como string
+          currentPrice: parseFloat(p.current_price as string) || 0, 
           freeShipping: p.free_shipping,
           unitsSold: p.units_sold,
           isFull: p.is_full,
