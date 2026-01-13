@@ -87,7 +87,7 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
   }, [userCnae]);
   
   const handleProductClick = async (product: CnaeProduct) => {
-      console.log("[ProductRedirect] Iniciando clique no produto:", product.productName);
+      // console.log("[ProductRedirect] Iniciando clique no produto:", product.productName); // LOG REMOVIDO
       
       if (!productRedirectWebhookUrl || productRedirectWebhookUrl.includes('placeholder')) {
           const msg = "Erro: URL do Webhook de Redirecionamento não configurada no Admin.";
@@ -128,8 +128,8 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
               productName: product.productName,
           };
           
-          console.log("[ProductRedirect] Chamando Webhook:", productRedirectWebhookUrl);
-          console.log("[ProductRedirect] Payload enviado:", payload);
+          // console.log("[ProductRedirect] Chamando Webhook:", productRedirectWebhookUrl); // LOG REMOVIDO
+          // console.log("[ProductRedirect] Payload enviado:", payload); // LOG REMOVIDO
 
           const fetchPromise = fetch(productRedirectWebhookUrl, {
               method: 'POST',
@@ -158,10 +158,10 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
               throw new Error(`Resposta inválida do webhook: ${rawText.substring(0, 50)}...`);
           }
           
-          console.log("[ProductRedirect] Resposta Bruta do Webhook:", data);
+          // console.log("[ProductRedirect] Resposta Bruta do Webhook:", data); // LOG REMOVIDO
           
           if (!response.ok) {
-              console.error("[ProductRedirect] Erro HTTP:", response.status, data);
+              // console.error("[ProductRedirect] Erro HTTP:", response.status, data); // LOG REMOVIDO
               throw new Error(data.error || `Falha na chamada HTTP: ${response.status}`);
           }
           
@@ -174,15 +174,15 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
           }
           
           if (!extractedLink) {
-              console.error("[ProductRedirect] Resposta do Webhook inválida: link final ausente no formato esperado.", data);
+              // console.error("[ProductRedirect] Resposta do Webhook inválida: link final ausente no formato esperado.", data); // LOG REMOVIDO
               throw new Error('Webhook retornou um link inválido (short_url ausente).');
           }
           
           finalLink = extractedLink; // Atualiza o link final
-          console.log("[ProductRedirect] Link final extraído:", finalLink);
+          // console.log("[ProductRedirect] Link final extraído:", finalLink); // LOG REMOVIDO
           
       } catch (e: any) {
-          console.error("[ProductRedirect] Erro/Timeout capturado:", e.message);
+          // console.error("[ProductRedirect] Erro/Timeout capturado:", e.message); // LOG REMOVIDO
           
           // Se houver erro (incluindo timeout), o finalLink permanece como o link original (fallback)
           showError(`Falha ao aplicar desconto/rastreamento. Redirecionando para o link original.`);
