@@ -167,9 +167,10 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
           
           // --- EXTRAÇÃO DO LINK FINAL (CORRIGIDO) ---
           let extractedLink = null;
-          // Verifica se é um array e se o caminho aninhado existe
-          if (Array.isArray(data) && data.length > 0 && data[0].urls && data[0].urls.length > 0) {
-              extractedLink = data[0].urls[0].short_url;
+          
+          // A resposta é um objeto que contém a chave 'urls' que é um array.
+          if (data && data.urls && Array.isArray(data.urls) && data.urls.length > 0) {
+              extractedLink = data.urls[0].short_url;
           }
           
           if (!extractedLink) {
