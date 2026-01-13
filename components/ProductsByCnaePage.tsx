@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { CnaeProduct, User } from '../types';
 import { supabase } from '../src/integrations/supabase/client';
 import { showError, showLoading, dismissToast } from '../utils/toastUtils'; // Importando toasts
@@ -34,57 +34,56 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
     return user.cnpjData?.estabelecimento?.atividade_principal?.descricao || 'seu negócio';
   }, [user.cnpjData]);
   
-  // Removendo o useMemo para productRedirectWebhookUrl, pois agora vem via props.
-
-  useEffect(() => {
+  // Função de busca de produtos (memoizada para ser usada no useEffect e no botão)
+  const fetchProducts = useCallback(async () => {
     if (!userCnae) {
       setError("Seu CNAE não está cadastrado. Por favor, complete seu perfil.");
       setLoading(false);
       return;
     }
 
-    const fetchProducts = async () => {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
-      try {
-        // 1. Consulta a tabela cnae_products filtrando pelo CNAE do usuário
-        const { data, error } = await supabase
-          .from('cnae_products')
-          .select('*')
-          .eq('cnae_code', userCnae)
-          .order('updated_at', { ascending: false });
+    try {
+      // 1. Consulta a tabela cnae_products filtrando pelo CNAE do usuário
+      const { data, error } = await supabase
+        .from('cnae_products')
+        .select('*')
+        .eq('cnae_code', userCnae)
+        .order('updated_at', { ascending: false });
 
-        if (error) {
-          throw error;
-        }
-
-        const mappedProducts: CnaeProduct[] = data.map(p => ({
-          id: p.id,
-          cnaeCode: p.cnae_code,
-          productName: p.product_name,
-          description: p.description,
-          link: p.link,
-          imageUrl: p.image_url,
-          // Conversão robusta: garante que o valor seja um número, mesmo que venha como string
-          currentPrice: parseFloat(p.current_price as string) || 0, 
-          freeShipping: p.free_shipping,
-          unitsSold: p.units_sold,
-          isFull: p.is_full,
-          partnerName: p.partner_name,
-          updatedAt: p.updated_at,
-        }));
-
-        setProducts(mappedProducts);
-      } catch (e: any) {
-        setError("Falha ao carregar produtos. Tente novamente mais tarde.");
-      } finally {
-        setLoading(false);
+      if (error) {
+        throw error;
       }
-    };
 
-    fetchProducts();
+      const mappedProducts: CnaeProduct[] = data.map(p => ({
+        id: p.id,
+        cnaeCode: p.cnae_code,
+        productName: p.product_name,
+        description: p.description,
+        link: p.link,
+        imageUrl: p.image_url,
+        // Conversão robusta: garante que o valor seja um número, mesmo que venha como string
+        currentPrice: parseFloat(p.current_price as string) || 0, 
+        freeShipping: p.free_shipping,
+        unitsSold: p.units_sold,
+        isFull: p.is_full,
+        partnerName: p.partner_name,
+        updatedAt: p.updated_at,
+      }));
+
+      setProducts(mappedProducts);
+    } catch (e: any) {
+      setError("Falha ao carregar produtos. Tente novamente mais tarde.");
+    } finally {
+      setLoading(false);
+    }
   }, [userCnae]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
   
   const handleProductClick = async (product: CnaeProduct) => {
       // console.log("[ProductRedirect] Iniciando clique no produto:", product.productName); // LOG REMOVIDO
@@ -267,12 +266,28 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-8">
-      <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
-        Produtos Recomendados
-      </h2>
-      <p className="text-slate-500 dark:text-slate-400 max-w-3xl">
-        Encontramos produtos e serviços essenciais para o seu tipo de negócio ({cnaeDescription}) em grandes marketplaces.
-      </p>
+      
+      {/* Header and Controls */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
+                Produtos Recomendados
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 max-w-3xl text-sm">
+                Encontramos produtos e serviços essenciais para o seu tipo de negócio ({cnaeDescription}) em grandes marketplaces.
+            </p>
+        </div>
+        
+        {/* Reload Button */}
+        <button 
+            onClick={fetchProducts}
+            disabled={loading}
+            className="bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2 text-sm flex-shrink-0"
+        >
+            <span className={`material-icons text-lg ${loading ? 'animate-spin' : ''}`}>refresh</span>
+            {loading ? 'Atualizando...' : 'Recarregar Produtos'}
+        </button>
+      </div>
 
       {loading && (
         <div className="flex items-center justify-center p-12 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
@@ -285,6 +300,9 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
         <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-xl text-red-700 dark:text-red-300">
           <p className="font-bold">Erro:</p>
           <p>{error}</p>
+          <button onClick={fetchProducts} className="mt-3 text-sm font-bold text-red-600 hover:underline flex items-center gap-1">
+             <span className="material-icons text-sm">refresh</span> Tentar Novamente
+          </button>
         </div>
       )}
 
