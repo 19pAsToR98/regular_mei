@@ -26,6 +26,9 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
   }, [user.cnpjData]);
 
   useEffect(() => {
+    console.log("[ProductsByCnaePage] Início do useEffect.");
+    console.log("[ProductsByCnaePage] userCnae detectado:", userCnae);
+
     if (!userCnae) {
       setError("Seu CNAE não está cadastrado. Por favor, complete seu perfil.");
       setLoading(false);
@@ -37,6 +40,8 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
       setError(null);
 
       try {
+        console.log(`[ProductsByCnaePage] Consultando produtos para CNAE: ${userCnae}`);
+        
         // 1. Consulta a tabela cnae_products filtrando pelo CNAE do usuário
         const { data, error } = await supabase
           .from('cnae_products')
@@ -45,7 +50,13 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
           .order('updated_at', { ascending: false });
 
         if (error) {
+          console.error("[ProductsByCnaePage] Erro na consulta Supabase:", error);
           throw error;
+        }
+        
+        console.log(`[ProductsByCnaePage] Dados recebidos: ${data.length} produtos.`);
+        if (data.length > 0) {
+            console.log("[ProductsByCnaePage] Primeiro item recebido:", data[0]);
         }
 
         const mappedProducts: CnaeProduct[] = data.map(p => ({
@@ -66,7 +77,7 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
 
         setProducts(mappedProducts);
       } catch (e: any) {
-        console.error("Error fetching products:", e);
+        console.error("[ProductsByCnaePage] Falha geral ao buscar produtos:", e);
         setError("Falha ao carregar produtos. Tente novamente mais tarde.");
       } finally {
         setLoading(false);
