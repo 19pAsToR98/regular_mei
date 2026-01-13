@@ -11,6 +11,7 @@ interface ProductRedirectModalProps {
 const ProductRedirectModal: React.FC<ProductRedirectModalProps> = ({ isOpen, productName, redirectLink, imageUrl, onClose }) => {
   
   useEffect(() => {
+    // Se o modal estiver aberto E o link final for fornecido (após a chamada do webhook)
     if (isOpen && redirectLink) {
       // Tempo de simulação de processamento (1.5 segundos)
       const timer = setTimeout(() => {
@@ -27,6 +28,9 @@ const ProductRedirectModal: React.FC<ProductRedirectModalProps> = ({ isOpen, pro
 
   if (!isOpen) return null;
 
+  // Se o link final ainda não foi recebido, mostramos o spinner.
+  const isProcessing = !redirectLink;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
@@ -42,14 +46,14 @@ const ProductRedirectModal: React.FC<ProductRedirectModalProps> = ({ isOpen, pro
 
           {/* Loading Spinner */}
           <div className="relative w-16 h-16 mb-6">
-            <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <div className={`absolute inset-0 border-4 border-primary border-t-transparent rounded-full ${isProcessing ? 'animate-spin' : 'animate-none'}`}></div>
             <div className="absolute inset-0 flex items-center justify-center">
                 <span className="material-icons text-2xl text-primary">shopping_cart</span>
             </div>
           </div>
           
           <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
-            Aplicando Descontos...
+            {isProcessing ? 'Aplicando Descontos...' : 'Redirecionando...'}
           </h3>
           
           <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">

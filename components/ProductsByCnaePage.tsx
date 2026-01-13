@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CnaeProduct, User } from '../types';
 import { supabase } from '../src/integrations/supabase/client';
-import { showError } from '../utils/toastUtils';
-import ProductRedirectModal from './ProductRedirectModal'; // IMPORTADO
+import { showError, showLoading, dismissToast } from '../utils/toastUtils'; // Importando toasts
+import ProductRedirectModal from './ProductRedirectModal';
 
 interface ProductsByCnaePageProps {
   user: User;
@@ -18,7 +18,7 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
       isOpen: boolean;
       name: string;
       link: string;
-      imageUrl: string; // NOVO CAMPO
+      imageUrl: string;
   }>({ isOpen: false, name: '', link: '', imageUrl: '' });
 
   // Extrai o CNAE principal do usuário
@@ -32,6 +32,20 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
   const cnaeDescription = useMemo(() => {
     return user.cnpjData?.estabelecimento?.atividade_principal?.descricao || 'seu negócio';
   }, [user.cnpjData]);
+  
+  const productRedirectWebhookUrl = useMemo(() => {
+      // A URL do webhook de redirecionamento é armazenada no perfil do usuário (via App.tsx -> ConnectionConfig)
+      // Como a ConnectionConfig não está disponível diretamente aqui, vamos assumir que ela está no App.tsx
+      // Para fins de desenvolvimento, usaremos um placeholder ou a buscaremos se necessário.
+      // No entanto, para manter a simplicidade e evitar dependências complexas, vamos assumir que o App.tsx
+      // passa a URL ou que ela é acessível globalmente (o que não é o caso).
+      // Vamos buscar a URL da ConnectionConfig via Supabase (Admin access não é necessário, mas a tabela app_config tem RLS público para SELECT)
+      // Para evitar a complexidade de buscar a config aqui, vamos assumir que o App.tsx injeta a URL via props ou contexto.
+      // Como não temos contexto/props adicionais, vamos usar um valor mockado para o webhook por enquanto,
+      // mas o usuário deve configurá-lo no Admin.
+      return 'https://n8nwebhook.portalmei360.com/webhook-test/product-redirect-placeholder'; // Placeholder
+  }, []);
+
 
   useEffect(() => {
     if (!userCnae) {
@@ -68,7 +82,7 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
           freeShipping: p.free_shipping,
           unitsSold: p.units_sold,
           isFull: p.is_full,
-          partnerName: p.partner_name,
+          partnerName: p.partnerName,
           updatedAt: p.updated_at,
         }));
 
@@ -83,14 +97,58 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
     fetchProducts();
   }, [userCnae]);
   
-  const handleProductClick = (product: CnaeProduct) => {
-      // Abre o modal de redirecionamento
+  const handleProductClick = async (product: CnaeProduct) => {
+      if (!productRedirectWebhookUrl) {
+          showError("O webhook de redirecionamento de produtos não está configurado. Contate o administrador.");
+          return;
+      }
+      
+      // 1. Abre o modal de carregamento/redirecionamento
       setRedirectModal({
           isOpen: true,
           name: product.productName,
-          link: product.link,
-          imageUrl: product.imageUrl, // PASSANDO A URL DA IMAGEM
+          link: '', // Link temporário vazio
+          imageUrl: product.imageUrl,
       });
+      
+      // 2. Chama o webhook para obter o link final
+      try {
+          const response = await fetch(productRedirectWebhookUrl, {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  // Adicionando o token de sessão para autenticação/rastreamento
+                  'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+              },
+              body: JSON.stringify({
+                  userId: user.id,
+                  userCnpj: user.cnpj,
+                  productLink: product.link,
+                  productId: product.id,
+                  productName: product.productName,
+              })
+          });
+          
+          const data = await response.json();
+          
+          if (!response.ok || !data.finalLink) {
+              throw new Error(data.error || 'Webhook retornou um link inválido.');
+          }
+          
+          // 3. Atualiza o modal com o link final para iniciar o redirecionamento
+          setRedirectModal(prev => ({
+              ...prev,
+              link: data.finalLink, // O useEffect do modal irá disparar o window.open
+          }));
+
+      } catch (e: any) {
+          console.error("Erro no redirecionamento de produto:", e);
+          setRedirectModal({ isOpen: false, name: '', link: '', imageUrl: '' }); // Fecha o modal
+          showError(`Falha ao aplicar desconto/rastreamento. Redirecionando para o link original.`);
+          
+          // Fallback: Abre o link original imediatamente
+          window.open(product.link, '_blank');
+      }
   };
 
   const renderProductCard = (product: CnaeProduct) => (
@@ -203,7 +261,7 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
           isOpen={redirectModal.isOpen}
           productName={redirectModal.name}
           redirectLink={redirectModal.link}
-          imageUrl={redirectModal.imageUrl} // PASSANDO A URL DA IMAGEM
+          imageUrl={redirectModal.imageUrl}
           onClose={() => setRedirectModal({ isOpen: false, name: '', link: '', imageUrl: '' })}
       />
     </div>

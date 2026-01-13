@@ -108,6 +108,7 @@ export interface ConnectionConfig {
   assistantWebhookUrl: string; // NEW: URL do webhook do assistente
   assistantGifUrl?: string; // NEW: URL do GIF do assistente
   assistantIconSize?: string; // NEW: Tamanho do ícone (ex: 'w-12 h-12')
+  productRedirectWebhookUrl: string; // NEW: URL do webhook para redirecionamento de produtos
 }
 
 export interface PollOption {

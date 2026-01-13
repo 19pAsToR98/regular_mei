@@ -123,17 +123,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
   
   // News Pagination
   const [newsPage, setNewsPage] = useState(1);
-  const newsPerPage = 5;
-
-  // --- OFFERS STATE (REMOVED) ---
-  // const initialOfferForm: Omit<Offer, 'id'> = {
-  //   partnerName: '', partnerColor: 'bg-blue-500', partnerIcon: 'store', discount: '',
-  //   title: '', description: '', category: 'Finanças', code: '', link: '',
-  //   expiry: '', isExclusive: false, isFeatured: false
-  // };
-  // const [offerForm, setOfferForm] = useState(initialOfferForm);
-  // const [editingOfferId, setEditingOfferId] = useState<number | null>(null);
-  // const [showIconPicker, setShowIconPicker] = useState(false);
+  newsPerPage = 5;
 
   // --- NOTIFICATIONS STATE ---
   const initialNotifForm: {
@@ -367,47 +357,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
   // Prepare content for preview (Quill output is already HTML)
   const previewContent = useMemo(() => newsForm.content, [newsForm.content]);
-
-  // --- OFFERS HANDLERS (REMOVED) ---
-  // const handleEditOfferClick = (e: React.MouseEvent, offer: Offer) => {
-  //   e.stopPropagation();
-  //   setEditingOfferId(offer.id);
-  //   setOfferForm({
-  //       partnerName: offer.partnerName, partnerColor: offer.partnerColor, partnerIcon: offer.partnerIcon,
-  //       discount: offer.discount, title: offer.title, description: offer.description, category: offer.category,
-  //       code: offer.code || '', link: offer.link || '', expiry: offer.expiry,
-  //       isExclusive: offer.isExclusive || false, isFeatured: offer.isFeatured || false
-  //   });
-  //   window.scrollTo({ top: 0, behavior: 'smooth' });
-  // };
-
-  // const handleCancelOfferEdit = () => {
-  //     setEditingOfferId(null);
-  //     setOfferForm(initialOfferForm);
-  // };
-
-  // const handleSaveOffer = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   setIsSubmitting(true);
-  //   await new Promise(r => setTimeout(r, 1000));
-
-  //   if (editingOfferId) {
-  //       onUpdateOffer({ id: editingOfferId, ...offerForm });
-  //   } else {
-  //       onAddOffer({ id: Date.now(), ...offerForm });
-  //   }
-  //   setIsSubmitting(false);
-  //   handleCancelOfferEdit();
-  // };
-
-  // const handleDeleteOfferClick = (e: React.MouseEvent, id: number) => {
-  //     e.stopPropagation();
-  //     e.preventDefault();
-  //     if(window.confirm('Tem certeza que deseja excluir esta oferta?')) {
-  //         onDeleteOffer(id);
-  //         if (editingOfferId === id) handleCancelOfferEdit();
-  //     }
-  // }
 
   // --- NOTIFICATION HANDLERS ---
   const handleAddPollOption = () => {
@@ -1120,7 +1069,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
           {/* News List */}
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm h-fit">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Gerenciar Notícias</h3>
+            <h3 className="font-bold text-slate-800 dark:text-white mb-4">Gerenciar Notícias</h3>
             <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
               {news.length === 0 ? (
                   <p className="text-slate-400 text-sm text-center py-4">Nenhuma notícia cadastrada.</p>
@@ -1464,6 +1413,27 @@ const AdminPage: React.FC<AdminPageProps> = ({
                           <button type="button" onClick={() => { setTestType('assistant'); setTestModalOpen(true); }} className="mt-2 text-sm font-medium text-primary hover:underline flex items-center gap-1">
                               <span className="material-icons text-sm">science</span> Testar Conexão
                           </button>
+                      </div>
+                  </div>
+                  
+                  {/* PRODUCT REDIRECT WEBHOOK (NEW SECTION) */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                          <span className="material-icons text-green-500">local_offer</span> Webhook de Redirecionamento de Produtos
+                      </h4>
+                      <div className="space-y-4">
+                          <div>
+                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">URL do Webhook de Redirecionamento</label>
+                              <input 
+                                  type="url" 
+                                  required
+                                  value={localConnConfig.productRedirectWebhookUrl} 
+                                  onChange={e => setLocalConnConfig({...localConnConfig, productRedirectWebhookUrl: e.target.value})}
+                                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 dark:bg-slate-800 text-sm"
+                                  placeholder="https://seu-webhook.com/product-redirect"
+                              />
+                              <p className="text-xs text-slate-500 mt-1">Este webhook deve receber o link original e retornar o link final (com rastreamento/desconto aplicado).</p>
+                          </div>
                       </div>
                   </div>
 
