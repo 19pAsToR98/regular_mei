@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { CnaeProduct, User } from '../types';
 import { supabase } from '../src/integrations/supabase/client';
 import { showError } from '../utils/toastUtils';
+import ProductRedirectModal from './ProductRedirectModal'; // IMPORTADO
 
 interface ProductsByCnaePageProps {
   user: User;
@@ -11,6 +12,13 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
   const [products, setProducts] = useState<CnaeProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Estado para o modal de redirecionamento
+  const [redirectModal, setRedirectModal] = useState<{
+      isOpen: boolean;
+      name: string;
+      link: string;
+  }>({ isOpen: false, name: '', link: '' });
 
   // Extrai o CNAE principal do usuário
   const userCnae = useMemo(() => {
@@ -73,14 +81,21 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
 
     fetchProducts();
   }, [userCnae]);
+  
+  const handleProductClick = (product: CnaeProduct) => {
+      // Abre o modal de redirecionamento
+      setRedirectModal({
+          isOpen: true,
+          name: product.productName,
+          link: product.link,
+      });
+  };
 
   const renderProductCard = (product: CnaeProduct) => (
-    <a 
+    <button 
       key={product.id}
-      href={product.link}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col h-full"
+      onClick={() => handleProductClick(product)} // Usa o handler para abrir o modal
+      className="group bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col h-full text-left"
     >
       {/* Image Container */}
       <div className="h-40 overflow-hidden relative bg-white">
@@ -142,7 +157,7 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
             </span>
         </div>
       </div>
-    </a>
+    </button>
   );
 
   return (
@@ -180,6 +195,14 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
           {products.map(renderProductCard)}
         </div>
       )}
+      
+      {/* Modal de Redirecionamento */}
+      <ProductRedirectModal
+          isOpen={redirectModal.isOpen}
+          productName={redirectModal.name}
+          redirectLink={redirectModal.link}
+          onClose={() => setRedirectModal({ isOpen: false, name: '', link: '' })}
+      />
     </div>
   );
 };
