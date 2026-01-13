@@ -123,7 +123,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
   
   // News Pagination
   const [newsPage, setNewsPage] = useState(1);
-  newsPerPage = 5;
+  const newsPerPage = 5; // <-- CORREÇÃO AQUI: Declarando a variável com 'const'
 
   // --- NOTIFICATIONS STATE ---
   const initialNotifForm: {
