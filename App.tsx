@@ -2008,7 +2008,11 @@ const App: React.FC = () => {
             />;
           case 'tools': return <ToolsPage user={user} />;
           case 'news': return <NewsPage news={news} readingId={readingNewsId} onSelectNews={(id) => setReadingNewsId(id)} />;
-          case 'offers': return <ProductsByCnaePage user={user} />; // SUBSTITUÍDO
+          case 'offers': 
+            return <ProductsByCnaePage 
+                user={user} 
+                productRedirectWebhookUrl={connectionConfig.productRedirectWebhookUrl} // PASSANDO A URL AQUI
+            />;
           case 'admin':
             return <AdminPage 
                 offers={offers}

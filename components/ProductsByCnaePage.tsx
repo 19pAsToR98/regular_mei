@@ -6,9 +6,10 @@ import ProductRedirectModal from './ProductRedirectModal';
 
 interface ProductsByCnaePageProps {
   user: User;
+  productRedirectWebhookUrl: string; // NOVO PROP
 }
 
-const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
+const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRedirectWebhookUrl }) => {
   const [products, setProducts] = useState<CnaeProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,19 +34,7 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
     return user.cnpjData?.estabelecimento?.atividade_principal?.descricao || 'seu negócio';
   }, [user.cnpjData]);
   
-  const productRedirectWebhookUrl = useMemo(() => {
-      // A URL do webhook de redirecionamento é armazenada no perfil do usuário (via App.tsx -> ConnectionConfig)
-      // Como a ConnectionConfig não está disponível diretamente aqui, vamos assumir que ela está no App.tsx
-      // Para fins de desenvolvimento, usaremos um placeholder ou a buscaremos se necessário.
-      // No entanto, para manter a simplicidade e evitar dependências complexas, vamos assumir que o App.tsx
-      // passa a URL ou que ela é acessível globalmente (o que não é o caso).
-      // Vamos buscar a URL da ConnectionConfig via Supabase (Admin access não é necessário, mas a tabela app_config tem RLS público para SELECT)
-      // Para evitar a complexidade de buscar a config aqui, vamos assumir que o App.tsx injeta a URL via props ou contexto.
-      // Como não temos contexto/props adicionais, vamos usar um valor mockado para o webhook por enquanto,
-      // mas o usuário deve configurá-lo no Admin.
-      return 'https://n8nwebhook.portalmei360.com/webhook-test/product-redirect-placeholder'; // Placeholder
-  }, []);
-
+  // Removendo o useMemo para productRedirectWebhookUrl, pois agora vem via props.
 
   useEffect(() => {
     if (!userCnae) {
@@ -82,7 +71,7 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
           freeShipping: p.free_shipping,
           unitsSold: p.units_sold,
           isFull: p.is_full,
-          partnerName: p.partnerName,
+          partnerName: p.partner_name,
           updatedAt: p.updated_at,
         }));
 
@@ -98,8 +87,12 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
   }, [userCnae]);
   
   const handleProductClick = async (product: CnaeProduct) => {
-      if (!productRedirectWebhookUrl) {
-          showError("O webhook de redirecionamento de produtos não está configurado. Contate o administrador.");
+      console.log("[ProductRedirect] Iniciando clique no produto:", product.productName);
+      
+      if (!productRedirectWebhookUrl || productRedirectWebhookUrl.includes('placeholder')) {
+          const msg = "Erro: URL do Webhook de Redirecionamento não configurada no Admin.";
+          console.error(`[ProductRedirect] ${msg}`);
+          showError(msg);
           return;
       }
       
@@ -120,20 +113,31 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
 
       // 3. Chama o webhook para obter o link final
       try {
+          const session = await supabase.auth.getSession();
+          const token = session.data.session?.access_token;
+          
+          if (!token) {
+              throw new Error("Token de autenticação não encontrado.");
+          }
+          
+          const payload = {
+              userId: user.id,
+              userCnpj: user.cnpj,
+              productLink: product.link,
+              productId: product.id,
+              productName: product.productName,
+          };
+          
+          console.log("[ProductRedirect] Chamando Webhook:", productRedirectWebhookUrl);
+          console.log("[ProductRedirect] Payload enviado:", payload);
+
           const fetchPromise = fetch(productRedirectWebhookUrl, {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/json',
-                  // Adicionando o token de sessão para autenticação/rastreamento
-                  'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+                  'Authorization': `Bearer ${token}`
               },
-              body: JSON.stringify({
-                  userId: user.id,
-                  userCnpj: user.cnpj,
-                  productLink: product.link,
-                  productId: product.id,
-                  productName: product.productName,
-              })
+              body: JSON.stringify(payload)
           });
           
           // Espera pela resposta do fetch ou pelo timeout
@@ -145,16 +149,25 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
 
           const data = await response.json();
           
-          if (!response.ok || !data.finalLink) {
-              throw new Error(data.error || 'Webhook retornou um link inválido.');
+          if (!response.ok) {
+              console.error("[ProductRedirect] Erro HTTP:", response.status, data);
+              throw new Error(data.error || `Falha na chamada HTTP: ${response.status}`);
+          }
+          
+          if (!data.finalLink) {
+              console.error("[ProductRedirect] Resposta do Webhook inválida:", data);
+              throw new Error('Webhook retornou um link inválido (finalLink ausente).');
           }
           
           finalLink = data.finalLink; // Atualiza o link final
+          console.log("[ProductRedirect] Link final recebido:", finalLink);
           
       } catch (e: any) {
-          console.error("Erro no redirecionamento de produto (usando fallback):", e.message);
+          console.error("[ProductRedirect] Erro/Timeout capturado:", e.message);
+          
           // Se houver erro (incluindo timeout), o finalLink permanece como o link original (fallback)
           showError(`Falha ao aplicar desconto/rastreamento. Redirecionando para o link original.`);
+          finalLink = product.link; // Garante que o fallback seja usado
       }
       
       // 4. Atualiza o modal com o link final (seja o retornado ou o fallback)
