@@ -91,12 +91,7 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
           className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-500 p-2"
         />
         
-        {/* Partner Name Overlay (Mantido na imagem, mas discreto) */}
-        {product.partnerName && (
-            <div className="absolute bottom-0 right-0 bg-black/50 backdrop-blur-sm text-white text-xs font-medium px-3 py-1 rounded-tl-lg">
-                Parceiro: {product.partnerName}
-            </div>
-        )}
+        {/* Partner Name Overlay (REMOVIDO) */}
       </div>
       
       {/* Content */}
@@ -112,6 +107,12 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
             {product.freeShipping && (
                 <span className="text-[10px] font-bold uppercase tracking-wider text-green-800 bg-green-100 px-2 py-1 rounded-md shadow-sm">
                     FRETE GRÁTIS
+                </span>
+            )}
+            {/* NEW: Display Partner Name as a badge if available */}
+            {product.partnerName && (
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 bg-slate-100 px-2 py-1 rounded-md shadow-sm">
+                    {product.partnerName}
                 </span>
             )}
         </div>
