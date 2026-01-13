@@ -111,9 +111,16 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
           imageUrl: product.imageUrl,
       });
       
-      // 2. Chama o webhook para obter o link final
+      let finalLink = product.link; // Fallback link
+      
+      // 2. Define o timeout de 10 segundos
+      const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Timeout de 10 segundos atingido.")), 10000)
+      );
+
+      // 3. Chama o webhook para obter o link final
       try {
-          const response = await fetch(productRedirectWebhookUrl, {
+          const fetchPromise = fetch(productRedirectWebhookUrl, {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/json',
@@ -129,26 +136,32 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
               })
           });
           
+          // Espera pela resposta do fetch ou pelo timeout
+          const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+          
+          if (response instanceof Error) {
+              throw response; // Propaga o erro de timeout
+          }
+
           const data = await response.json();
           
           if (!response.ok || !data.finalLink) {
               throw new Error(data.error || 'Webhook retornou um link inválido.');
           }
           
-          // 3. Atualiza o modal com o link final para iniciar o redirecionamento
-          setRedirectModal(prev => ({
-              ...prev,
-              link: data.finalLink, // O useEffect do modal irá disparar o window.open
-          }));
-
-      } catch (e: any) {
-          console.error("Erro no redirecionamento de produto:", e);
-          setRedirectModal({ isOpen: false, name: '', link: '', imageUrl: '' }); // Fecha o modal
-          showError(`Falha ao aplicar desconto/rastreamento. Redirecionando para o link original.`);
+          finalLink = data.finalLink; // Atualiza o link final
           
-          // Fallback: Abre o link original imediatamente
-          window.open(product.link, '_blank');
+      } catch (e: any) {
+          console.error("Erro no redirecionamento de produto (usando fallback):", e.message);
+          // Se houver erro (incluindo timeout), o finalLink permanece como o link original (fallback)
+          showError(`Falha ao aplicar desconto/rastreamento. Redirecionando para o link original.`);
       }
+      
+      // 4. Atualiza o modal com o link final (seja o retornado ou o fallback)
+      setRedirectModal(prev => ({
+          ...prev,
+          link: finalLink, // O useEffect do modal irá disparar o window.open
+      }));
   };
 
   const renderProductCard = (product: CnaeProduct) => (
