@@ -542,6 +542,7 @@ const App: React.FC = () => {
   
   // NEW: Function to load all user-specific data after login/onboarding
   const loadAllUserData = async (userId: string, userRole: 'admin' | 'user') => {
+    console.log('[loadAllUserData] Starting data load for user:', userId, 'Role:', userRole);
     setLoadingAuth(true);
     await Promise.all([
         loadTransactions(userId).then(setTransactions),
@@ -551,13 +552,17 @@ const App: React.FC = () => {
         // Only load all users if admin
         ...(userRole === 'admin' ? [loadAllUsers()] : []),
     ]);
+    console.log('[loadAllUserData] Data load complete.');
     setLoadingAuth(false);
   };
 
 
   const loadUserProfile = async (supabaseUser: any) => {
+    console.log('[loadUserProfile] Attempting to load profile for:', supabaseUser.email);
+    
     // Optimization: Check if the user is already fully loaded and set up based on the ref
     if (userRef.current && userRef.current.id === supabaseUser.id && userRef.current.isSetupComplete) {
+        console.log('[loadUserProfile] Profile already loaded and setup complete. Skipping full fetch.');
         setLoadingAuth(false);
         return;
     }
@@ -570,7 +575,7 @@ const App: React.FC = () => {
         .single();
 
     if (profileError) {
-        console.error('Error fetching profile:', profileError);
+        console.error('[loadUserProfile] Error fetching profile:', profileError);
         // Fallback to basic user data if profile fetch fails
         const appUser: User = {
             id: supabaseUser.id,
@@ -584,6 +589,8 @@ const App: React.FC = () => {
         setLoadingAuth(false);
         return;
     }
+    
+    console.log('[loadUserProfile] Raw Profile Data:', profileData);
 
     const appUser: User = {
         id: profileData.id,
@@ -600,6 +607,14 @@ const App: React.FC = () => {
         cnpjData: profileData.cnpj_data, // NEW: Load CNPJ data
         fiscalSummary: profileData.fiscal_summary, // NEW: Load fiscal summary
     };
+    
+    console.log('[loadUserProfile] Mapped App User:', {
+        id: appUser.id,
+        name: appUser.name,
+        role: appUser.role,
+        isSetupComplete: appUser.isSetupComplete,
+        cnpj: appUser.cnpj
+    });
 
     setUser(appUser);
     setCnpj(appUser.cnpj || '');
@@ -608,6 +623,7 @@ const App: React.FC = () => {
     if (appUser.isSetupComplete) {
         loadAllUserData(appUser.id, appUser.role || 'user');
     } else {
+        console.log('[loadUserProfile] Setup not complete. Showing onboarding.');
         setLoadingAuth(false);
     }
   };
@@ -733,6 +749,8 @@ const App: React.FC = () => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       const currentUser = userRef.current; 
       const isUserAlreadyLoaded = currentUser && currentUser.id === session?.user?.id;
+      
+      console.log(`[onAuthStateChange] Event: ${event}, Session Exists: ${!!session}, User Loaded: ${isUserAlreadyLoaded}`);
 
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
         if (!isUserAlreadyLoaded) {
@@ -780,6 +798,8 @@ const App: React.FC = () => {
   const handleOnboardingComplete = async (newCnpj: string, theme: 'light' | 'dark', companyName: string, receiveWeeklySummary: boolean, cnpjData: CNPJResponse | null) => {
       if (!user) return;
       
+      console.log('[OnboardingComplete] Starting profile update...');
+      
       // 1. Update Supabase Profile
       const now = new Date().toISOString(); // Capture current time for lastActive
       const { error } = await supabase
@@ -795,10 +815,12 @@ const App: React.FC = () => {
           .eq('id', user.id);
 
       if (error) {
-          console.error('Error updating profile during onboarding:', error);
+          console.error('[OnboardingComplete] Error updating profile during onboarding:', error);
           showError('Erro ao salvar dados. Tente novamente.');
           return;
       }
+      
+      console.log('[OnboardingComplete] Profile updated successfully in DB.');
 
       // 2. Update Local State
       const updatedUser: User = { 
@@ -823,8 +845,9 @@ const App: React.FC = () => {
       
       // 4. Load data for the first time
       loadAllUserData(user.id, updatedUser.role || 'user');
-
-      // Removed: if (pendingCnpjFlow) { setActiveTab('cnpj'); setPendingCnpjFlow(false); }
+      
+      console.log('[OnboardingComplete] Local state updated. Navigating to dashboard.');
+      setActiveTab('dashboard');
   }
   
   // NEW HANDLERS for Landing Page
@@ -1690,6 +1713,7 @@ const App: React.FC = () => {
   // --- RENDER LOGIC ---
   
   if (loadingAuth) {
+      console.log('[Render] Loading Auth...');
       return (
           <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
               <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -1699,6 +1723,7 @@ const App: React.FC = () => {
   
   // NEW: Render Embed View
   if (isEmbedView) {
+      console.log('[Render] Embed View Active.');
       return (
           <div className="w-full h-full bg-background-light dark:bg-background-dark overflow-hidden">
               <div className="max-w-full mx-auto p-4">
@@ -1709,6 +1734,7 @@ const App: React.FC = () => {
   }
 
   if (isPublicView) {
+      console.log('[Render] Public News View Active.');
       return (
           <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
               <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 h-[72px] flex items-center justify-between px-6">
@@ -1747,6 +1773,7 @@ const App: React.FC = () => {
 
   // Handle public pages (Terms and Privacy) when not logged in
   if (!user && (activeTab === 'terms' || activeTab === 'privacy')) {
+      console.log('[Render] Public Terms/Privacy View Active.');
       return (
           <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
               <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 h-[72px] flex items-center justify-between px-6">
@@ -1777,12 +1804,14 @@ const App: React.FC = () => {
   
   // NEW: Handle public CNPJ Consult Page
   if (!user && activeTab === 'cnpj-consult') {
+      console.log('[Render] Public CNPJ Consult View Active.');
       return <CnpjConsultPage onBack={handleBackToLanding} connectionConfig={connectionConfig} />;
   }
 
   // If not logged in, show LandingPage or AuthPage
   if (!user) {
       if (activeTab === 'auth') {
+          console.log('[Render] Auth Page Active.');
           return <AuthPage 
               onLogin={handleLogin} 
               onForgotPassword={handleForgotPassword} 
@@ -1791,6 +1820,7 @@ const App: React.FC = () => {
           />;
       }
       // Default to LandingPage
+      console.log('[Render] Landing Page Active.');
       return <LandingPage 
           onGetStarted={handleLandingGetStarted} 
           onLogin={handleLandingLogin} 
@@ -1799,13 +1829,17 @@ const App: React.FC = () => {
           news={news} // PASSING NEWS DATA HERE
       />;
   }
+  
+  console.log(`[Render] Logged In User: ${user.name}, Setup Complete: ${user.isSetupComplete}, Role: ${user.role}, Active Tab: ${activeTab}`);
 
   if (!user.isSetupComplete) {
+      console.log('[Render] Showing Onboarding Page.');
       return <OnboardingPage user={user} onComplete={handleOnboardingComplete} />;
   }
   
   // Logged in user: Redirect if on a public-only tab
   if (activeTab === 'home' || activeTab === 'auth' || activeTab === 'cnpj-consult') {
+      console.log(`[Render] Redirecting from public tab (${activeTab}) to dashboard.`);
       setActiveTab('dashboard');
       return null; // Prevent rendering until state updates
   }
