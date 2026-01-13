@@ -18,7 +18,8 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
       isOpen: boolean;
       name: string;
       link: string;
-  }>({ isOpen: false, name: '', link: '' });
+      imageUrl: string; // NOVO CAMPO
+  }>({ isOpen: false, name: '', link: '', imageUrl: '' });
 
   // Extrai o CNAE principal do usuário
   const userCnae = useMemo(() => {
@@ -88,6 +89,7 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
           isOpen: true,
           name: product.productName,
           link: product.link,
+          imageUrl: product.imageUrl, // PASSANDO A URL DA IMAGEM
       });
   };
 
@@ -201,7 +203,8 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
           isOpen={redirectModal.isOpen}
           productName={redirectModal.name}
           redirectLink={redirectModal.link}
-          onClose={() => setRedirectModal({ isOpen: false, name: '', link: '' })}
+          imageUrl={redirectModal.imageUrl} // PASSANDO A URL DA IMAGEM
+          onClose={() => setRedirectModal({ isOpen: false, name: '', link: '', imageUrl: '' })}
       />
     </div>
   );

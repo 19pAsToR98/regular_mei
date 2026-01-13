@@ -4,10 +4,11 @@ interface ProductRedirectModalProps {
   isOpen: boolean;
   productName: string;
   redirectLink: string;
+  imageUrl: string; // NOVO CAMPO
   onClose: () => void;
 }
 
-const ProductRedirectModal: React.FC<ProductRedirectModalProps> = ({ isOpen, productName, redirectLink, onClose }) => {
+const ProductRedirectModal: React.FC<ProductRedirectModalProps> = ({ isOpen, productName, redirectLink, imageUrl, onClose }) => {
   
   useEffect(() => {
     if (isOpen && redirectLink) {
@@ -32,6 +33,13 @@ const ProductRedirectModal: React.FC<ProductRedirectModalProps> = ({ isOpen, pro
         
         <div className="p-8 text-center flex flex-col items-center">
           
+          {/* Product Image */}
+          {imageUrl && (
+              <div className="w-24 h-24 mb-4 bg-white rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center p-1 shadow-md">
+                  <img src={imageUrl} alt={productName} className="w-full h-full object-contain" />
+              </div>
+          )}
+
           {/* Loading Spinner */}
           <div className="relative w-16 h-16 mb-6">
             <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
