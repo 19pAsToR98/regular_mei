@@ -83,16 +83,27 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
       className="group bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col h-full"
     >
       {/* Image Container */}
-      <div className="h-40 overflow-hidden relative">
+      <div className="h-40 overflow-hidden relative bg-slate-100 dark:bg-slate-800">
         <img 
           src={product.imageUrl} 
           alt={product.productName}
-          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+          // Usando object-contain para garantir que a imagem caiba dentro do contêiner
+          className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-500 p-2"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
         
-        {/* Badges */}
-        <div className="absolute top-3 left-3 flex flex-wrap gap-1">
+        {/* Partner Name Overlay (Mantido na imagem, mas discreto) */}
+        {product.partnerName && (
+            <div className="absolute bottom-0 right-0 bg-black/50 backdrop-blur-sm text-white text-xs font-medium px-3 py-1 rounded-tl-lg">
+                Parceiro: {product.partnerName}
+            </div>
+        )}
+      </div>
+      
+      {/* Content */}
+      <div className="p-4 flex flex-col flex-grow">
+        
+        {/* Badges (Movidos para fora da imagem) */}
+        <div className="flex flex-wrap gap-1 mb-3">
             {product.isFull && (
                 <span className="text-[10px] font-bold uppercase tracking-wider text-white bg-blue-600 px-2 py-1 rounded-md shadow-sm">
                     FULL
@@ -104,17 +115,7 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
                 </span>
             )}
         </div>
-        
-        {/* Partner Name Overlay */}
-        {product.partnerName && (
-            <div className="absolute bottom-0 right-0 bg-black/50 backdrop-blur-sm text-white text-xs font-medium px-3 py-1 rounded-tl-lg">
-                Parceiro: {product.partnerName}
-            </div>
-        )}
-      </div>
-      
-      {/* Content */}
-      <div className="p-4 flex flex-col flex-grow">
+
         <h3 className="text-base font-bold text-slate-800 dark:text-white mb-2 leading-snug line-clamp-2 group-hover:text-primary transition-colors">
           {product.productName}
         </h3>
