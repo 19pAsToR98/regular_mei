@@ -147,7 +147,17 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
               throw response; // Propaga o erro de timeout
           }
 
-          const data = await response.json();
+          const rawText = await response.text(); // Read as text first
+          let data: any;
+          
+          try {
+              data = JSON.parse(rawText); // Try parsing
+          } catch (e) {
+              // If parsing fails, the webhook returned non-JSON (like 'continuecontinuecontinue')
+              console.error("[ProductRedirect] Erro ao analisar JSON. Resposta bruta:", rawText);
+              throw new Error(`Resposta inválida do webhook: ${rawText.substring(0, 50)}...`);
+          }
+          
           console.log("[ProductRedirect] Resposta Bruta do Webhook:", data);
           
           if (!response.ok) {
