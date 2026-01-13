@@ -148,19 +148,26 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
           }
 
           const data = await response.json();
+          console.log("[ProductRedirect] Resposta Bruta do Webhook:", data);
           
           if (!response.ok) {
               console.error("[ProductRedirect] Erro HTTP:", response.status, data);
               throw new Error(data.error || `Falha na chamada HTTP: ${response.status}`);
           }
           
-          if (!data.finalLink) {
-              console.error("[ProductRedirect] Resposta do Webhook inválida:", data);
+          // --- EXTRAÇÃO DO LINK FINAL (AJUSTADO PARA O NOVO FORMATO) ---
+          let extractedLink = null;
+          if (Array.isArray(data) && data.length > 0 && data[0].urls && data[0].urls.length > 0) {
+              extractedLink = data[0].urls[0].short_url;
+          }
+          
+          if (!extractedLink) {
+              console.error("[ProductRedirect] Resposta do Webhook inválida: finalLink ausente no formato esperado.", data);
               throw new Error('Webhook retornou um link inválido (finalLink ausente).');
           }
           
-          finalLink = data.finalLink; // Atualiza o link final
-          console.log("[ProductRedirect] Link final recebido:", finalLink);
+          finalLink = extractedLink; // Atualiza o link final
+          console.log("[ProductRedirect] Link final extraído:", finalLink);
           
       } catch (e: any) {
           console.error("[ProductRedirect] Erro/Timeout capturado:", e.message);
