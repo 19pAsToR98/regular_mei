@@ -155,15 +155,16 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
               throw new Error(data.error || `Falha na chamada HTTP: ${response.status}`);
           }
           
-          // --- EXTRAÇÃO DO LINK FINAL (AJUSTADO PARA O NOVO FORMATO) ---
+          // --- EXTRAÇÃO DO LINK FINAL (CORRIGIDO) ---
           let extractedLink = null;
+          // Verifica se é um array e se o caminho aninhado existe
           if (Array.isArray(data) && data.length > 0 && data[0].urls && data[0].urls.length > 0) {
               extractedLink = data[0].urls[0].short_url;
           }
           
           if (!extractedLink) {
-              console.error("[ProductRedirect] Resposta do Webhook inválida: finalLink ausente no formato esperado.", data);
-              throw new Error('Webhook retornou um link inválido (finalLink ausente).');
+              console.error("[ProductRedirect] Resposta do Webhook inválida: link final ausente no formato esperado.", data);
+              throw new Error('Webhook retornou um link inválido (short_url ausente).');
           }
           
           finalLink = extractedLink; // Atualiza o link final
