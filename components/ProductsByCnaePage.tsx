@@ -14,13 +14,14 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Estado para o modal de redirecionamento
+  // Estado para o modal de redirecionamento (Adicionando 'error' ao estado)
   const [redirectModal, setRedirectModal] = useState<{
       isOpen: boolean;
       name: string;
       link: string;
       imageUrl: string;
-  }>({ isOpen: false, name: '', link: '', imageUrl: '' });
+      error: string | null; // NOVO CAMPO
+  }>({ isOpen: false, name: '', link: '', imageUrl: '', error: null });
 
   // Extrai o CNAE principal do usuário
   const userCnae = useMemo(() => {
@@ -86,7 +87,6 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
   }, [fetchProducts]);
   
   const handleProductClick = async (product: CnaeProduct) => {
-      // console.log("[ProductRedirect] Iniciando clique no produto:", product.productName); // LOG REMOVIDO
       
       if (!productRedirectWebhookUrl || productRedirectWebhookUrl.includes('placeholder')) {
           const msg = "Erro: URL do Webhook de Redirecionamento não configurada no Admin.";
@@ -101,9 +101,11 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
           name: product.productName,
           link: '', // Link temporário vazio
           imageUrl: product.imageUrl,
+          error: null,
       });
       
       let finalLink = product.link; // Fallback link
+      let webhookError: string | null = null;
       
       // 2. Define o timeout de 10 segundos
       const timeoutPromise = new Promise((_, reject) => 
@@ -127,9 +129,6 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
               productName: product.productName,
           };
           
-          // console.log("[ProductRedirect] Chamando Webhook:", productRedirectWebhookUrl); // LOG REMOVIDO
-          // console.log("[ProductRedirect] Payload enviado:", payload); // LOG REMOVIDO
-
           const fetchPromise = fetch(productRedirectWebhookUrl, {
               method: 'POST',
               headers: {
@@ -152,19 +151,15 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
           try {
               data = JSON.parse(rawText); // Try parsing
           } catch (e) {
-              // If parsing fails, the webhook returned non-JSON (like 'continuecontinuecontinue')
               console.error("[ProductRedirect] Erro ao analisar JSON. Resposta bruta:", rawText);
               throw new Error(`Resposta inválida do webhook: ${rawText.substring(0, 50)}...`);
           }
           
-          // console.log("[ProductRedirect] Resposta Bruta do Webhook:", data); // LOG REMOVIDO
-          
           if (!response.ok) {
-              // console.error("[ProductRedirect] Erro HTTP:", response.status, data); // LOG REMOVIDO
               throw new Error(data.error || `Falha na chamada HTTP: ${response.status}`);
           }
           
-          // --- EXTRAÇÃO DO LINK FINAL (CORRIGIDO) ---
+          // --- EXTRAÇÃO DO LINK FINAL ---
           let extractedLink = null;
           
           // A resposta é um objeto que contém a chave 'urls' que é um array.
@@ -173,26 +168,30 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
           }
           
           if (!extractedLink) {
-              // console.error("[ProductRedirect] Resposta do Webhook inválida: link final ausente no formato esperado.", data); // LOG REMOVIDO
               throw new Error('Webhook retornou um link inválido (short_url ausente).');
           }
           
           finalLink = extractedLink; // Atualiza o link final
-          // console.log("[ProductRedirect] Link final extraído:", finalLink); // LOG REMOVIDO
           
       } catch (e: any) {
-          // console.error("[ProductRedirect] Erro/Timeout capturado:", e.message); // LOG REMOVIDO
-          
           // Se houver erro (incluindo timeout), o finalLink permanece como o link original (fallback)
-          showError(`Falha ao aplicar desconto/rastreamento. Redirecionando para o link original.`);
+          webhookError = e.message.includes("Timeout") 
+              ? "O servidor de rastreamento demorou demais para responder." 
+              : `Erro na integração: ${e.message}`;
           finalLink = product.link; // Garante que o fallback seja usado
       }
       
       // 4. Atualiza o modal com o link final (seja o retornado ou o fallback)
       setRedirectModal(prev => ({
           ...prev,
-          link: finalLink, // O useEffect do modal irá disparar o window.open
+          link: finalLink, 
+          error: webhookError, // Define o erro se houver
       }));
+      
+      // Se houve erro, exibe um toast de aviso (além do modal)
+      if (webhookError) {
+          showWarning("Redirecionamento falhou. Abrindo link original.");
+      }
   };
 
   const renderProductCard = (product: CnaeProduct) => (
@@ -325,7 +324,8 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user, productRe
           productName={redirectModal.name}
           redirectLink={redirectModal.link}
           imageUrl={redirectModal.imageUrl}
-          onClose={() => setRedirectModal({ isOpen: false, name: '', link: '', imageUrl: '' })}
+          error={redirectModal.error}
+          onClose={() => setRedirectModal({ isOpen: false, name: '', link: '', imageUrl: '', error: null })}
       />
     </div>
   );

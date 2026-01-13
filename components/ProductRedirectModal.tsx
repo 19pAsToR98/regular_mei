@@ -5,14 +5,15 @@ interface ProductRedirectModalProps {
   productName: string;
   redirectLink: string;
   imageUrl: string; // NOVO CAMPO
+  error: string | null; // NOVO CAMPO
   onClose: () => void;
 }
 
-const ProductRedirectModal: React.FC<ProductRedirectModalProps> = ({ isOpen, productName, redirectLink, imageUrl, onClose }) => {
+const ProductRedirectModal: React.FC<ProductRedirectModalProps> = ({ isOpen, productName, redirectLink, imageUrl, error, onClose }) => {
   
   useEffect(() => {
     // Se o modal estiver aberto E o link final for fornecido (após a chamada do webhook)
-    if (isOpen && redirectLink) {
+    if (isOpen && redirectLink && !error) {
       // Tempo de simulação de processamento (1.5 segundos)
       const timer = setTimeout(() => {
         // 1. Abre o link em uma nova aba
@@ -24,12 +25,12 @@ const ProductRedirectModal: React.FC<ProductRedirectModalProps> = ({ isOpen, pro
 
       return () => clearTimeout(timer);
     }
-  }, [isOpen, redirectLink, onClose]);
+  }, [isOpen, redirectLink, error, onClose]);
 
   if (!isOpen) return null;
 
-  // Se o link final ainda não foi recebido, mostramos o spinner.
-  const isProcessing = !redirectLink;
+  // Se o link final ainda não foi recebido E não há erro, estamos processando.
+  const isProcessing = !redirectLink && !error;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
@@ -44,25 +45,52 @@ const ProductRedirectModal: React.FC<ProductRedirectModalProps> = ({ isOpen, pro
               </div>
           )}
 
-          {/* Loading Spinner */}
+          {/* Loading Spinner / Error Icon */}
           <div className="relative w-16 h-16 mb-6">
-            <div className={`absolute inset-0 border-4 border-primary border-t-transparent rounded-full ${isProcessing ? 'animate-spin' : 'animate-none'}`}></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-                <span className="material-icons text-2xl text-primary">shopping_cart</span>
-            </div>
+            {isProcessing && (
+                <>
+                    <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="material-icons text-2xl text-primary">shopping_cart</span>
+                    </div>
+                </>
+            )}
+            {error && (
+                <div className="absolute inset-0 flex items-center justify-center bg-red-100 rounded-full">
+                    <span className="material-icons text-3xl text-red-600">error</span>
+                </div>
+            )}
+            {!isProcessing && !error && (
+                 <div className="absolute inset-0 flex items-center justify-center bg-green-100 rounded-full">
+                    <span className="material-icons text-3xl text-green-600">check</span>
+                </div>
+            )}
           </div>
           
           <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
-            {isProcessing ? 'Aplicando Descontos...' : 'Redirecionando...'}
+            {isProcessing ? 'Aplicando Descontos...' : error ? 'Falha no Redirecionamento' : 'Redirecionando...'}
           </h3>
           
           <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
-            Você será redirecionado para o produto: <strong>{productName}</strong>
+            {error ? (
+                <span className="text-red-500">{error}</span>
+            ) : (
+                <>Você será redirecionado para o produto: <strong>{productName}</strong></>
+            )}
           </p>
           
           <p className="text-xs text-slate-400 mt-2">
-            Aguarde enquanto preparamos sua oferta exclusiva.
+            {isProcessing ? 'Aguarde enquanto preparamos sua oferta exclusiva.' : error ? 'Clique em fechar para continuar.' : 'Abrindo nova aba em instantes...'}
           </p>
+          
+          {error && (
+              <button 
+                onClick={onClose}
+                className="mt-4 bg-primary hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-bold transition-colors"
+              >
+                  Fechar
+              </button>
+          )}
         </div>
       </div>
     </div>
