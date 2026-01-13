@@ -23,60 +23,71 @@ serve(async (req) => {
     const { products } = await req.json();
 
     if (!Array.isArray(products) || products.length === 0) {
-        return new Response(JSON.stringify({ error: 'Missing or invalid products array in body.' }), { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        });
+        // Se o array estiver vazio, ainda excluímos o catálogo, mas não inserimos nada.
+        console.warn("[update-cnae-products] Received empty products array. Will clear existing catalog.");
     }
     
-    // Initialize Supabase client with Service Role Key (Admin access for upsert)
+    // Initialize Supabase client with Service Role Key (Admin access)
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 2. Prepare data for upsert
-    const productsPayload = products.map((p: any) => ({
-        // Assumimos que o 'id' é gerado externamente ou é o identificador único do produto
-        // Se o 'id' for UUID, ele deve ser fornecido. Se não, usaremos 'cnae_code' e 'product_name' como chaves de conflito.
-        // Para simplificar, vamos assumir que o 'id' é o identificador único.
-        id: p.id,
-        cnae_code: p.cnaeCode,
-        product_name: p.productName,
-        description: p.description,
-        link: p.link,
-        image_url: p.imageUrl,
-        current_price: p.currentPrice,
-        free_shipping: p.freeShipping,
-        units_sold: p.unitsSold,
-        is_full: p.isFull,
-        partner_name: p.partnerName,
-        updated_at: new Date().toISOString(),
-    }));
-
-    // 3. Execute upsert operation
-    // Conflict target: 'id' (assuming it's the primary key and unique identifier)
-    const { data, error } = await supabaseAdmin
+    // --- 2. DELETE ALL EXISTING PRODUCTS ---
+    console.log("[update-cnae-products] Deleting all existing products from cnae_products table.");
+    const { error: deleteError } = await supabaseAdmin
         .from('cnae_products')
-        .upsert(productsPayload, { 
-            onConflict: 'id',
-            ignoreDuplicates: false // Ensure update happens if ID exists
-        })
-        .select('id');
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows (using a dummy condition that is always true)
 
-    if (error) {
-        console.error('[update-cnae-products] Upsert error:', error);
-        return new Response(JSON.stringify({ error: 'Failed to update products.', details: error.message }), {
+    if (deleteError) {
+        console.error('[update-cnae-products] Delete error:', deleteError);
+        return new Response(JSON.stringify({ error: 'Failed to clear existing products.', details: deleteError.message }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
     }
+    console.log("[update-cnae-products] Existing catalog cleared successfully.");
 
-    console.log(`[update-cnae-products] Successfully upserted ${data.length} products.`);
+
+    // --- 3. INSERT NEW PRODUCTS ---
+    let insertedCount = 0;
+    if (products.length > 0) {
+        const productsPayload = products.map((p: any) => ({
+            id: p.id,
+            cnae_code: p.cnaeCode,
+            product_name: p.productName,
+            description: p.description,
+            link: p.link,
+            image_url: p.imageUrl,
+            current_price: p.currentPrice,
+            free_shipping: p.freeShipping,
+            units_sold: p.unitsSold,
+            is_full: p.isFull,
+            partner_name: p.partnerName,
+            updated_at: new Date().toISOString(),
+        }));
+
+        const { data: insertData, error: insertError } = await supabaseAdmin
+            .from('cnae_products')
+            .insert(productsPayload)
+            .select('id');
+
+        if (insertError) {
+            console.error('[update-cnae-products] Insert error:', insertError);
+            return new Response(JSON.stringify({ error: 'Failed to insert new products.', details: insertError.message }), {
+                status: 500,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+        insertedCount = insertData.length;
+    }
+
+    console.log(`[update-cnae-products] Successfully inserted ${insertedCount} new products.`);
 
     return new Response(JSON.stringify({ 
-        message: `Successfully updated/inserted ${data.length} products.`,
-        updated_ids: data.map(item => item.id)
+        message: `Catalog completely replaced. Deleted all previous entries and inserted ${insertedCount} new products.`,
+        inserted_count: insertedCount
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
