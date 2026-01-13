@@ -83,7 +83,7 @@ const ProductsByCnaePage: React.FC<ProductsByCnaePageProps> = ({ user }) => {
       className="group bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col h-full"
     >
       {/* Image Container */}
-      <div className="h-40 overflow-hidden relative bg-white dark:bg-slate-800">
+      <div className="h-40 overflow-hidden relative bg-white">
         <img 
           src={product.imageUrl} 
           alt={product.productName}
