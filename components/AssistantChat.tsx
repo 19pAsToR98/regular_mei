@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { sendAssistantQuery } from '../utils/assistantUtils';
-import { showError } from '../utils/toastUtils'; // Importando utilitário de erro
+import { showError, showWarning } from '../utils/toastUtils'; // Importando showWarning
 import { ConnectionConfig } from '../types'; // Importando o tipo
 import AssistantMessageContent from './AssistantMessageContent'; 
 import AudioWaveIndicator from './AudioWaveIndicator'; 
@@ -21,6 +21,9 @@ interface Message {
         label: string;
     }
 }
+
+// Limite máximo de gravação em segundos
+const MAX_RECORDING_TIME = 30;
 
 // Helper para converter Blob em Base64 (retorna apenas a string Base64 pura)
 const blobToBase64 = (blob: Blob): Promise<string> => {
@@ -64,7 +67,18 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
   useEffect(() => {
     if (isRecording) {
         timerRef.current = setInterval(() => {
-            setRecordingTime(prev => prev + 1);
+            setRecordingTime(prev => {
+                const newTime = prev + 1;
+                if (newTime >= MAX_RECORDING_TIME) {
+                    // Auto-stop recording
+                    if (mediaRecorder) {
+                        mediaRecorder.stop();
+                        showWarning(`Gravação interrompida: limite de ${MAX_RECORDING_TIME} segundos atingido.`);
+                    }
+                    return MAX_RECORDING_TIME;
+                }
+                return newTime;
+            });
         }, 1000);
     } else {
         if (timerRef.current) {
@@ -75,7 +89,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
     return () => {
         if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isRecording]);
+  }, [isRecording, mediaRecorder]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -317,7 +331,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, onNavigate, conn
                     <AudioWaveIndicator isRecording={isRecording} />
                     <span className="font-medium text-sm">Gravando...</span>
                 </div>
-                <span className="font-mono text-sm">{formatTime(recordingTime)}</span>
+                <span className="font-mono text-sm">{formatTime(recordingTime)}/{MAX_RECORDING_TIME}s</span>
             </div>
           ) : isProcessing ? (
             // Processing UI
