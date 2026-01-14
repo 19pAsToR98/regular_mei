@@ -368,7 +368,13 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                                 
                                 {/* Header */}
                                 <div className="relative z-10 flex flex-col items-center mb-6">
-                                    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo%E2%80%94pix_powered_by_Banco_Central_%28Brazil%2C_2020%29.svg" alt="Pix" className="h-12 mb-2 brightness-0 invert" />
+                                    {/* CORREÇÃO: Removendo o filtro 'brightness-0 invert' e usando uma imagem mais robusta ou um ícone */}
+                                    <img 
+                                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Logo_PIX.svg/1200px-Logo_PIX.svg.png" 
+                                        alt="Pix" 
+                                        className="h-12 mb-2 object-contain" 
+                                        style={{ filter: 'brightness(0) invert(1)' }} // Forçando o branco no fundo colorido
+                                    />
                                     <h3 className="text-xl font-bold tracking-wide uppercase text-white/90 text-center whitespace-nowrap">
                                         Pagamento Instantâneo
                                     </h3>
@@ -430,6 +436,7 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
 };
 
 const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null }) => {
+// ... (Restante do ReceiptGenerator permanece inalterado)
     // Helper para obter a data local no formato YYYY-MM-DD
     const getLocalISODate = () => {
         const now = new Date();
@@ -565,10 +572,6 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
             if (chunk > 0) {
                 let chunkWords = toWords(chunk);
                 if (chunk === 1 && i === 1) chunkWords = 'mil';
-                
-                if (i > 0) {
-                    chunkWords += ' ' + thousands[i];
-                }
                 
                 if (result) {
                     result = chunkWords + (i === 1 ? ' e ' : ', ') + result;
@@ -989,6 +992,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
 };
 
 const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null }) => {
+// ... (Restante do BudgetGenerator permanece inalterado)
     const [budget, setBudget] = useState({
         // Removendo a inicialização do número do orçamento
         number: '', 
@@ -1341,7 +1345,7 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
 };
 
 const FeeCalculator = ({ onBack }: { onBack: () => void }) => {
-    // ... (No changes needed here for now) ...
+// ... (Restante do FeeCalculator permanece inalterado)
     const [calcData, setCalcData] = useState({
         desiredAmount: '',
         feePercent: '',
