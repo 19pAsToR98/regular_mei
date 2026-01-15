@@ -542,7 +542,7 @@ const App: React.FC = () => {
   
   // NEW: Function to load all user-specific data after login/onboarding
   const loadAllUserData = async (userId: string, userRole: 'admin' | 'user') => {
-    // console.log('[loadAllUserData] Starting data load for user:', userId, 'Role:', userRole); // REMOVED LOG
+    // console.log('[loadAllUserData] Starting data load for user:', userId, 'Role:', userRole); // REMOVIDO LOG
     setLoadingAuth(true);
     await Promise.all([
         loadTransactions(userId).then(setTransactions),
@@ -552,7 +552,7 @@ const App: React.FC = () => {
         // Only load all users if admin
         ...(userRole === 'admin' ? [loadAllUsers()] : []),
     ]);
-    // console.log('[loadAllUserData] Data load complete.'); // REMOVED LOG
+    // console.log('[loadAllUserData] Data load complete.'); // REMOVIDO LOG
     setLoadingAuth(false);
   };
 
@@ -755,8 +755,9 @@ const App: React.FC = () => {
       
       // console.log(`[onAuthStateChange] Event: ${event}, Session Exists: ${!!session}, User Loaded: ${isUserAlreadyLoaded}`); // REMOVIDO LOG
 
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-        if (!isUserAlreadyLoaded) {
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') && session?.user) {
+        // Se o usuário foi atualizado (ex: email mudou), forçamos o recarregamento do perfil
+        if (event === 'USER_UPDATED' || !isUserAlreadyLoaded) {
             loadUserProfile(session.user);
         } else {
             setLoadingAuth(false);
@@ -792,23 +793,24 @@ const App: React.FC = () => {
   useEffect(() => {
       if (typeof window !== 'undefined') {
           const hash = window.location.hash;
-          if (hash.includes('message=')) {
-              const params = new URLSearchParams(hash.substring(1));
-              const message = params.get('message');
+          
+          // 1. Tenta extrair parâmetros do hash
+          const params = new URLSearchParams(hash.substring(1));
+          const message = params.get('message') || params.get('error_description');
+          
+          if (message) {
+              const decodedMessage = decodeURIComponent(message.replace(/\+/g, ' '));
               
-              if (message) {
-                  const decodedMessage = decodeURIComponent(message.replace(/\+/g, ' '));
-                  
-                  // Check for specific success messages related to email change or general confirmation
-                  if (decodedMessage.includes('Confirmation link accepted') || decodedMessage.includes('successfully')) {
-                      showSuccess(decodedMessage);
-                  } else {
-                      showWarning(decodedMessage);
-                  }
-                  
-                  // Clear the hash fragment to clean the URL
-                  window.history.replaceState(null, '', window.location.pathname + window.location.search);
+              // Check for specific success messages related to email change or general confirmation
+              if (decodedMessage.includes('Confirmation link accepted') || decodedMessage.includes('successfully')) {
+                  showSuccess(decodedMessage);
+              } else {
+                  showWarning(decodedMessage);
               }
+              
+              // 2. Limpa o hash fragment para limpar a URL
+              // Usamos replaceState para não adicionar uma entrada no histórico
+              window.history.replaceState(null, '', window.location.pathname + window.location.search);
           }
       }
   }, []);
@@ -1275,7 +1277,7 @@ const App: React.FC = () => {
           text: item.text,
           type: item.type,
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          expires_at: expiresAtValue, 
+          expires_at: expiresAtAtValue, 
           active: item.active,
       };
       
