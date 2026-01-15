@@ -60,7 +60,8 @@ const portugueseIconMap: Record<string, string[]> = {
 interface SettingsPageProps {
   user?: User | null;
   onUpdateUser?: (user: User) => void;
-  onUpdateUserPhone?: (userId: string, newPhone: string) => Promise<{ success: boolean, error?: string }>; // NEW PROP
+  onUpdateUserPhone?: (userId: string, newPhone: string) => Promise<{ success: boolean, error?: string }>;
+  onUpdateUserEmail?: (newEmail: string) => Promise<{ success: boolean, error?: string }>; // <--- NEW PROP
   cnpj?: string;
   onCnpjChange?: (cnpj: string) => void;
   revenueCats: Category[];
@@ -68,7 +69,7 @@ interface SettingsPageProps {
   onAddCategory: (type: 'receita' | 'despesa', cat: Category) => void;
   onDeleteCategory: (type: 'receita' | 'despesa', name: string) => void;
   onExportData?: () => void;
-  onDeleteAccount?: () => Promise<void>; // Updated signature to reflect async operation
+  onDeleteAccount?: () => Promise<void>;
   onChangePassword?: (newPassword: string) => Promise<boolean>;
 }
 
@@ -89,7 +90,7 @@ const formatPhone = (value: string): string => {
 
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ 
-  user, onUpdateUser, onUpdateUserPhone,
+  user, onUpdateUser, onUpdateUserPhone, onUpdateUserEmail,
   cnpj, onCnpjChange, 
   revenueCats, expenseCats, onAddCategory, onDeleteCategory,
   onExportData, onDeleteAccount, onChangePassword
@@ -120,10 +121,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   });
   const [isSavingPass, setIsSavingPass] = useState(false);
 
-  // Email Verification State
-  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
-  const [pendingEmail, setPendingEmail] = useState('');
+  // REMOVIDO: Email Verification State
+  // const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
+  // const [verificationCode, setVerificationCode] = useState('');
+  // const [pendingEmail, setPendingEmail] = useState('');
   
   // Category State
   const [activeCatTab, setActiveCatTab] = useState<'receita' | 'despesa'>('receita');
@@ -177,7 +178,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   const handleSaveProfile = async () => {
-    if (!user || !onUpdateUser || !onUpdateUserPhone) return;
+    if (!user || !onUpdateUser || !onUpdateUserPhone || !onUpdateUserEmail) return;
     
     setIsSaving(true);
     
@@ -185,9 +186,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     const newPhone = profileForm.phone;
     const isPhoneChanged = originalPhone !== newPhone;
     
+    const originalEmail = user.email;
+    const newEmail = profileForm.email;
+    const isEmailChanged = originalEmail !== newEmail;
+    
     let phoneUpdateSuccess = true;
-
-    // 1. Handle Phone Change (Requires separate logic due to duplication check)
+    let emailUpdateSuccess = true;
+    
+    // 1. Handle Phone Change
     if (isPhoneChanged) {
         const { success, error } = await onUpdateUserPhone(user.id, newPhone);
         if (!success) {
@@ -196,64 +202,52 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         }
     }
 
-    // 2. Handle CNPJ Change
+    // 2. Handle Email Change (Updates Auth Credential)
+    if (isEmailChanged) {
+        const { success, error } = await onUpdateUserEmail(newEmail);
+        if (success) {
+            showWarning(`Um link de confirmação foi enviado para ${newEmail}. Clique no link para finalizar a alteração do seu e-mail de login.`);
+            // We do NOT update the local user state yet, as the change is pending confirmation.
+        } else {
+            showError(error || "Erro ao iniciar a alteração de e-mail.");
+            emailUpdateSuccess = false;
+        }
+    }
+
+    // 3. Handle CNPJ Change
     if (onCnpjChange) {
       onCnpjChange(localCnpj);
     }
 
-    // 3. Check for Email Change
-    if (profileForm.email !== user.email) {
-        setPendingEmail(profileForm.email);
-        setIsVerifyingEmail(true);
-        setIsSaving(false);
-        // Simulate sending email
-        showWarning(`Um código de verificação foi enviado para: ${profileForm.email}`);
-        return;
-    }
-
-    // 4. Save Basic Info (Name/Summary Preference) if phone update was successful or not attempted
-    if (phoneUpdateSuccess) {
+    // 4. Save Basic Info (Name/Summary Preference) and update profile table email if email wasn't changed (or if it was, we only update name/phone/summary)
+    if (phoneUpdateSuccess && emailUpdateSuccess) {
         // Create a partial user object for fields that don't require special checks
         const partialUpdate: Partial<User> = {
             name: profileForm.name,
             receiveWeeklySummary: profileForm.receiveWeeklySummary
         };
         
-        // If phone was updated successfully, it's already reflected in the user state via onUpdateUserPhone, 
-        // but we need to ensure the name/summary preference is also saved.
+        // If email was NOT changed, we update the profile table email field too (redundant but safe)
+        if (!isEmailChanged) {
+             partialUpdate.email = profileForm.email;
+        }
         
         // We call onUpdateUser which handles the DB update for these fields.
         onUpdateUser({
             ...user,
             ...partialUpdate,
-            // Note: phone is already updated in the DB by onUpdateUserPhone if successful
         });
         
-        showSuccessFeedback();
+        // Only show success feedback if no critical errors occurred
+        if (!isEmailChanged) {
+            showSuccessFeedback();
+        }
     }
     
     setIsSaving(false);
   };
 
-  const handleVerifyEmail = () => {
-      if (verificationCode === '123456') {
-          if (user && onUpdateUser) {
-              onUpdateUser({
-                  ...user,
-                  name: profileForm.name,
-                  phone: profileForm.phone.replace(/[^\d]/g, ''), // Save clean phone
-                  email: pendingEmail,
-                  receiveWeeklySummary: profileForm.receiveWeeklySummary // SAVE NEW FIELD
-              });
-          }
-          setIsVerifyingEmail(false);
-          setVerificationCode('');
-          setPendingEmail('');
-          showSuccessFeedback();
-      } else {
-          showError("Código incorreto. Tente novamente.");
-      }
-  };
+  // REMOVIDO: handleVerifyEmail function
 
   const handlePasswordSubmit = async () => {
       if (passForm.new !== passForm.confirm) {
@@ -416,7 +410,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                         </div>
 
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">E-mail</label>
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">E-mail (Login)</label>
                             <input 
                                 type="email" 
                                 value={profileForm.email}
@@ -426,7 +420,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             {user && profileForm.email !== user.email && (
                                 <p className="text-xs text-orange-500 mt-1 flex items-center gap-1">
                                     <span className="material-icons text-xs">warning</span>
-                                    Será necessário verificar o novo e-mail.
+                                    Será enviado um link de confirmação para o novo e-mail.
                                 </p>
                             )}
                         </div>
@@ -753,48 +747,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             onSave={onAddCategory}
         />
 
-        {/* Verification Modal */}
-        {isVerifyingEmail && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-                <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6 border border-slate-200 dark:border-slate-800">
-                    <div className="text-center mb-6">
-                        <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <span className="material-icons text-3xl">mark_email_read</span>
-                        </div>
-                        <h3 className="text-lg font-bold text-slate-800 dark:text-white">Verificar E-mail</h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                            Enviamos um código para <strong>{pendingEmail}</strong>. Digite-o abaixo para confirmar.
-                        </p>
-                    </div>
-                    
-                    <input 
-                        type="text" 
-                        value={verificationCode}
-                        onChange={(e) => setVerificationCode(e.target.value)}
-                        className="w-full px-4 py-3 text-center text-xl font-bold tracking-widest border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary/50 mb-6"
-                        placeholder="000000"
-                        maxLength={6}
-                    />
-
-                    <div className="flex gap-3">
-                        <button 
-                            type="button"
-                            onClick={() => setIsVerifyingEmail(false)}
-                            className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-                        >
-                            Cancelar
-                        </button>
-                        <button 
-                            type="button"
-                            onClick={handleVerifyEmail}
-                            className="flex-1 px-4 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold shadow-sm transition-colors"
-                        >
-                            Confirmar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
+        {/* REMOVIDO: Verification Modal */}
      </div>
   );
 };

@@ -971,6 +971,22 @@ const App: React.FC = () => {
       
       return { success: true };
   };
+  
+  // NOVO: Função para atualizar o e-mail de autenticação
+  const handleUpdateUserEmail = async (newEmail: string): Promise<{ success: boolean, error?: string }> => {
+      if (!user) return { success: false, error: "Usuário não autenticado." };
+      
+      const { error } = await supabase.auth.updateUser({ email: newEmail });
+      
+      if (error) {
+          console.error("Error updating user email:", error);
+          return { success: false, error: error.message };
+      }
+      
+      // O Supabase envia um e-mail de confirmação. A alteração só é efetiva após o clique no link.
+      // Não atualizamos o estado local do email aqui, apenas o notificamos.
+      return { success: true };
+  };
 
   const handleAddUser = (newUser: User) => {
       setAllUsers([...allUsers, newUser]);
@@ -2041,6 +2057,7 @@ const App: React.FC = () => {
               user={user}
               onUpdateUser={handleUpdateUser}
               onUpdateUserPhone={handleUpdateUserPhone}
+              onUpdateUserEmail={handleUpdateUserEmail} // <--- NEW PROP
               cnpj={cnpj} 
               onCnpjChange={setCnpj}
               revenueCats={revenueCats}
