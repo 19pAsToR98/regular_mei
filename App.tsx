@@ -558,11 +558,11 @@ const App: React.FC = () => {
 
 
   const loadUserProfile = async (supabaseUser: any) => {
-    // console.log('[loadUserProfile] Attempting to load profile for:', supabaseUser.email); // REMOVED LOG
+    // console.log('[loadUserProfile] Attempting to load profile for:', supabaseUser.email); // REMOVIDO LOG
     
     // Optimization: Check if the user is already fully loaded and set up based on the ref
     if (userRef.current && userRef.current.id === supabaseUser.id && userRef.current.isSetupComplete) {
-        // console.log('[loadUserProfile] Profile already loaded and setup complete. Skipping full fetch.'); // REMOVED LOG
+        // console.log('[loadUserProfile] Profile already loaded and setup complete. Skipping full fetch.'); // REMOVIDO LOG
         setLoadingAuth(false);
         return;
     }
@@ -592,7 +592,7 @@ const App: React.FC = () => {
         return;
     }
     
-    // console.log('[loadUserProfile] Raw Profile Data:', profileData); // REMOVED LOG
+    // console.log('[loadUserProfile] Raw Profile Data:', profileData); // REMOVIDO LOG
 
     const appUser: User = {
         id: profileData.id,
@@ -610,7 +610,7 @@ const App: React.FC = () => {
         fiscalSummary: profileData.fiscal_summary, // NEW: Load fiscal summary
     };
     
-    // console.log('[loadUserProfile] Mapped App User:', { // REMOVED LOG
+    // console.log('[loadUserProfile] Mapped App User:', { // REMOVIDO LOG
     //     id: appUser.id,
     //     name: appUser.name,
     //     role: appUser.role,
@@ -623,10 +623,10 @@ const App: React.FC = () => {
     setFiscalData(appUser.fiscalSummary || null); // Initialize fiscal data from profile
     
     if (appUser.isSetupComplete) {
-        // console.log('[loadUserProfile] Setup complete. Loading user data.'); // REMOVED LOG
+        // console.log('[loadUserProfile] Setup complete. Loading user data.'); // REMOVIDO LOG
         loadAllUserData(appUser.id, appUser.role || 'user');
     } else {
-        // console.log('[loadUserProfile] Setup not complete. Showing onboarding.'); // REMOVED LOG
+        // console.log('[loadUserProfile] Setup not complete. Showing onboarding.'); // REMOVIDO LOG
         setLoadingAuth(false);
     }
   };
@@ -753,7 +753,7 @@ const App: React.FC = () => {
       const currentUser = userRef.current; 
       const isUserAlreadyLoaded = currentUser && currentUser.id === session?.user?.id;
       
-      // console.log(`[onAuthStateChange] Event: ${event}, Session Exists: ${!!session}, User Loaded: ${isUserAlreadyLoaded}`); // REMOVED LOG
+      // console.log(`[onAuthStateChange] Event: ${event}, Session Exists: ${!!session}, User Loaded: ${isUserAlreadyLoaded}`); // REMOVIDO LOG
 
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
         if (!isUserAlreadyLoaded) {
@@ -787,6 +787,32 @@ const App: React.FC = () => {
       authListener.subscription.unsubscribe();
     };
   }, []); // Dependency array remains empty
+  
+  // NEW: Effect to handle URL hash messages (Supabase confirmations)
+  useEffect(() => {
+      if (typeof window !== 'undefined') {
+          const hash = window.location.hash;
+          if (hash.includes('message=')) {
+              const params = new URLSearchParams(hash.substring(1));
+              const message = params.get('message');
+              
+              if (message) {
+                  const decodedMessage = decodeURIComponent(message.replace(/\+/g, ' '));
+                  
+                  // Check for specific success messages related to email change or general confirmation
+                  if (decodedMessage.includes('Confirmation link accepted') || decodedMessage.includes('successfully')) {
+                      showSuccess(decodedMessage);
+                  } else {
+                      showWarning(decodedMessage);
+                  }
+                  
+                  // Clear the hash fragment to clean the URL
+                  window.history.replaceState(null, '', window.location.pathname + window.location.search);
+              }
+          }
+      }
+  }, []);
+
 
   // --- AUTH HANDLERS ---
   const handleLogin = (userData: User) => {
@@ -801,7 +827,7 @@ const App: React.FC = () => {
   const handleOnboardingComplete = async (newCnpj: string, theme: 'light' | 'dark', companyName: string, receiveWeeklySummary: boolean, cnpjData: CNPJResponse | null) => {
       if (!user) return;
       
-      // console.log('[OnboardingComplete] Starting profile update...'); // REMOVED LOG
+      // console.log('[OnboardingComplete] Starting profile update...'); // REMOVIDO LOG
       
       // 1. Update Supabase Profile
       const now = new Date().toISOString(); // Capture current time for lastActive
@@ -823,7 +849,7 @@ const App: React.FC = () => {
           return;
       }
       
-      // console.log('[OnboardingComplete] Profile updated successfully in DB.'); // REMOVED LOG
+      // console.log('[OnboardingComplete] Profile updated successfully in DB.'); // REMOVIDO LOG
 
       // 2. Update Local State
       const updatedUser: User = { 
@@ -849,7 +875,7 @@ const App: React.FC = () => {
       // 4. Load data for the first time
       loadAllUserData(user.id, updatedUser.role || 'user');
       
-      // console.log('[OnboardingComplete] Local state updated. Navigating to dashboard.'); // REMOVED LOG
+      // console.log('[OnboardingComplete] Local state updated. Navigating to dashboard.'); // REMOVIDO LOG
       setActiveTab('dashboard');
   }
   
@@ -867,7 +893,7 @@ const App: React.FC = () => {
   };
   
   const handleViewNews = (id: number) => {
-    // console.log('Attempting to view news ID:', id); // REMOVED LOG
+    // console.log('Attempting to view news ID:', id); // REMOVIDO LOG
     
     // If in embed view, force parent navigation
     if (isEmbedView) {
@@ -1732,7 +1758,7 @@ const App: React.FC = () => {
   // --- RENDER LOGIC ---
   
   if (loadingAuth) {
-      // console.log('[Render] Loading Auth...'); // REMOVED LOG
+      // console.log('[Render] Loading Auth...'); // REMOVIDO LOG
       return (
           <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
               <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -1742,7 +1768,7 @@ const App: React.FC = () => {
   
   // NEW: Render Embed View
   if (isEmbedView) {
-      // console.log('[Render] Embed View Active.'); // REMOVED LOG
+      // console.log('[Render] Embed View Active.'); // REMOVIDO LOG
       return (
           <div className="w-full h-full bg-background-light dark:bg-background-dark overflow-hidden">
               <div className="max-w-full mx-auto p-4">
@@ -1753,7 +1779,7 @@ const App: React.FC = () => {
   }
 
   if (isPublicView) {
-      // console.log('[Render] Public News View Active.'); // REMOVED LOG
+      // console.log('[Render] Public News View Active.'); // REMOVIDO LOG
       return (
           <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
               <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 h-[72px] flex items-center justify-between px-6">
@@ -1792,7 +1818,7 @@ const App: React.FC = () => {
 
   // Handle public pages (Terms and Privacy) when not logged in
   if (!user && (activeTab === 'terms' || activeTab === 'privacy')) {
-      // console.log('[Render] Public Terms/Privacy View Active.'); // REMOVED LOG
+      // console.log('[Render] Public Terms/Privacy View Active.'); // REMOVIDO LOG
       return (
           <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
               <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 h-[72px] flex items-center justify-between px-6">
@@ -1823,14 +1849,14 @@ const App: React.FC = () => {
   
   // NEW: Handle public CNPJ Consult Page
   if (!user && activeTab === 'cnpj-consult') {
-      // console.log('[Render] Public CNPJ Consult View Active.'); // REMOVED LOG
+      // console.log('[Render] Public CNPJ Consult View Active.'); // REMOVIDO LOG
       return <CnpjConsultPage onBack={handleBackToLanding} connectionConfig={connectionConfig} />;
   }
 
   // If not logged in, show LandingPage or AuthPage
   if (!user) {
       if (activeTab === 'auth') {
-          // console.log('[Render] Auth Page Active.'); // REMOVED LOG
+          // console.log('[Render] Auth Page Active.'); // REMOVIDO LOG
           return <AuthPage 
               onLogin={handleLogin} 
               onForgotPassword={handleForgotPassword} 
@@ -1839,7 +1865,7 @@ const App: React.FC = () => {
           />;
       }
       // Default to LandingPage
-      // console.log('[Render] Landing Page Active.'); // REMOVED LOG
+      // console.log('[Render] Landing Page Active.'); // REMOVIDO LOG
       return <LandingPage 
           onGetStarted={handleLandingGetStarted} 
           onLogin={handleLandingLogin} 
@@ -1849,16 +1875,16 @@ const App: React.FC = () => {
       />;
   }
   
-  // console.log(`[Render] Logged In User: ${user.name}, Setup Complete: ${user.isSetupComplete}, Role: ${user.role}, Active Tab: ${activeTab}`); // REMOVED LOG
+  // console.log(`[Render] Logged In User: ${user.name}, Setup Complete: ${user.isSetupComplete}, Role: ${user.role}, Active Tab: ${activeTab}`); // REMOVIDO LOG
 
   if (!user.isSetupComplete) {
-      // console.log('[Render] Showing Onboarding Page.'); // REMOVED LOG
+      // console.log('[Render] Showing Onboarding Page.'); // REMOVIDO LOG
       return <OnboardingPage user={user} onComplete={handleOnboardingComplete} />;
   }
   
   // Logged in user: Redirect if on a public-only tab
   if (activeTab === 'home' || activeTab === 'auth' || activeTab === 'cnpj-consult') {
-      // console.log(`[Render] Redirecting from public tab (${activeTab}) to dashboard.`); // REMOVED LOG
+      // console.log(`[Render] Redirecting from public tab (${activeTab}) to dashboard.`); // REMOVIDO LOG
       setActiveTab('dashboard');
       return null; // Prevent rendering until state updates
   }
