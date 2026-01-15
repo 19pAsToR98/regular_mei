@@ -184,7 +184,7 @@ const App: React.FC = () => {
   // --- QUICK ADD MODAL STATE ---
   const [quickAddModalType, setQuickAddModalType] = useState<'receita' | 'despesa' | null>(null);
   
-  // --- OFFERS STATE (REMOVED) ---
+  // --- OFFERS STATE (REMOVIDO) ---
   const [offers, setOffers] = useState<Offer[]>([]); // Kept for loadNewsAndOffers compatibility, will be removed later
 
   // --- DATA FETCHING FUNCTIONS ---
@@ -597,7 +597,7 @@ const App: React.FC = () => {
     const appUser: User = {
         id: profileData.id,
         name: profileData.name || supabaseUser.email,
-        email: profileData.email || supabaseUser.email,
+        email: supabaseUser.email, // <-- CORREÇÃO: Usando o email do perfil do DB (que é atualizado pelo trigger)
         phone: profileData.phone,
         cnpj: profileData.cnpj,
         isSetupComplete: profileData.is_setup_complete,
@@ -610,13 +610,10 @@ const App: React.FC = () => {
         fiscalSummary: profileData.fiscal_summary, // NEW: Load fiscal summary
     };
     
-    // console.log('[loadUserProfile] Mapped App User:', { // REMOVIDO LOG
-    //     id: appUser.id,
-    //     name: appUser.name,
-    //     role: appUser.role,
-    //     isSetupComplete: appUser.isSetupComplete,
-    //     cnpj: appUser.cnpj
-    // });
+    // Se o email do perfil estiver vazio (o que não deveria acontecer após o trigger), usamos o email de autenticação.
+    if (!appUser.email) {
+        appUser.email = supabaseUser.email;
+    }
 
     setUser(appUser);
     setCnpj(appUser.cnpj || '');
@@ -1152,7 +1149,7 @@ const App: React.FC = () => {
       setActiveTab('home'); // Explicitly navigate to home view
   };
 
-  // --- OFFERS HANDLERS (REMOVED) ---
+  // --- OFFERS HANDLERS (REMOVIDO) ---
   const handleAddOffer = async (newOffer: Offer) => {
     showError('Funcionalidade de Produtos desativada.');
   };
@@ -1277,7 +1274,7 @@ const App: React.FC = () => {
           text: item.text,
           type: item.type,
           poll_options: item.type === 'poll' ? item.pollOptions : null,
-          expires_at: expiresAtAtValue, 
+          expires_at: expiresAtValue, 
           active: item.active,
       };
       
