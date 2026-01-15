@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { supabase } from '../src/integrations/supabase/client';
+import { showSuccess, showError } from '../utils/toastUtils'; // Importando toasts
 
 interface AuthPageProps {
   onLogin: (user: User) => void;
@@ -9,7 +10,7 @@ interface AuthPageProps {
   onBackToLanding: () => void; // NEW PROP
 }
 
-type AuthMode = 'login' | 'register' | 'forgot';
+type AuthMode = 'login' | 'register' | 'forgot' | 'resend'; // Adicionando 'resend'
 
 const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNavigate, onBackToLanding }) => {
   const [mode, setMode] = useState<AuthMode>('login');
@@ -39,6 +40,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState(false);
+  
+  // Resend Confirmation States
+  const [resendEmail, setResendEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
 
   // --- UTILS ---
   const formatPhone = (value: string): string => {
@@ -73,7 +78,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
     setIsLoading(false);
 
     if (error) {
-        setAuthError(error.message.includes('Invalid login credentials') ? 'Credenciais inválidas. Verifique seu email e senha.' : error.message);
+        if (error.message.includes('Email not confirmed')) {
+            setAuthError('Seu e-mail ainda não foi confirmado. Por favor, verifique sua caixa de entrada ou solicite o reenvio.');
+            setMode('resend'); // Redireciona para a tela de reenvio
+        } else {
+            setAuthError(error.message.includes('Invalid login credentials') ? 'Credenciais inválidas. Verifique seu email e senha.' : error.message);
+        }
     } else {
         // onAuthStateChange in App.tsx handles successful login and user state update
     }
@@ -213,6 +223,33 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
           setForgotSuccess(true);
       }
   };
+  
+  const handleResendConfirmation = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setResendLoading(true);
+      setAuthError(null);
+      setAuthSuccess(null);
+      
+      const { error } = await supabase.auth.resend({
+          type: 'signup',
+          email: resendEmail,
+      });
+      
+      setResendLoading(false);
+      
+      if (error) {
+          // Supabase retorna erro se o e-mail já estiver confirmado ou não existir
+          if (error.message.includes('already confirmed')) {
+              setAuthError('Este e-mail já está confirmado. Tente fazer login.');
+              setMode('login');
+          } else {
+              setAuthError(error.message);
+          }
+      } else {
+          showSuccess(`Novo e-mail de confirmação enviado para ${resendEmail}.`);
+          setMode('login');
+      }
+  };
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-900">
@@ -261,14 +298,16 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
             </div>
 
             <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2 text-center">
-                {mode === 'login' ? 'Acesse sua conta' : mode === 'register' ? 'Crie sua conta grátis' : 'Recuperar Senha'}
+                {mode === 'login' ? 'Acesse sua conta' : mode === 'register' ? 'Crie sua conta grátis' : mode === 'forgot' ? 'Recuperar Senha' : 'Reenviar Confirmação'}
             </h2>
             <p className="text-slate-500 text-center mb-8">
                 {mode === 'login' 
                     ? 'Bem-vindo de volta! Insira seus dados abaixo.' 
                     : mode === 'register' 
                     ? 'Comece a organizar seu negócio hoje mesmo.'
-                    : 'Enviaremos as instruções para seu e-mail.'}
+                    : mode === 'forgot'
+                    ? 'Enviaremos as instruções para seu e-mail.'
+                    : 'Seu link de confirmação expirou ou não chegou. Solicite um novo.'}
             </p>
             
             {authError && (
@@ -324,7 +363,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
                         </div>
                     </div>
                     
-                    <div className="flex justify-end">
+                    <div className="flex justify-between items-center">
+                        <button type="button" onClick={() => { setMode('resend'); setAuthError(null); setAuthSuccess(null); setResendEmail(email); }} className="text-sm text-slate-500 hover:underline">Reenviar Confirmação?</button>
                         <button type="button" onClick={() => { setMode('forgot'); setAuthError(null); setAuthSuccess(null); }} className="text-sm text-primary hover:underline">Esqueceu a senha?</button>
                     </div>
 
@@ -540,6 +580,48 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onForgotPassword, onNaviga
                             </p>
                         </form>
                     )}
+                </div>
+            )}
+            
+            {mode === 'resend' && (
+                // RESEND CONFIRMATION FORM
+                <div className="space-y-6">
+                    <form onSubmit={handleResendConfirmation} className="space-y-4">
+                        <div className="p-3 bg-yellow-50 text-yellow-700 rounded-lg border border-yellow-200 text-sm">
+                            Seu link de confirmação pode ter expirado. Insira seu e-mail para receber um novo.
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email de Cadastro</label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-lg">email</span>
+                                <input 
+                                    type="email" 
+                                    required
+                                    value={resendEmail}
+                                    onChange={(e) => setResendEmail(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/50"
+                                    placeholder="seu@email.com"
+                                />
+                            </div>
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            disabled={resendLoading}
+                            className="w-full bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white py-3 rounded-lg font-bold shadow-sm transition-colors flex justify-center items-center gap-2"
+                        >
+                            {resendLoading ? (
+                                <>
+                                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                    Enviando...
+                                </>
+                            ) : 'Reenviar Confirmação'}
+                        </button>
+                        
+                        <p className="text-center text-slate-500 mt-6">
+                            <button type="button" onClick={() => { setMode('login'); setAuthError(null); setAuthSuccess(null); }} className="text-primary font-bold hover:underline">Voltar ao Login</button>
+                        </p>
+                    </form>
                 </div>
             )}
         </div>
