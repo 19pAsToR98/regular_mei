@@ -554,7 +554,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                 return h + (rest ? ' e ' + rest : '');
             }
             return '';
-        };
+            };
 
         const integerPart = Math.floor(num);
         const decimalPart = Math.round((num - integerPart) * 100);
@@ -1061,12 +1061,11 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                 scale: 2, 
                 logging: false, 
                 useCORS: true,
-                // Adicionando largura explícita para tentar corrigir o corte
-                width: element.offsetWidth, 
+                // REMOVIDO: width: element.offsetWidth, // Removendo largura explícita para evitar corte no mobile
             },
             jsPDF: { 
                 unit: 'mm', 
-                format: 'a4', 
+                format: 'a4', // Garantindo A4
                 orientation: 'portrait' 
             }
         };
