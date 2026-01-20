@@ -596,8 +596,8 @@ const App: React.FC = () => {
 
     const appUser: User = {
         id: profileData.id,
-        name: profileData.name || supabaseUser.email,
         email: supabaseUser.email, // <-- CORREÇÃO: Usando o email do perfil do DB (que é atualizado pelo trigger)
+        name: profileData.name || supabaseUser.email,
         phone: profileData.phone,
         cnpj: profileData.cnpj,
         isSetupComplete: profileData.is_setup_complete,
@@ -893,6 +893,11 @@ const App: React.FC = () => {
   
   const handleViewNews = (id: number) => {
     // console.log('Attempting to view news ID:', id); // REMOVIDO LOG
+    
+    // If user is NOT logged in, force public view mode
+    if (!user) {
+        setIsPublicView(true);
+    }
     
     // If in embed view, force parent navigation
     if (isEmbedView) {
