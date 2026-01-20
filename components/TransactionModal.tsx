@@ -112,6 +112,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 amount: amountValue,
                 expectedAmount: amountValue,
                 date: dateStr,
+                time: undefined, // Time is not collected here
                 status: (formData.recurrenceType !== 'none' && i > 0) ? 'pendente' : (formData.status as 'pago' | 'pendente'),
                 isRecurring: formData.recurrenceType === 'recurring',
                 installments: formData.recurrenceType === 'installment' ? { current: i + 1, total: count } : undefined
@@ -217,7 +218,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 type="date" 
                 required
                 value={formData.date}
-                onChange={e => setDate(e.target.value)}
+                onChange={e => setFormData({...formData, date: e.target.value})}
                 className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary/50 outline-none"
               />
             </div>
@@ -280,7 +281,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                   type="radio" 
                   name="status" 
                   checked={formData.status === 'pago'}
-                  onChange={() => setStatus('pago')}
+                  onChange={() => setFormData({...formData, status: 'pago'})}
                   className="text-primary focus:ring-primary"
                 />
                 <span className="text-slate-700 dark:text-slate-300">{isRevenue ? 'Recebido' : 'Pago'}</span>
@@ -290,7 +291,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                   type="radio" 
                   name="status" 
                   checked={formData.status === 'pendente'}
-                  onChange={() => setStatus('pendente')}
+                  onChange={() => setFormData({...formData, status: 'pendente'})}
                   className="text-primary focus:ring-primary"
                 />
                 <span className="text-slate-700 dark:text-slate-300">Pendente (Previsto)</span>
