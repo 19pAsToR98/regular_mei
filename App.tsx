@@ -67,7 +67,7 @@ const App: React.FC = () => {
   // --- AUTH STATE ---
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
-  const [isPublicView, setIsPublicView] = useState(false);
+  // REMOVED: const [isPublicView, setIsPublicView] = useState(false);
   const [isEmbedView, setIsEmbedView] = useState(false);
   // Removed: const [pendingCnpjFlow, setPendingCnpjFlow] = useState(false); 
 
@@ -413,7 +413,7 @@ const App: React.FC = () => {
         console.error('Error fetching news:', newsError);
     }
 
-    // Offers (REMOVED LOGIC)
+    // Offers (REMOVIDO LOGIC)
     // const { data: offersData, error: offersError } = await supabase
     //     .from('offers')
     //     .select('*')
@@ -723,20 +723,20 @@ const App: React.FC = () => {
             setIsEmbedView(true);
             setLoadingAuth(false);
             loadNewsAndOffers();
-            loadConnectionConfig(); // Ensure config loads even in embed view
+            loadConnectionConfig();
             return () => {};
         }
 
         if (params.get('page') === 'news') {
-            setIsPublicView(true);
-            setLoadingAuth(false);
-            // Set readingNewsId if provided in URL
+            // If public news link is accessed directly, set the tab and ID
+            setActiveTabState('news');
             if (articleIdParam) {
                 setReadingNewsId(parseInt(articleIdParam));
             }
+            setLoadingAuth(false);
             // Ensure public data is loaded
             loadNewsAndOffers();
-            loadConnectionConfig(); // Ensure config loads for public news view
+            loadConnectionConfig();
             return () => {}; // Return empty cleanup function
         }
     }
@@ -891,13 +891,8 @@ const App: React.FC = () => {
       setActiveTab('cnpj-consult'); // Navigate to the new public page
   };
   
-  const handleViewNews = (id: number) => {
+  const handleViewNews = (id: number | undefined) => {
     // console.log('Attempting to view news ID:', id); // REMOVIDO LOG
-    
-    // If user is NOT logged in, force public view mode
-    if (!user) {
-        setIsPublicView(true);
-    }
     
     // If in embed view, force parent navigation
     if (isEmbedView) {
@@ -913,8 +908,8 @@ const App: React.FC = () => {
         return;
     }
     
-    // If in dashboard or public view, update internal state
-    setReadingNewsId(id);
+    // Set readingNewsId (null if undefined)
+    setReadingNewsId(id || null);
     setActiveTab('news');
   };
   
@@ -1331,7 +1326,7 @@ const App: React.FC = () => {
 
     if (error) {
         console.error('Error marking as read:', error);
-        // Continue without showing error, as it's a background task
+        // Continue without showing error, as it.s a background task
     }
     
     // Optimistic UI update
@@ -1782,83 +1777,53 @@ const App: React.FC = () => {
       );
   }
 
-  if (isPublicView) {
-      // console.log('[Render] Public News View Active.'); // REMOVIDO LOG
-      return (
-          <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
-              <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 h-[72px] flex items-center justify-between px-6">
-                  <div className="flex items-center gap-2">
-                      <img 
-                        src="https://regularmei.com.br/wp-content/uploads/2024/07/REGULAR-500-x-200-px.png" 
-                        alt="Regular MEI" 
-                        className="h-8 w-auto object-contain dark:brightness-0 dark:invert"
-                      />
-                      <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase ml-2">{activeTab === 'terms' ? 'Termos' : 'Privacidade'}</span>
-                  </div>
-                  <button 
-                    onClick={() => {
-                        setIsPublicView(false);
-                        setReadingNewsId(null); // Clear article ID when navigating back
-                        const url = new URL(window.location.href);
-                        url.searchParams.delete('page');
-                        url.searchParams.delete('articleId'); // Clear article ID from URL
-                        window.history.pushState({}, '', url);
-                        setActiveTab('home'); // Redirect to home/landing
-                    }}
-                    className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
-                  >
-                      Acessar Plataforma <span className="material-icons text-sm">login</span>
-                  </button>
-              </header>
-              <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8">
-                  <NewsPage news={news} readingId={readingNewsId} onSelectNews={setReadingNewsId} />
-              </main>
-              <footer className="mt-8 text-center text-sm text-slate-400 pb-8">
-                <p>&copy; {new Date().getFullYear()} Regular MEI. Todos os direitos reservados.</p>
-              </footer>
-          </div>
-      );
-  }
-
-  // Handle public pages (Terms and Privacy) when not logged in
-  if (!user && (activeTab === 'terms' || activeTab === 'privacy')) {
-      // console.log('[Render] Public Terms/Privacy View Active.'); // REMOVIDO LOG
-      return (
-          <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
-              <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 h-[72px] flex items-center justify-between px-6">
-                  <div className="flex items-center gap-2">
-                      <img 
-                        src="https://regularmei.com.br/wp-content/uploads/2024/07/REGULAR-500-x-200-px.png" 
-                        alt="Regular MEI" 
-                        className="h-8 w-auto object-contain dark:brightness-0 dark:invert"
-                      />
-                      <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase ml-2">{activeTab === 'terms' ? 'Termos' : 'Privacidade'}</span>
-                  </div>
-                  <button 
-                    onClick={() => setActiveTab('auth')}
-                    className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
-                  >
-                      Voltar ao Login <span className="material-icons text-sm">login</span>
-                  </button>
-              </header>
-              <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8">
-                  {activeTab === 'terms' ? <TermsPage /> : <PrivacyPage />}
-              </main>
-              <footer className="mt-8 text-center text-sm text-slate-400 pb-8">
-                <p>&copy; {new Date().getFullYear()} Regular MEI. Todos os direitos reservados.</p>
-              </footer>
-          </div>
-      );
-  }
-  
-  // NEW: Handle public CNPJ Consult Page
-  if (!user && activeTab === 'cnpj-consult') {
-      // console.log('[Render] Public CNPJ Consult View Active.'); // REMOVIDO LOG
-      return <CnpjConsultPage onBack={handleBackToLanding} connectionConfig={connectionConfig} />;
-  }
-
   // If not logged in, show LandingPage or AuthPage
   if (!user) {
+      // Handle public pages that require full screen rendering
+      if (activeTab === 'terms' || activeTab === 'privacy' || activeTab === 'cnpj-consult' || activeTab === 'news') {
+          
+          // If navigating to news list from landing page, ensure readingId is null
+          if (activeTab === 'news' && readingNewsId === undefined) {
+              setReadingNewsId(null);
+          }
+
+          return (
+              <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
+                  <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 h-[72px] flex items-center justify-between px-6">
+                      <div className="flex items-center gap-2">
+                          <img 
+                            src="https://regularmei.com.br/wp-content/uploads/2024/07/REGULAR-500-x-200-px.png" 
+                            alt="Regular MEI" 
+                            className="h-8 w-auto object-contain dark:brightness-0 dark:invert"
+                          />
+                          <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase ml-2">
+                              {activeTab === 'terms' ? 'Termos' : activeTab === 'privacy' ? 'Privacidade' : activeTab === 'cnpj-consult' ? 'Consulta CNPJ' : 'Notícias'}
+                          </span>
+                      </div>
+                      <button 
+                        onClick={() => {
+                            setReadingNewsId(null);
+                            setActiveTab('home');
+                        }}
+                        className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
+                      >
+                          Voltar para a Home <span className="material-icons text-sm">arrow_back</span>
+                      </button>
+                  </header>
+                  <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8">
+                      {activeTab === 'terms' ? <TermsPage /> : 
+                       activeTab === 'privacy' ? <PrivacyPage /> :
+                       activeTab === 'cnpj-consult' ? <CnpjConsultPage onBack={handleBackToLanding} connectionConfig={connectionConfig} /> :
+                       <NewsPage news={news} readingId={readingNewsId} onSelectNews={setReadingNewsId} />
+                      }
+                  </main>
+                  <footer className="mt-8 text-center text-sm text-slate-400 pb-8">
+                    <p>&copy; {new Date().getFullYear()} Regular MEI. Todos os direitos reservados.</p>
+                  </footer>
+              </div>
+          );
+      }
+
       if (activeTab === 'auth') {
           // console.log('[Render] Auth Page Active.'); // REMOVIDO LOG
           return <AuthPage 
@@ -1868,6 +1833,7 @@ const App: React.FC = () => {
               onBackToLanding={handleBackToLanding}
           />;
       }
+      
       // Default to LandingPage
       // console.log('[Render] Landing Page Active.'); // REMOVIDO LOG
       return <LandingPage 
