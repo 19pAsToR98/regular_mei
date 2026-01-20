@@ -199,9 +199,10 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                 scale: 3, // Alta escala para qualidade
                 logging: false, 
                 useCORS: true,
+                allowTaint: true, // Adicionado para mitigar erro cross-origin
                 width: PLATE_WIDTH, 
                 height: PLATE_HEIGHT,
-                window: window, // Adicionado para mitigar erro cross-origin
+                window: window, 
             },
             jsPDF: { 
                 unit: 'mm', 
@@ -505,7 +506,8 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                 scale: 2, 
                 logging: false, 
                 useCORS: true,
-                window: window, // Adicionado para mitigar erro cross-origin
+                allowTaint: true, // Adicionado para mitigar erro cross-origin
+                window: window, 
                 // Usando onclone para forçar o fundo branco e o grayscale
                 onclone: (doc: Document) => {
                     const receiptElement = doc.getElementById('receipt-preview');
@@ -1059,7 +1061,8 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                 scale: 2, 
                 logging: false, 
                 useCORS: true,
-                window: window, // Adicionado para mitigar erro cross-origin
+                allowTaint: true, // Adicionado para mitigar erro cross-origin
+                window: window, 
             },
             jsPDF: { 
                 unit: 'mm', 

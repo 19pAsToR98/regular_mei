@@ -5,7 +5,7 @@ import PublicNewsSlider from './PublicNewsSlider';
 interface LandingPageProps {
   onGetStarted: () => void;
   onLogin: () => void;
-  onViewBlog: () => void;
+  onViewBlog: (id: number | null) => void; // Atualizado para aceitar null
   onConsultCnpj: () => void;
   news: NewsItem[]; // NEW PROP
 }
@@ -92,6 +92,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
   
   const handleCloseTypebot = () => {
       setActiveTypebotId(null);
+  };
+  
+  // NOVO: Handler para navegar para a lista de notícias
+  const handleViewBlogList = () => {
+      onViewBlog(null); // Passa null para indicar que queremos a lista
   };
 
   const mainServices = [
@@ -574,11 +579,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
           </div>
           
           {/* Public News Slider */}
-          <PublicNewsSlider news={news} onViewNews={onViewBlog} />
+          <PublicNewsSlider news={news} onViewNews={(id) => onViewBlog(id)} />
           
           <div className="text-center mt-10">
               <button 
-                  onClick={onViewBlog} 
+                  onClick={handleViewBlogList} // CORRIGIDO: Chama a função que navega para a lista
                   className="bg-primary hover:bg-blue-600 text-white px-8 py-3 rounded-xl font-bold text-base shadow-lg shadow-blue-500/25 transition-all active:scale-95 flex items-center justify-center gap-2 mx-auto"
               >
                   Ver Blog Completo <span className="material-icons">arrow_forward</span>
@@ -619,7 +624,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
               <h4 className="font-bold text-slate-900 dark:text-white mb-4 md:mb-6 uppercase text-[10px] md:text-xs tracking-widest">Suporte</h4>
               <ul className="space-y-3 md:space-y-4 text-xs md:text-sm text-slate-500 dark:text-slate-400">
                 <li><a href="#" className="hover:text-primary">Central de Ajuda</a></li>
-                <li><a href="#" className="hover:text-primary">Privacidade</a></li>
+                <li><button onClick={() => onViewBlog('privacy' as any)} className="hover:text-primary">Privacidade</button></li>
                 <li><a href="#" className="hover:text-primary">Contato</a></li>
               </ul>
             </div>
