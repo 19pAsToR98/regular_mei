@@ -199,9 +199,9 @@ const PixGenerator = ({ onBack, user }: { onBack: () => void, user?: User | null
                 scale: 3, // Alta escala para qualidade
                 logging: false, 
                 useCORS: true,
-                // Definir largura e altura exatas do elemento para evitar quebras
                 width: PLATE_WIDTH, 
-                height: PLATE_HEIGHT 
+                height: PLATE_HEIGHT,
+                window: window, // Adicionado para mitigar erro cross-origin
             },
             jsPDF: { 
                 unit: 'mm', 
@@ -505,6 +505,7 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                 scale: 2, 
                 logging: false, 
                 useCORS: true,
+                window: window, // Adicionado para mitigar erro cross-origin
                 // Usando onclone para forçar o fundo branco e o grayscale
                 onclone: (doc: Document) => {
                     const receiptElement = doc.getElementById('receipt-preview');
@@ -962,9 +963,6 @@ const ReceiptGenerator = ({ onBack, user }: { onBack: () => void, user?: User | 
                         // Mantendo a classe grayscale no JSX para a pré-visualização
                         className={`bg-[#fffbeb] text-slate-800 p-8 rounded-sm shadow-lg border-2 border-dashed border-slate-300 relative font-mono text-sm leading-relaxed grayscale`}
                     >
-                        {/* Paper Texture Effect */}
-                        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-                        
                         {renderReceiptContent()}
                         
                         <div className="absolute bottom-4 left-0 w-full text-center text-[10px] text-slate-400">
@@ -1061,7 +1059,7 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                 scale: 2, 
                 logging: false, 
                 useCORS: true,
-                // REMOVIDO: width: element.offsetWidth, // Removendo largura explícita para evitar corte no mobile
+                window: window, // Adicionado para mitigar erro cross-origin
             },
             jsPDF: { 
                 unit: 'mm', 
@@ -1138,7 +1136,7 @@ const BudgetGenerator = ({ onBack, user }: { onBack: () => void, user?: User | n
                                         <button 
                                             key={t}
                                             onClick={() => setBudget({...budget, template: t as any})}
-                                            className={`flex-1 py-2 text-xs font-bold uppercase rounded border transition-colors ${budget.template === t ? 'bg-slate-800 text-white border-slate-800 dark:bg-slate-700' : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'}`}
+                                            className={`flex-1 py-2 text-xs font-bold uppercase rounded border transition-colors ${budget.template === t ? 'bg-slate-800 text-white dark:bg-slate-700' : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'}`}
                                         >
                                             {t === 'classic' ? 'Padrão' : t === 'modern' ? 'Moderno' : 'Minim.'}
                                         </button>
