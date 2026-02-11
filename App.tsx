@@ -73,7 +73,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTabState] = useState(() => {
     if (typeof window !== 'undefined') {
       const storedTab = localStorage.getItem('activeTab');
-      if (!storedTab || storedTab === 'login' || storedTab === 'auth') return 'home';
+      if (!storedTab || storedTab === 'login' || storedTab === 'auth' || storedTab === 'home') return 'home';
       return storedTab;
     }
     return 'home';
@@ -308,6 +308,47 @@ const App: React.FC = () => {
     if (!error) { setTransactions(prev => prev.filter(tr => tr.id !== id)); showSuccess('Excluído!'); }
   };
 
+  const handleMarkAsRead = async (id: number) => {
+      if (!user) return;
+      const { error } = await supabase.from('user_notification_interactions').upsert({ user_id: user.id, notification_id: id, is_read: true }, { onConflict: 'user_id,notification_id' });
+      if (!error) setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  };
+
+  const handleVote = async (notificationId: number, optionId: number) => {
+      if (!user) return;
+      const { error } = await supabase.from('user_notification_interactions').upsert({ user_id: user.id, notification_id: notificationId, voted_option_id: optionId, voted_at: new Date().toISOString() }, { onConflict: 'user_id,notification_id' });
+      if (!error) {
+          setNotifications(prev => prev.map(n => {
+              if (n.id === notificationId) {
+                  const newOptions = n.pollOptions?.map(opt => opt.id === optionId ? { ...opt, votes: opt.votes + 1 } : opt);
+                  return { ...n, pollOptions: newOptions, userVotedOptionId: optionId };
+              }
+              return n;
+          }));
+          showSuccess('Voto registrado!');
+      }
+  };
+
+  const handleAddCategory = async (type: 'receita' | 'despesa', cat: Category) => {
+      if (!user) return;
+      const { error } = await supabase.from('user_categories').insert({ user_id: user.id, name: cat.name, icon: cat.icon, type });
+      if (!error) {
+          if (type === 'receita') setRevenueCats(prev => [...prev, cat]);
+          else setExpenseCats(prev => [...prev, cat]);
+          showSuccess('Categoria adicionada!');
+      }
+  };
+
+  const handleDeleteCategory = async (type: 'receita' | 'despesa', name: string) => {
+      if (!user) return;
+      const { error } = await supabase.from('user_categories').delete().eq('user_id', user.id).eq('name', name).eq('type', type);
+      if (!error) {
+          if (type === 'receita') setRevenueCats(prev => prev.filter(c => c.name !== name));
+          else setExpenseCats(prev => prev.filter(c => c.name !== name));
+          showSuccess('Categoria removida!');
+      }
+  };
+
   const renderContent = () => {
       if (activeTab === 'admin' && user?.role !== 'admin') return <div className="p-8 text-center">Acesso Negado</div>;
       if (isPageInMaintenance(activeTab)) return <MaintenanceOverlay type="page" />;
@@ -361,6 +402,13 @@ const App: React.FC = () => {
   };
 
   const isPageInMaintenance = (page: string) => { if (user?.role === 'admin') return false; if (maintenance.global && page !== 'admin' && page !== 'settings') return true; return maintenance[page as keyof MaintenanceConfig] || false; };
+
+  if (loadingAuth) return <div className="h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950"><div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>;
+
+  if (!user && activeTab === 'home') return <LandingPage onGetStarted={() => setActiveTab('auth')} onLogin={() => setActiveTab('auth')} onViewBlog={handleViewNews} onConsultCnpj={() => setActiveTab('cnpj_consult')} news={news} />;
+  if (!user && activeTab === 'cnpj_consult') return <CnpjConsultPage onBack={() => setActiveTab('home')} connectionConfig={connectionConfig} />;
+  if (!user) return <AuthPage onLogin={() => {}} onForgotPassword={async () => true} onNavigate={setActiveTab} onBackToLanding={() => setActiveTab('home')} />;
+  if (user && !user.isSetupComplete) return <OnboardingPage onComplete={handleOnboardingComplete} />;
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden relative">

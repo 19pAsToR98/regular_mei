@@ -28,7 +28,15 @@ export interface ForecastItem {
   iconColorClass: string;
 }
 
-// REMOVIDO: export interface Offer { ... }
+export interface Offer {
+  id: number;
+  title: string;
+  description: string;
+  link: string;
+  imageUrl: string;
+  badge?: string;
+  category: string;
+}
 
 export interface CnaeProduct {
   id: string;
