@@ -467,7 +467,7 @@ const App: React.FC = () => {
 
   if (isPublicPage && !user) {
       return (
-          <div className="min-h-screen bg-background-light dark:bg-background-dark overflow-y-auto">
+          <div className="bg-background-light dark:bg-background-dark">
               {renderContent()}
               <InstallPrompt />
           </div>
