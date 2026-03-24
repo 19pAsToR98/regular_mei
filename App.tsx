@@ -147,7 +147,6 @@ const App: React.FC = () => {
         fiscalSummary: profile.fiscal_summary
       });
       setCnpj(profile.cnpj || '');
-      // Fetch other data...
       fetchTransactions(userId);
       fetchAppointments(userId);
     }
@@ -193,7 +192,6 @@ const App: React.FC = () => {
   };
 
   const handleDeleteTransactionSeries = async (t: Transaction) => {
-    // Logic for deleting recurring series...
     showSuccess('Série excluída!');
   };
 
@@ -234,7 +232,6 @@ const App: React.FC = () => {
   };
 
   const handleVote = (notifId: number, optionId: number) => {
-    // Logic for voting...
     showSuccess('Voto registrado!');
   };
 
@@ -275,12 +272,10 @@ const App: React.FC = () => {
   };
 
   const handleExportData = () => {
-    // Logic for exporting CSV...
     showSuccess('Dados exportados!');
   };
 
   const handleDeleteAccount = async () => {
-    // Logic for account deletion...
     showSuccess('Conta excluída.');
   };
 
@@ -333,8 +328,8 @@ const App: React.FC = () => {
       aReceber: pendingRevenue,
       aPagar: pendingExpense,
       caixaProjetado: (realizedRevenue + pendingRevenue) - (realizedExpense + pendingExpense),
-      emAtraso: 0, // Simplified
-      aVencer: 0   // Simplified
+      emAtraso: 0,
+      aVencer: 0
     };
   }, [transactions]);
 
@@ -465,6 +460,18 @@ const App: React.FC = () => {
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
+  }
+
+  // --- RENDER LOGIC ---
+  const isPublicPage = activeTab === 'home' || activeTab === 'login' || activeTab === 'register' || activeTab === 'cnpj-consult' || (activeTab === 'dasn-service' && !user);
+
+  if (isPublicPage && !user) {
+      return (
+          <div className="min-h-screen bg-background-light dark:bg-background-dark overflow-y-auto">
+              {renderContent()}
+              <InstallPrompt />
+          </div>
+      );
   }
 
   return (
