@@ -36,6 +36,7 @@ interface PaymentData {
 
 const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   const [cnpj, setCnpj] = useState(initialCnpj);
+  const [email, setEmail] = useState(''); // NOVO ESTADO PARA EMAIL
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
@@ -53,7 +54,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
 
-  const SERVICE_PRICE_PER_YEAR = 69.90; // Exemplo de valor
+  const SERVICE_PRICE_PER_YEAR = 69.90;
 
   // Validation Error State
   const [validationError, setValidationError] = useState<ValidationError | null>(null);
@@ -72,6 +73,17 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
         if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [isLoading, isValidating, isCreatingPayment]);
+
+  // Tenta carregar o email do usuário logado se disponível
+  useEffect(() => {
+      const loadUserEmail = async () => {
+          const { data } = await supabase.auth.getUser();
+          if (data?.user?.email) {
+              setEmail(data.user.email);
+          }
+      };
+      loadUserEmail();
+  }, []);
 
   const fetchCompanyData = async (cleanCnpj: string) => {
     const targetUrl = `https://publica.cnpj.ws/cnpj/${cleanCnpj}`;
@@ -136,6 +148,12 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
       showWarning("Por favor, insira um CNPJ válido com 14 dígitos.");
       return;
     }
+    
+    if (!email.includes('@') || !email.includes('.')) {
+        showWarning("Por favor, insira um e-mail válido.");
+        return;
+    }
+
     setIsLoading(true);
     const [nameResult, pendingResult] = await Promise.all([
         fetchCompanyData(cleanCnpj),
@@ -268,7 +286,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
               body: JSON.stringify({
                   cnpj: cnpj,
                   name: companyName,
-                  email: sessionData.session?.user?.email || 'cliente@regularmei.com.br',
+                  email: email, // USANDO O EMAIL DO ESTADO
                   amount: totalAmount,
                   description: description
               })
@@ -298,7 +316,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
 
   const steps = [
     { id: 1, label: 'Início', icon: 'info' },
-    { id: 2, label: 'CNPJ', icon: 'business' },
+    { id: 2, label: 'Dados', icon: 'business' },
     { id: 3, label: 'Pendências', icon: 'fact_check' },
     { id: 4, label: 'Valores', icon: 'payments' },
     { id: 5, label: 'Pagamento', icon: 'shopping_cart' },
@@ -378,10 +396,10 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
 
             {step === 2 && (
                 <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                    <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Identificação da Empresa</h3>
-                    <p className="text-slate-500 dark:text-slate-400 mb-8">Confirme o CNPJ para o qual deseja realizar a declaração.</p>
+                    <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Dados de Contato</h3>
+                    <p className="text-slate-500 dark:text-slate-400 mb-8">Informe o CNPJ e o e-mail para receber o comprovante da declaração.</p>
 
-                    <form onSubmit={handleCheckPending} className="space-y-8">
+                    <form onSubmit={handleCheckPending} className="space-y-6">
                         <div className="relative group">
                             <label className="absolute -top-2.5 left-4 px-2 bg-white dark:bg-slate-900 text-xs font-bold text-primary z-10">CNPJ da MEI</label>
                             <div className="relative">
@@ -389,14 +407,30 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                                 <input 
                                     type="text" 
                                     required
-                                    autoFocus
                                     value={cnpj}
                                     onChange={(e) => setCnpj(e.target.value)}
-                                    className="w-full pl-14 pr-6 py-5 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-xl font-mono outline-none focus:border-primary transition-all shadow-sm"
+                                    className="w-full pl-14 pr-6 py-4 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-xl font-mono outline-none focus:border-primary transition-all shadow-sm"
                                     placeholder="00.000.000/0000-00"
                                     disabled={isLoading}
                                 />
                             </div>
+                        </div>
+
+                        <div className="relative group">
+                            <label className="absolute -top-2.5 left-4 px-2 bg-white dark:bg-slate-900 text-xs font-bold text-primary z-10">E-mail para Contato</label>
+                            <div className="relative">
+                                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors material-icons text-2xl">email</span>
+                                <input 
+                                    type="email" 
+                                    required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full pl-14 pr-6 py-4 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-lg outline-none focus:border-primary transition-all shadow-sm"
+                                    placeholder="seu@email.com"
+                                    disabled={isLoading}
+                                />
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-2 ml-2">Este e-mail será usado para criar sua conta no gateway de pagamento.</p>
                         </div>
 
                         {isLoading && (
@@ -410,7 +444,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             </div>
                         )}
 
-                        <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex flex-col sm:flex-row gap-3 pt-4">
                             <button 
                                 type="button"
                                 onClick={() => setStep(1)}
