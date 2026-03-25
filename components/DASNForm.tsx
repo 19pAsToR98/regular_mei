@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { showWarning, showError } from '../utils/toastUtils';
 import { CNPJResponse } from '../types';
 
@@ -17,10 +17,28 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   const [cnpj, setCnpj] = useState(initialCnpj);
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const timerRef = useRef<any>(null);
   
   // Data States
   const [companyName, setCompanyName] = useState('');
   const [pendingYears, setPendingYears] = useState<PendingYear[]>([]);
+
+  // Timer logic for loading
+  useEffect(() => {
+    if (isLoading) {
+        const startTime = Date.now();
+        timerRef.current = setInterval(() => {
+            setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
+        }, 1000);
+    } else {
+        if (timerRef.current) clearInterval(timerRef.current);
+        setElapsedTime(0);
+    }
+    return () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isLoading]);
 
   const fetchCompanyData = async (cleanCnpj: string) => {
     const targetUrl = `https://publica.cnpj.ws/cnpj/${cleanCnpj}`;
@@ -73,7 +91,6 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
 
         const rawData = await response.json();
         
-        // Normaliza a resposta para um array (pode vir como objeto único ou array)
         let dataList = [];
         if (Array.isArray(rawData)) {
             dataList = rawData;
@@ -85,7 +102,6 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
         
         const pending: PendingYear[] = [];
 
-        // 1. Tenta extrair do objeto "resumo" (conforme seu exemplo)
         const summary = dataList.find((i: any) => i.tipo === 'resumo' && i.hasPendentes === true);
         if (summary && Array.isArray(summary.lista)) {
             summary.lista.forEach((year: string) => {
@@ -97,7 +113,6 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
             });
         }
 
-        // 2. Se não encontrou resumo ou a lista está vazia, busca nos objetos "item" individuais
         if (pending.length === 0) {
             const items = dataList.filter((i: any) => 
                 i.tipo === 'item' && 
@@ -130,7 +145,6 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
 
     setIsLoading(true);
     
-    // Executa as duas consultas em paralelo seguindo o padrão da plataforma
     const [nameResult, pendingResult] = await Promise.all([
         fetchCompanyData(cleanCnpj),
         fetchPendingDeclarations(cleanCnpj)
@@ -241,15 +255,28 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                                     onChange={(e) => setCnpj(e.target.value)}
                                     className="w-full pl-14 pr-6 py-5 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-xl font-mono outline-none focus:border-primary transition-all shadow-sm"
                                     placeholder="00.000.000/0000-00"
+                                    disabled={isLoading}
                                 />
                             </div>
                         </div>
+
+                        {isLoading && (
+                            <div className="flex flex-col items-center justify-center p-6 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-800 animate-in zoom-in-95">
+                                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+                                <p className="text-sm font-bold text-blue-800 dark:text-blue-300 mb-1">Consultando situação fiscal...</p>
+                                <p className="text-xs text-blue-600 dark:text-blue-400 text-center mb-3">Este processo pode levar até 60 segundos. Por favor, não feche esta página.</p>
+                                <div className="bg-white dark:bg-slate-800 px-4 py-1 rounded-full text-xs font-mono font-bold text-primary shadow-sm">
+                                    Tempo decorrido: {elapsedTime}s
+                                </div>
+                            </div>
+                        )}
 
                         <div className="flex flex-col sm:flex-row gap-3">
                             <button 
                                 type="button"
                                 onClick={() => setStep(1)}
-                                className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                                disabled={isLoading}
+                                className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all disabled:opacity-50"
                             >
                                 Voltar
                             </button>
@@ -259,7 +286,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                                 className="flex-[2] bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
                             >
                                 {isLoading ? (
-                                    <span className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                    <>Aguarde...</>
                                 ) : (
                                     <>Verificar Pendências <span className="material-icons">search</span></>
                                 )}
@@ -304,7 +331,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                         </div>
                     )}
 
-                    <div className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 mb-8">
+                    <div className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 mb-8">
                         <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
                             {pendingYears.length > 0 
                                 ? 'O próximo passo é informar os valores de faturamento para cada ano pendente listado acima.'
