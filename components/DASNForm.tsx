@@ -73,25 +73,46 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
 
         const rawData = await response.json();
         
-        // Padrão de extração idêntico ao CNPJPage.tsx
-        let dataToProcess = null;
+        // Normaliza a resposta para um array (pode vir como objeto único ou array)
+        let dataList = [];
         if (Array.isArray(rawData)) {
-            dataToProcess = rawData;
+            dataList = rawData;
         } else if (rawData && rawData.resultado) {
-            dataToProcess = rawData.resultado;
+            dataList = Array.isArray(rawData.resultado) ? rawData.resultado : [rawData.resultado];
         } else {
-            dataToProcess = [rawData];
+            dataList = [rawData];
         }
         
-        if (Array.isArray(dataToProcess)) {
-            // Filtra apenas os objetos do tipo 'item' que possuem pendência
-            return dataToProcess.filter((item: any) => 
-                item.tipo === 'item' && 
-                (item.hasPendentes === true || item.status === 'NaoApresentada')
-            ) as PendingYear[];
+        const pending: PendingYear[] = [];
+
+        // 1. Tenta extrair do objeto "resumo" (conforme seu exemplo)
+        const summary = dataList.find((i: any) => i.tipo === 'resumo' && i.hasPendentes === true);
+        if (summary && Array.isArray(summary.lista)) {
+            summary.lista.forEach((year: string) => {
+                pending.push({
+                    ano: year,
+                    status: 'NaoApresentada',
+                    label: year
+                });
+            });
+        }
+
+        // 2. Se não encontrou resumo ou a lista está vazia, busca nos objetos "item" individuais
+        if (pending.length === 0) {
+            const items = dataList.filter((i: any) => 
+                i.tipo === 'item' && 
+                (i.hasPendentes === true || i.status === 'NaoApresentada')
+            );
+            items.forEach((i: any) => {
+                pending.push({
+                    ano: i.ano || i.label,
+                    status: i.status || 'NaoApresentada',
+                    label: i.label || i.ano
+                });
+            });
         }
         
-        return [];
+        return pending;
     } catch (e) {
         console.error("Erro ao buscar pendências:", e);
         return [];
