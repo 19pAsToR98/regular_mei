@@ -24,39 +24,61 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
 
   const fetchCompanyData = async (cleanCnpj: string) => {
     const targetUrl = `https://publica.cnpj.ws/cnpj/${cleanCnpj}`;
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
     
-    try {
-        const response = await fetch(proxyUrl);
-        if (!response.ok) return null;
-        const data: CNPJResponse = await response.json();
-        return data.razao_social || data.estabelecimento?.nome_fantasia || 'Empresa não identificada';
-    } catch (e) {
-        console.error("Erro ao buscar dados do CNPJ:", e);
-        return null;
+    const endpoints = [
+      { url: `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, type: 'corsproxy' },
+      { url: `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`, type: 'allorigins' },
+      { url: targetUrl, type: 'direct' }
+    ];
+
+    for (const endpoint of endpoints) {
+        try {
+            const response = await fetch(endpoint.url);
+            if (!response.ok) continue;
+
+            let json = await response.json();
+
+            if (endpoint.type === 'allorigins') {
+                if (json.contents) {
+                    try {
+                        const content = JSON.parse(json.contents);
+                        json = content;
+                    } catch (e) { continue; }
+                } else { continue; }
+            }
+
+            const data: CNPJResponse = json;
+            return data.razao_social || data.estabelecimento?.nome_fantasia || 'Empresa não identificada';
+        } catch (e) {
+            console.warn(`Failed ${endpoint.type}`);
+        }
     }
+    return null;
   };
 
   const fetchPendingDeclarations = async (cleanCnpj: string) => {
-    const targetUrl = 'https://n8nwebhook.portalmei360.com/webhook/7b72bef1-f974-424e-8629-cd73aa67bd2d';
-    // Aplicando o CORS Proxy para evitar o bloqueio do navegador
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+    const webhookUrl = 'https://n8nwebhook.portalmei360.com/webhook/7b72bef1-f974-424e-8629-cd73aa67bd2d';
     
     try {
-        const response = await fetch(proxyUrl, {
-            method: 'GET',
+        // Seguindo o padrão de fetchFiscalData: POST com Header e Body
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
             headers: {
                 'cnpj': cleanCnpj,
                 'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify({ cnpj: cleanCnpj })
         });
 
-        if (!response.ok) throw new Error("Falha na consulta de pendências");
+        if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
 
         const data = await response.json();
-        // Filtra apenas os itens do tipo 'item' que estão pendentes
-        if (Array.isArray(data)) {
-            return data.filter(item => item.tipo === 'item' && item.hasPendentes) as PendingYear[];
+        
+        // O n8n pode retornar um array direto ou dentro de um objeto 'resultado'
+        let list = Array.isArray(data) ? data : (data.resultado || []);
+        
+        if (Array.isArray(list)) {
+            return list.filter((item: any) => item.tipo === 'item' && item.hasPendentes) as PendingYear[];
         }
         return [];
     } catch (e) {
@@ -76,7 +98,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
 
     setIsLoading(true);
     
-    // Executa as duas consultas em paralelo
+    // Executa as duas consultas em paralelo seguindo o padrão da plataforma
     const [nameResult, pendingResult] = await Promise.all([
         fetchCompanyData(cleanCnpj),
         fetchPendingDeclarations(cleanCnpj)
