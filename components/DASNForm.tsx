@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { showWarning, showError } from '../utils/toastUtils';
+import { showWarning, showError, showSuccess } from '../utils/toastUtils';
 import { CNPJResponse } from '../types';
 
 interface DASNFormProps {
@@ -13,6 +13,12 @@ interface PendingYear {
     label: string;
 }
 
+interface YearData {
+    services: string;
+    commerce: string;
+    hasEmployee: boolean;
+}
+
 const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   const [cnpj, setCnpj] = useState(initialCnpj);
   const [step, setStep] = useState(1);
@@ -23,6 +29,9 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   // Data States
   const [companyName, setCompanyName] = useState('');
   const [pendingYears, setPendingYears] = useState<PendingYear[]>([]);
+  
+  // Form Data for each year
+  const [yearsFormData, setYearsFormData] = useState<Record<string, YearData>>({});
 
   // Timer logic for loading
   useEffect(() => {
@@ -42,7 +51,6 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
 
   const fetchCompanyData = async (cleanCnpj: string) => {
     const targetUrl = `https://publica.cnpj.ws/cnpj/${cleanCnpj}`;
-    
     const endpoints = [
       { url: `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, type: 'corsproxy' },
       { url: `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`, type: 'allorigins' },
@@ -53,80 +61,42 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
         try {
             const response = await fetch(endpoint.url);
             if (!response.ok) continue;
-
             let json = await response.json();
-
-            if (endpoint.type === 'allorigins') {
-                if (json.contents) {
-                    try {
-                        const content = JSON.parse(json.contents);
-                        json = content;
-                    } catch (e) { continue; }
-                } else { continue; }
+            if (endpoint.type === 'allorigins' && json.contents) {
+                try { json = JSON.parse(json.contents); } catch (e) { continue; }
             }
-
             const data: CNPJResponse = json;
             return data.razao_social || data.estabelecimento?.nome_fantasia || 'Empresa não identificada';
-        } catch (e) {
-            console.warn(`Failed ${endpoint.type}`);
-        }
+        } catch (e) { console.warn(`Failed ${endpoint.type}`); }
     }
     return null;
   };
 
   const fetchPendingDeclarations = async (cleanCnpj: string) => {
     const webhookUrl = 'https://n8nwebhook.portalmei360.com/webhook/7b72bef1-f974-424e-8629-cd73aa67bd2d';
-    
     try {
         const response = await fetch(webhookUrl, {
             method: 'POST',
-            headers: {
-                'cnpj': cleanCnpj,
-                'Content-Type': 'application/json'
-            },
+            headers: { 'cnpj': cleanCnpj, 'Content-Type': 'application/json' },
             body: JSON.stringify({ cnpj: cleanCnpj })
         });
-
         if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
-
         const rawData = await response.json();
-        
-        let dataList = [];
-        if (Array.isArray(rawData)) {
-            dataList = rawData;
-        } else if (rawData && rawData.resultado) {
-            dataList = Array.isArray(rawData.resultado) ? rawData.resultado : [rawData.resultado];
-        } else {
-            dataList = [rawData];
-        }
+        let dataList = Array.isArray(rawData) ? rawData : (rawData.resultado ? (Array.isArray(rawData.resultado) ? rawData.resultado : [rawData.resultado]) : [rawData]);
         
         const pending: PendingYear[] = [];
-
         const summary = dataList.find((i: any) => i.tipo === 'resumo' && i.hasPendentes === true);
         if (summary && Array.isArray(summary.lista)) {
             summary.lista.forEach((year: string) => {
-                pending.push({
-                    ano: year,
-                    status: 'NaoApresentada',
-                    label: year
-                });
+                pending.push({ ano: year, status: 'NaoApresentada', label: year });
             });
         }
-
         if (pending.length === 0) {
-            const items = dataList.filter((i: any) => 
-                i.tipo === 'item' && 
-                (i.hasPendentes === true || i.status === 'NaoApresentada')
-            );
+            const items = dataList.filter((i: any) => i.tipo === 'item' && (i.hasPendentes === true || i.status === 'NaoApresentada'));
             items.forEach((i: any) => {
-                pending.push({
-                    ano: i.ano || i.label,
-                    status: i.status || 'NaoApresentada',
-                    label: i.label || i.ano
-                });
+                pending.push({ ano: i.ano || i.label, status: i.status || 'NaoApresentada', label: i.label || i.ano });
             });
         }
-        
         return pending;
     } catch (e) {
         console.error("Erro ao buscar pendências:", e);
@@ -134,22 +104,18 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
     }
   };
 
-  const handleNext = async (e: React.FormEvent) => {
+  const handleCheckPending = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanCnpj = cnpj.replace(/[^\d]/g, '');
-    
     if (cleanCnpj.length !== 14) {
       showWarning("Por favor, insira um CNPJ válido com 14 dígitos.");
       return;
     }
-
     setIsLoading(true);
-    
     const [nameResult, pendingResult] = await Promise.all([
         fetchCompanyData(cleanCnpj),
         fetchPendingDeclarations(cleanCnpj)
     ]);
-
     setIsLoading(false);
 
     if (!nameResult && (!pendingResult || pendingResult.length === 0)) {
@@ -159,13 +125,51 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
 
     setCompanyName(nameResult || 'Empresa Identificada');
     setPendingYears(pendingResult || []);
+    
+    // Initialize form data for each pending year
+    const initialData: Record<string, YearData> = {};
+    pendingResult.forEach(p => {
+        initialData[p.ano] = { services: '', commerce: '', hasEmployee: false };
+    });
+    setYearsFormData(initialData);
+    
     setStep(3);
+  };
+
+  const handleUpdateYearField = (year: string, field: keyof YearData, value: any) => {
+      setYearsFormData(prev => ({
+          ...prev,
+          [year]: { ...prev[year], [field]: value }
+      }));
+  };
+
+  const handleFinalSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      // Validação básica
+      const allFilled = pendingYears.every(p => {
+          const data = yearsFormData[p.ano];
+          return data.services !== '' && data.commerce !== '';
+      });
+
+      if (!allFilled) {
+          showWarning("Por favor, preencha os valores de faturamento para todos os anos pendentes.");
+          return;
+      }
+
+      setIsLoading(true);
+      // Simulação de envio
+      setTimeout(() => {
+          setIsLoading(false);
+          showSuccess("Dados da declaração enviados com sucesso! Nossa equipe processará seu pedido.");
+          onBack();
+      }, 2000);
   };
 
   const steps = [
     { id: 1, label: 'Introdução', icon: 'info' },
     { id: 2, label: 'Identificação', icon: 'business' },
     { id: 3, label: 'Pendências', icon: 'fact_check' },
+    { id: 4, label: 'Valores', icon: 'payments' },
   ];
 
   return (
@@ -242,7 +246,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                     <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Identificação da Empresa</h3>
                     <p className="text-slate-500 dark:text-slate-400 mb-8">Confirme o CNPJ para o qual deseja realizar a declaração.</p>
 
-                    <form onSubmit={handleNext} className="space-y-8">
+                    <form onSubmit={handleCheckPending} className="space-y-8">
                         <div className="relative group">
                             <label className="absolute -top-2.5 left-4 px-2 bg-white dark:bg-slate-900 text-xs font-bold text-primary z-10">CNPJ da MEI</label>
                             <div className="relative">
@@ -347,6 +351,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             Voltar
                         </button>
                         <button 
+                            onClick={() => setStep(4)}
                             disabled={pendingYears.length === 0}
                             className={`flex-[2] py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${
                                 pendingYears.length > 0 
@@ -357,6 +362,103 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             Preencher Valores {pendingYears.length === 0 && <span className="material-icons">lock</span>}
                         </button>
                     </div>
+                </div>
+            )}
+
+            {step === 4 && (
+                <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+                    <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Valores de Faturamento</h3>
+                    <p className="text-slate-500 dark:text-slate-400 mb-8">Informe os valores brutos recebidos em cada ano pendente.</p>
+
+                    <form onSubmit={handleFinalSubmit} className="space-y-10">
+                        {pendingYears.map((p) => (
+                            <div key={p.ano} className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 space-y-6">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-sm">{p.ano}</span>
+                                    <h4 className="font-bold text-slate-800 dark:text-white">Ano Base {p.ano}</h4>
+                                </div>
+
+                                {/* Serviços */}
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                        Faturamento com prestação de serviços em {p.ano}
+                                    </label>
+                                    <p className="text-[10px] text-slate-500 mb-2 leading-tight">
+                                        Exceto transporte intermunicipal e interestadual. Inclua também receitas de locação e demais receitas da atividade sem incidência de ICMS e ISS.
+                                    </p>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">R$</span>
+                                        <input 
+                                            type="number" 
+                                            step="0.01"
+                                            required
+                                            value={yearsFormData[p.ano]?.services || ''}
+                                            onChange={(e) => handleUpdateYearField(p.ano, 'services', e.target.value)}
+                                            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary/50 font-bold"
+                                            placeholder="0,00"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Comércio */}
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                        Faturamento com comércio e indústria em {p.ano}
+                                    </label>
+                                    <p className="text-[10px] text-slate-500 mb-2 leading-tight">
+                                        Inclua também receitas de transporte intermunicipal e interestadual e fornecimento de refeições.
+                                    </p>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">R$</span>
+                                        <input 
+                                            type="number" 
+                                            step="0.01"
+                                            required
+                                            value={yearsFormData[p.ano]?.commerce || ''}
+                                            onChange={(e) => handleUpdateYearField(p.ano, 'commerce', e.target.value)}
+                                            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary/50 font-bold"
+                                            placeholder="0,00"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Empregado */}
+                                <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                    <div className="flex-1">
+                                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Possuiu empregado contratado em {p.ano}?</p>
+                                    </div>
+                                    <button 
+                                        type="button"
+                                        onClick={() => handleUpdateYearField(p.ano, 'hasEmployee', !yearsFormData[p.ano]?.hasEmployee)}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${yearsFormData[p.ano]?.hasEmployee ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700'}`}
+                                    >
+                                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${yearsFormData[p.ano]?.hasEmployee ? 'translate-x-6' : 'translate-x-1'}`} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+
+                        <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                            <button 
+                                type="button"
+                                onClick={() => setStep(3)}
+                                className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                            >
+                                Voltar
+                            </button>
+                            <button 
+                                type="submit"
+                                disabled={isLoading}
+                                className="flex-[2] bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2"
+                            >
+                                {isLoading ? (
+                                    <span className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                ) : (
+                                    <>Finalizar Declaração <span className="material-icons">check_circle</span></>
+                                )}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             )}
         </div>
