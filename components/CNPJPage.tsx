@@ -6,12 +6,13 @@ interface CNPJPageProps {
   cnpj?: string;
   fiscalData: FiscalData | null;
   onUpdateFiscalData: (data: FiscalData) => void;
-  onUpdateCnpjData: (data: CNPJResponse) => void; // <--- NEW PROP
+  onUpdateCnpjData: (data: CNPJResponse) => void;
   connectionConfig: ConnectionConfig;
   cnpjData?: CNPJResponse | null;
+  onNavigate?: (tab: string) => void; // NOVA PROP
 }
 
-// Redefining servicesData locally for CNPJPage to function independently
+// ... servicesData definition remains same ...
 const servicesData: ServiceCTA[] = [
   {
     id: 'declaracao',
@@ -57,7 +58,7 @@ const servicesData: ServiceCTA[] = [
   }
 ];
 
-// --- HOLIDAY CALCULATION HELPERS (Copied from Reminders.tsx for DAS calculation) ---
+// ... Holiday helpers remain same ...
 const getEasterDate = (year: number): Date => {
     const a = year % 19;
     const b = Math.floor(year / 100);
@@ -100,7 +101,7 @@ const getBrazilianHolidays = (year: number) => {
 
 const isHolidayOrWeekend = (date: Date): boolean => {
     const day = date.getDay();
-    if (day === 0 || day === 6) return true; // Sunday or Saturday
+    if (day === 0 || day === 6) return true;
     
     const holidays = getBrazilianHolidays(date.getFullYear());
     return holidays.some(h => 
@@ -115,11 +116,8 @@ const getNextBusinessDay = (date: Date): Date => {
     }
     return checkDate;
 };
-// --- END HOLIDAY HELPERS ---
 
-
-const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalData, onUpdateCnpjData, connectionConfig, cnpjData }) => {
-  // --- DADOS CADASTRAIS STATE ---
+const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalData, onUpdateCnpjData, connectionConfig, cnpjData, onNavigate }) => {
   const [loadingData, setLoadingData] = useState(false);
   const [lastUpdateData, setLastUpdateData] = useState('');
   const [errorData, setErrorData] = useState<string | null>(null);
@@ -135,22 +133,18 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
     naturezaJuridica: '',
   });
 
-  // --- DIAGNÓSTICO FISCAL STATE ---
   const [loadingFiscal, setLoadingFiscal] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [errorFiscal, setErrorFiscal] = useState<string | null>(null);
   
-  // RESOLUTION MODAL STATE
   const [resolveUrl, setResolveUrl] = useState<string | null>(null);
   
-  // LOGGING STATE
   const [fetchLogs, setFetchLogs] = useState<string[]>([]);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<any>(null);
 
   const [activeTab, setActiveTab] = useState<'das' | 'dasn'>('das');
   
-  // Helper function to process the raw CNPJ response into companyData state
   const processCompanyResult = (data: CNPJResponse, cleanCnpj: string) => {
       setCompanyData({
           cnpj: data.estabelecimento?.cnpj || cleanCnpj, 
@@ -172,7 +166,6 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
       });
   };
 
-  // Load from LocalStorage/Props on mount or when CNPJ changes
   useEffect(() => {
     if (cnpj) {
       const cleanCnpj = cnpj.replace(/[^\d]/g, '');
@@ -188,25 +181,20 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
         }
       }
       
-      // 2. Load Company Data from persisted state or fetch
       if (cnpjData) {
-          // Use persisted data if available
           processCompanyResult(cnpjData, cleanCnpj);
           setLastUpdateData('Persistido');
           addLog("Dados cadastrais carregados do perfil.");
       } else {
-          // Fallback to fetching if no persisted data
           fetchCompanyData();
       }
     }
-  }, [cnpj, cnpjData]); // Added cnpjData dependency
+  }, [cnpj, cnpjData]);
 
-  // Auto-scroll logs
   useEffect(() => {
       logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [fetchLogs]);
 
-  // Timer logic
   useEffect(() => {
       if (loadingFiscal) {
           const startTime = Date.now();
@@ -226,7 +214,6 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
     setFetchLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
   };
 
-  // --- FETCH DADOS CADASTRAIS ---
   const fetchCompanyData = async () => {
     if (!cnpj) return;
     
@@ -277,7 +264,7 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
         const data: CNPJResponse = json;
         
         processCompanyResult(data, cleanCnpj);
-        onUpdateCnpjData(data); // <--- PERSIST RAW DATA
+        onUpdateCnpjData(data);
 
         const now = new Date();
         setLastUpdateData(`${now.toLocaleDateString()} às ${now.toLocaleTimeString().slice(0, 5)}`);
@@ -304,20 +291,18 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
     setLoadingData(false);
   };
 
-  // --- FETCH DIAGNÓSTICO FISCAL ---
   const fetchFiscalData = async () => {
     if (!cnpj) return;
     
     setLoadingFiscal(true);
     setErrorFiscal(null);
-    setFetchLogs([]); // Reset logs
+    setFetchLogs([]);
     addLog("Inicializando consulta detalhada...");
     addLog("Atenção: Este processo leva cerca de 30 a 40 segundos.");
 
     const cleanCnpj = cnpj.replace(/[^\d]/g, '');
     addLog(`CNPJ alvo: ${cleanCnpj}`);
     
-    // USANDO A URL DA CONFIGURAÇÃO SALVA
     const webhookUrl = connectionConfig.diagnosticApi.webhookUrl;
     const headerKey = connectionConfig.diagnosticApi.headerKey || 'cnpj';
     
@@ -327,10 +312,8 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
         return;
     }
     
-    // Adicionando query param como fallback para proxies que strip headers
     const urlWithParams = `${webhookUrl}?cnpj=${cleanCnpj}`;
 
-    // Define strategies with ONLY DIRECT connection (using corsproxy as a fallback wrapper if needed)
     const strategies = [
         { name: 'direct', url: urlWithParams }
     ];
@@ -343,7 +326,6 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
             };
-            // Adiciona o header key configurado, se existir
             if (headerKey) {
                 headers[headerKey] = cleanCnpj; 
             }
@@ -351,7 +333,7 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
             const response = await fetch(strategy.url, {
                 method: 'POST',
                 headers: headers,
-                body: JSON.stringify({ cnpj: cleanCnpj }) // Body redundancy
+                body: JSON.stringify({ cnpj: cleanCnpj })
             });
             
             addLog(`Resposta recebida (Status: ${response.status}).`);
@@ -370,26 +352,20 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
             }
             
             addLog(`Dados recebidos.`);
-            addLog(`Raw Data: ${JSON.stringify(rawData).slice(0, 100)}...`); // Show preview for debug
 
-            // PERMISSIVE PARSING STRATEGY
             let dataToProcess = null;
 
-            // Check if Array (Format 1: [{ sucesso: true, resultado: ... }])
             if (Array.isArray(rawData) && rawData.length > 0) {
                  if (rawData[0].resultado) {
                      dataToProcess = rawData[0].resultado;
                  } else {
-                     // Maybe the array itself contains the data directly?
                      dataToProcess = rawData[0];
                  }
             } 
-            // Check if Object (Format 2: { sucesso: true, resultado: ... } OR { dAS: ..., dASN: ... })
             else if (typeof rawData === 'object' && rawData !== null) {
                 if (rawData.resultado) {
                     dataToProcess = rawData.resultado;
                 } else {
-                    // Assume the object itself is the result
                     dataToProcess = rawData;
                 }
             }
@@ -401,8 +377,6 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                 break; 
             } else {
                 addLog(`Aviso: Estrutura inesperada.`);
-                addLog(`Tentando processar mesmo assim...`);
-                // Last ditch effort: Try processing whatever we got
                 try {
                     processFiscalResult(rawData, cleanCnpj);
                     success = true;
@@ -410,7 +384,6 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                     break;
                 } catch (forcedError) {
                     addLog(`Falha no processamento forçado.`);
-                    console.error("Invalid Response Structure:", rawData);
                     throw new Error('Não foi possível identificar dados fiscais na resposta.');
                 }
             }
@@ -431,14 +404,11 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
 
   const processFiscalResult = (result: any, cleanCnpj: string) => {
      try {
-        // Safe access with default empty arrays
         const dasListRaw = result?.dAS?.anos || result?.anos || [];
         const dasnListRaw = result?.dASN?.anos || result?.anos || [];
         
-        addLog(`Encontrado: ${dasListRaw.length} DAS, ${dasnListRaw.length} DASN.`);
-
         const processedDas = Array.isArray(dasListRaw) ? dasListRaw
-            .filter((item: DasItem) => item && (item.principal || item.total)) // Basic filter
+            .filter((item: DasItem) => item && (item.principal || item.total))
             .map((item: DasItem) => {
                 let status = 'pendente'; 
                 const situacao = item.situacao ? item.situacao.toLowerCase() : '';
@@ -446,7 +416,6 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                 if (situacao.includes('liquidado') || situacao.includes('pago')) {
                    status = 'pago';
                 } else if (item.vencimento) {
-                   // Check date
                    const parts = item.vencimento.split('/');
                    if (parts.length === 3) {
                        const dueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
@@ -466,7 +435,6 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                 return dateA < dateB ? 1 : -1;
             }) : [];
         
-        // Calculate Debt (Base Calculation from specific items)
         let totalDebt = processedDas
             .filter((item: any) => item.status === 'vencido')
             .reduce((acc: number, item: any) => {
@@ -475,7 +443,6 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                 return acc + (isNaN(val) ? 0 : val);
             }, 0);
 
-        // Process DASN
         const processedDasn = Array.isArray(dasnListRaw) ? dasnListRaw.map((item: DasnItem) => {
             let status = 'pendente';
             if (item.status === 'Regular' || item.dataApresentacao) status = 'entregue';
@@ -486,42 +453,32 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
 
         const pendingDasnCount = processedDasn.filter((i: any) => i.status === 'pendente').length;
         
-        // --- ESTIMATION LOGIC ---
         const today = new Date();
         const currentYear = today.getFullYear();
-        const averageDasValue = 75.00; // Valor médio estimado
+        const averageDasValue = 75.00;
         let isEstimated = false;
         
-        // 1. Identify all years with pending DASN
         const pendingDasnYears = processedDasn
             .filter((d: DasnItem) => d.status === 'pendente')
             .map(d => parseInt(d.ano));
             
         const yearsToEstimate = new Set<number>();
         
-        // A. Past Years (Y < currentYear)
         pendingDasnYears
             .filter(year => year < currentYear)
             .forEach(year => {
                 const dasCountForYear = processedDas.filter((d: DasItem) => d.ano && parseInt(d.ano) === year).length;
-                
-                // STRICT CHECK: Only estimate 12 months if DASN is pending AND no DAS guides were returned for that year.
                 if (dasCountForYear === 0) {
                     yearsToEstimate.add(year);
-                    addLog(`Ano passado ${year} (DASN pendente) adicionado para estimativa de 12 meses.`);
-                } else {
-                    addLog(`Aviso: DASN pendente para ${year}, mas ${dasCountForYear} DAS foram retornadas. Pulando estimativa para evitar duplicidade.`);
                 }
             });
             
-        // B. Current Year (Y == currentYear)
         const previousYear = currentYear - 1;
         const isPreviousDasnPending = pendingDasnYears.includes(previousYear);
         const hasCurrentYearDas = processedDas.some((d: DasItem) => d.ano && parseInt(d.ano) === currentYear);
 
         if (isPreviousDasnPending && !hasCurrentYearDas) {
             yearsToEstimate.add(currentYear);
-            addLog(`Adicionando ano ${currentYear} à estimativa (DASN anterior pendente e sem DAS do ano atual).`);
         }
         
         const uniqueYearsToEstimate = Array.from(yearsToEstimate).sort((a, b) => a - b);
@@ -533,11 +490,9 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
             let maxMonths = 12;
             
             if (year < currentYear) {
-                // Past years already passed the strict check (dasCountForYear === 0) when added to the set
                 monthsToEstimate = 12;
             } else if (year === currentYear) {
-                // Current year logic: estimate remaining months up to today
-                maxMonths = today.getMonth() + 1; // Current month (1 to 12)
+                maxMonths = today.getMonth() + 1;
                 monthsToEstimate = maxMonths - dasCountForYear;
             }
 
@@ -545,7 +500,6 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                 const estimatedDebt = monthsToEstimate * averageDasValue;
                 totalDebt += estimatedDebt;
                 isEstimated = true;
-                addLog(`Estimativa adicionada: R$ ${estimatedDebt.toFixed(2)} (${monthsToEstimate} meses) para ${year}.`);
             }
         }
         
@@ -561,10 +515,8 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
             isEstimated
         };
 
-        onUpdateFiscalData(finalData); // <--- PERSIST FISCAL SUMMARY
-        // Save to cache
+        onUpdateFiscalData(finalData);
         localStorage.setItem(`fiscal_cache_${cleanCnpj}`, JSON.stringify(finalData));
-        addLog("Resultados salvos localmente.");
 
      } catch (e: any) {
          addLog(`Erro ao processar dados visuais: ${e.message}`);
@@ -574,17 +526,16 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
   };
 
   const handleResolveDasn = () => {
-      const clean = cnpj ? cnpj.replace(/[^\d]/g, '') : '';
-      if(clean) {
-          setResolveUrl(`https://typebotapi.portalmei360.com/declara-o-anual-cl1wie5?cnpj=${clean}`);
-      } else {
-          alert('CNPJ inválido');
+      if (onNavigate) {
+          onNavigate('dasn-form'); // NAVEGAÇÃO NATIVA
       }
   };
 
   const handleServiceClick = (serviceId: string) => {
-      // Placeholder for future link logic
-      console.log(`Service clicked: ${serviceId}`);
+      if (serviceId === 'declaracao' && onNavigate) {
+          onNavigate('dasn-form');
+          return;
+      }
       alert('Funcionalidade será ativada em breve!');
   };
 
@@ -652,9 +603,8 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
           </div>
       </div>
 
-      {/* SECTION 2: DIAGNÓSTICO FISCAL UNIFICADO */}
+      {/* SECTION 2: DIAGNÓSTICO FISCAL */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col min-h-[400px]">
-          {/* Header */}
           <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 dark:bg-slate-800/50">
              <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
                <span className="material-icons text-slate-400">analytics</span>
@@ -670,14 +620,11 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
              </button>
           </div>
 
-          {/* Content Body */}
           <div className="p-6 flex-1 flex flex-col">
-              
               {!fiscalData && !loadingFiscal && !errorFiscal && (
                   <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-400">
                       <span className="material-icons text-5xl mb-3 text-slate-200 dark:text-slate-700">query_stats</span>
                       <p>Clique em "Atualizar Diagnóstico" para buscar pendências de DAS e Declarações.</p>
-                      <p className="text-xs mt-2 text-slate-400">Atenção: A consulta pode levar até 40 segundos.</p>
                   </div>
               )}
 
@@ -685,7 +632,6 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                   <div className="flex-1 flex flex-col items-center justify-center p-12">
                       <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-6"></div>
                       <h4 className="text-lg font-bold text-slate-700 dark:text-white mb-2">Analisando situação fiscal...</h4>
-                      <p className="text-slate-500 mb-4 text-center max-w-sm">Estamos consultando as bases da Receita Federal. Isso pode levar alguns instantes.</p>
                       <div className="bg-slate-100 dark:bg-slate-800 px-4 py-1 rounded-full text-xs font-mono text-slate-500">
                           Tempo decorrido: {elapsedTime}s
                       </div>
@@ -705,8 +651,6 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
 
               {fiscalData && !loadingFiscal && (
                   <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                      
-                      {/* Status Banner */}
                       <div className={`p-4 rounded-xl border mb-6 flex items-start gap-4 ${
                           fiscalData.status === 'regular' 
                            ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-900/50' 
@@ -735,7 +679,6 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                           </div>
                       </div>
 
-                      {/* Summary Cards */}
                       <div className="grid grid-cols-2 gap-4 mb-6">
                           <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700 relative">
                               <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Dívida Total Estimada</span>
@@ -744,14 +687,11 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                                     R$ {fiscalData.totalDebt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </span>
                                 {fiscalData.isEstimated && (
-                                    <span className="material-icons text-yellow-500 text-lg cursor-help" title="Valor estimado. Guias de 2025 ainda não foram geradas devido à pendência da Declaração Anual.">
+                                    <span className="material-icons text-yellow-500 text-lg cursor-help" title="Valor estimado.">
                                         warning_amber
                                     </span>
                                 )}
                               </div>
-                              {fiscalData.isEstimated && (
-                                  <p className="text-[10px] text-yellow-600 dark:text-yellow-500 mt-1">* Valor projetado (DASN Pendente)</p>
-                              )}
                           </div>
                           <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
                               <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Declarações Pendentes</span>
@@ -761,7 +701,6 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                           </div>
                       </div>
 
-                      {/* Detail Tabs */}
                       <div className="mb-4 flex gap-2 border-b border-slate-200 dark:border-slate-800">
                           <button 
                             onClick={() => setActiveTab('das')}
@@ -777,17 +716,9 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                           </button>
                       </div>
 
-                      {/* List Content */}
                       <div className="flex-1 overflow-y-auto max-h-[400px] pr-1 custom-scrollbar">
                           {activeTab === 'das' ? (
                               <div className="space-y-2">
-                                  {fiscalData.isEstimated && (
-                                      <div className="p-3 mb-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900/50 rounded-lg text-sm text-yellow-800 dark:text-yellow-200 flex items-start gap-2">
-                                          <span className="material-icons text-sm mt-0.5">info</span>
-                                          <p>As guias do ano vigente ainda não estão disponíveis no sistema da Receita Federal pois a Declaração Anual (DASN) do ano anterior está pendente.</p>
-                                      </div>
-                                  )}
-
                                   {fiscalData.dasList.length === 0 ? (
                                       <p className="text-center text-slate-400 py-4">Nenhuma guia com valor encontrada.</p>
                                   ) : (
@@ -846,7 +777,6 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
                   </div>
               )}
               
-              {/* LOGS DE PROCESSAMENTO */}
               {fetchLogs.length > 0 && (
                   <div className="mt-6 border-t border-slate-200 dark:border-slate-700 pt-4">
                       <details className="group" open={loadingFiscal}>
@@ -898,7 +828,6 @@ const CNPJPage: React.FC<CNPJPageProps> = ({ cnpj, fiscalData, onUpdateFiscalDat
           </div>
       </div>
 
-      {/* RESOLUTION MODAL */}
       {resolveUrl && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
               <div className="bg-white dark:bg-slate-900 w-full max-w-4xl h-[85vh] rounded-xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">

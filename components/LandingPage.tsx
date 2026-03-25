@@ -5,40 +5,40 @@ import PublicNewsSlider from './PublicNewsSlider';
 interface LandingPageProps {
   onGetStarted: () => void;
   onLogin: () => void;
-  onViewBlog: (id: number | null) => void; // Atualizado para aceitar null
+  onViewBlog: (id: number | null) => void;
   onConsultCnpj: () => void;
-  news: NewsItem[]; // NEW PROP
+  onNavigate: (tab: string) => void; // NOVA PROP
+  news: NewsItem[];
 }
 
-// Mapeamento dos Typebot IDs
+// Mapeamento dos Typebot IDs (Mantido para os outros serviços por enquanto)
 const TYPEBOT_IDS: Record<string, string> = {
-    'declaracao': 'declara-o-anual-cl1wie5', // ID padronizado para o fluxo de resolução/declaração
     'cancelamento': 'cancelar-mei-yljnmeh',
     'parcelamento': 'parcelamento-de-d-bitos-c1b6oco',
     'abertura': 'abrir-mei-43ty0i4',
     'alterar': 'alterar-mei-o1ryxif',
-    'consulta': 'declara-o-anual-cl1wie5' // Usando o mesmo ID do fluxo de declaração/resolução
+    'consulta': 'declara-o-anual-cl1wie5'
 };
 const TYPEBOT_API_HOST = "https://typebotapi.portalmei360.com";
 
 
-const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onViewBlog, onConsultCnpj, news }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onViewBlog, onConsultCnpj, onNavigate, news }) => {
   const [activeMessageIndex, setActiveMessageIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeTypebotId, setActiveTypebotId] = useState<string | null>(null); // Stores the Typebot ID
-  const [typebotTitle, setTypebotTitle] = useState('Atendimento Especializado'); // Stores the title for the modal
+  const [activeTypebotId, setActiveTypebotId] = useState<string | null>(null);
+  const [typebotTitle, setTypebotTitle] = useState('Atendimento Especializado');
 
   // WhatsApp conversation simulation logic
   useEffect(() => {
     const sequence = [
-      { delay: 1000, typing: true },  // Bot starts typing
-      { delay: 1500, typing: false, show: 1 }, // Bot msg 1
-      { delay: 1000, typing: false, show: 1 }, // Wait
-      { delay: 1500, typing: false, show: 2 }, // User msg
-      { delay: 1000, typing: true, show: 2 },  // Bot starts typing response
-      { delay: 2000, typing: false, show: 3 }, // Bot msg 2
-      { delay: 5000, typing: false, show: 0 }, // Reset loop
+      { delay: 1000, typing: true },
+      { delay: 1500, typing: false, show: 1 },
+      { delay: 1000, typing: false, show: 1 },
+      { delay: 1500, typing: false, show: 2 },
+      { delay: 1000, typing: true, show: 2 },
+      { delay: 2000, typing: false, show: 3 },
+      { delay: 5000, typing: false, show: 0 },
     ];
 
     let timer: any;
@@ -61,9 +61,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
     return () => clearTimeout(timer);
   }, []);
 
-  // Function to generate the iframe URL
   const getTypebotUrl = (id: string) => {
-      // URL format for embedding Typebot in an iframe
       return `${TYPEBOT_API_HOST}/${id}`;
   };
 
@@ -84,7 +82,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
     }
   };
 
-  const handleOpenTypebot = (serviceKey: keyof typeof TYPEBOT_IDS = 'consulta') => {
+  const handleOpenService = (serviceKey: string) => {
+    if (serviceKey === 'declaracao') {
+        onNavigate('dasn-form'); // NAVEGAÇÃO NATIVA
+        return;
+    }
+    
     const service = mainServices.find(s => s.key === serviceKey);
     setTypebotTitle(service?.title || 'Atendimento Especializado');
     setActiveTypebotId(TYPEBOT_IDS[serviceKey]);
@@ -94,9 +97,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
       setActiveTypebotId(null);
   };
   
-  // NOVO: Handler para navegar para a lista de notícias
   const handleViewBlogList = () => {
-      onViewBlog(null); // Passa null para indicar que queremos a lista
+      onViewBlog(null);
   };
 
   const mainServices = [
@@ -170,8 +172,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
       color: 'bg-cyan-500'
     }
   ];
-  
-  // Mock News Data removed, using 'news' prop instead.
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 selection:bg-primary selection:text-white overflow-x-hidden scroll-smooth">
@@ -216,7 +216,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
           </div>
         </div>
 
-        {/* Mobile Menu Overlay - SOLID BACKGROUND */}
+        {/* Mobile Menu Overlay */}
         {isMenuOpen && (
           <div className="lg:hidden fixed inset-0 top-[72px] bg-white dark:bg-slate-950 z-[110] animate-in slide-in-from-top duration-300 overflow-y-auto pb-10">
             <div className="px-4 py-6 space-y-2">
@@ -269,7 +269,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
         </div>
 
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 items-center">
-          {/* Left Column: Content */}
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-6 md:space-y-8 animate-in fade-in slide-in-from-left-6 duration-700">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-primary dark:text-blue-400 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest border border-blue-100 dark:border-blue-800">
               <span className="relative flex h-2 w-2">
@@ -292,7 +291,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
               <button onClick={onConsultCnpj} className="bg-primary hover:bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-base shadow-xl shadow-blue-500/30 transition-all transform active:scale-95 flex items-center justify-center gap-2">
                 Consultar CNPJ Grátis <span className="material-icons">search</span>
               </button>
-              <button onClick={() => handleOpenTypebot('declaracao')} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 px-8 py-4 rounded-2xl font-bold text-base hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
+              <button onClick={() => handleOpenService('declaracao')} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 px-8 py-4 rounded-2xl font-bold text-base hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
                 DASN 2025 <span className="material-icons text-sm">assignment</span>
               </button>
             </div>
@@ -305,13 +304,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
                   </div>
                 ))}
               </div>
-              <p className="text-xs md:text-sm text-slate-400 font-medium">
+              <p className="text-xs md:sm text-slate-400 font-medium">
                 <span className="text-slate-900 dark:text-white font-bold">15 mil+</span> empreendedores
               </p>
             </div>
           </div>
 
-          {/* Right Column: Image */}
           <div className="relative animate-in fade-in slide-in-from-bottom-12 lg:slide-in-from-right-12 duration-1000 mt-8 lg:mt-0">
             <div className="relative w-full max-w-[320px] sm:max-w-[450px] mx-auto">
               <div className="relative aspect-square rounded-[40px] md:rounded-[60px] overflow-hidden shadow-2xl border-[8px] md:border-[16px] border-white dark:border-slate-900 z-10 transform lg:-rotate-2">
@@ -323,7 +321,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
                 <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent"></div>
               </div>
 
-              {/* Floating Gadget: Search/Consulta (Change to use onConsultCnpj) */}
               <div className="absolute -top-6 -right-2 md:-right-12 z-20 animate-bounce-slow hidden sm:block">
                 <button onClick={onConsultCnpj} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-3 md:p-4 rounded-3xl shadow-2xl border border-white/20 flex items-center gap-3 md:gap-4 hover:scale-105 transition-transform">
                   <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-lg">
@@ -331,12 +328,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
                   </div>
                   <div className="text-left">
                     <p className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">CNPJ Regular</p>
-                    <p className="text-xs md:text-sm font-bold text-slate-800 dark:text-white">Consulta Gratuita</p>
+                    <p className="text-xs md:sm font-bold text-slate-800 dark:text-white">Consulta Gratuita</p>
                   </div>
                 </button>
               </div>
 
-              {/* Floating Gadget: DASN Deadline */}
               <div className="absolute bottom-6 -left-4 md:-left-16 z-20 animate-pulse-slow">
                 <div className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-4 md:px-6 py-3 md:py-4 rounded-[24px] md:rounded-[32px] shadow-2xl flex flex-col items-center gap-1 border border-white/10 dark:border-slate-200">
                   <span className="material-icons text-orange-500 text-2xl md:text-3xl">event_busy</span>
@@ -366,7 +362,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
               <div 
                 key={i} 
                 className="group p-6 md:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 cursor-pointer"
-                onClick={() => handleOpenTypebot(service.key as keyof typeof TYPEBOT_IDS)}
+                onClick={() => handleOpenService(service.key)}
               >
                 <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl ${service.bg} ${service.color} flex items-center justify-center mb-5 md:mb-6 group-hover:scale-110 transition-transform`}>
                   <span className="material-icons text-2xl md:text-3xl">{service.icon}</span>
@@ -387,7 +383,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
                <span className="material-icons text-4xl md:text-5xl">help_outline</span>
                <h3 className="text-xl md:text-2xl font-bold">Precisa de ajuda?</h3>
                <p className="text-blue-100 text-xs md:text-sm opacity-90">Nossos consultores estão prontos para te orientar em qualquer processo.</p>
-               <button onClick={() => handleOpenTypebot('consulta')} className="bg-white text-primary px-6 py-3 rounded-xl font-black text-sm hover:bg-blue-50 transition-colors w-full">
+               <button onClick={() => handleOpenService('consulta')} className="bg-white text-primary px-6 py-3 rounded-xl font-black text-sm hover:bg-blue-50 transition-colors w-full">
                   Falar com Consultor
                </button>
             </div>
@@ -424,7 +420,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
             </div>
             
             <div className="relative group max-w-[500px] mx-auto w-full">
-               {/* Main Card Mockup */}
                <div className="relative z-10 bg-white dark:bg-slate-900 p-6 md:p-8 rounded-[30px] md:rounded-[40px] shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in duration-700">
                   <div className="flex justify-between items-center mb-6 md:mb-8">
                      <div>
@@ -455,7 +450,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
                   </div>
                </div>
 
-               {/* Floating elements adjusted for mobile visibility or hidden */}
                <div className="absolute -bottom-6 -right-2 md:-right-6 z-20 bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 w-32 md:w-48 animate-in slide-in-from-right-10 duration-1000 hidden sm:block">
                   <div className="relative h-1.5 md:h-2 bg-slate-100 dark:bg-slate-700 rounded-full mb-2 md:mb-3 overflow-hidden">
                      <div className="absolute left-0 top-0 h-full bg-orange-500 w-[78%] rounded-full"></div>
@@ -473,7 +467,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
           <div className="flex flex-col lg:flex-row items-center gap-12 md:gap-16">
             <div className="w-full lg:w-1/2 order-2 lg:order-1">
                <div className="relative max-w-[280px] md:max-w-[300px] mx-auto">
-                  {/* Smartphone Mockup */}
                   <div className="relative z-10 bg-slate-900 rounded-[2.5rem] md:rounded-[3rem] p-3 md:p-4 shadow-2xl border-[6px] md:border-[8px] border-slate-800">
                      <div className="bg-white dark:bg-slate-900 rounded-[1.8rem] md:rounded-[2rem] overflow-hidden h-[480px] md:h-[550px] flex flex-col">
                         <div className="bg-[#075e54] p-3 md:p-4 text-white flex items-center gap-3">
@@ -566,7 +559,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
         </div>
       </section>
       
-      {/* NEW: BLOG/NEWS SECTION (Using PublicNewsSlider) */}
+      {/* BLOG/NEWS SECTION */}
       <section id="blog" className="py-16 md:py-24 px-4 border-t border-slate-100 dark:border-slate-800">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
@@ -578,12 +571,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
             </p>
           </div>
           
-          {/* Public News Slider */}
           <PublicNewsSlider news={news} onViewNews={(id) => onViewBlog(id)} />
           
           <div className="text-center mt-10">
               <button 
-                  onClick={handleViewBlogList} // CORRIGIDO: Chama a função que navega para a lista
+                  onClick={handleViewBlogList}
                   className="bg-primary hover:bg-blue-600 text-white px-8 py-3 rounded-xl font-bold text-base shadow-lg shadow-blue-500/25 transition-all active:scale-95 flex items-center justify-center gap-2 mx-auto"
               >
                   Ver Blog Completo <span className="material-icons">arrow_forward</span>
@@ -635,7 +627,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
         </div>
       </footer>
 
-      {/* TYPEBOT MODAL - FULLSCREEN ON MOBILE */}
+      {/* TYPEBOT MODAL */}
       {activeTypebotId && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4 animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 w-full h-full md:h-[680px] md:max-w-4xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95">
@@ -652,7 +644,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
               </button>
             </div>
             <div className="bg-white flex-1 relative">
-              {/* Usando iframe para carregar o Typebot */}
               <iframe 
                   src={getTypebotUrl(activeTypebotId)} 
                   className="w-full h-full border-0 absolute inset-0" 

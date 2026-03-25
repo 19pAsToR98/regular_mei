@@ -36,7 +36,8 @@ import MorePage from './components/MorePage';
 import DashboardViewSelector from './components/DashboardViewSelector';
 import TransactionModal from './components/TransactionModal';
 import ProductsByCnaePage from './components/ProductsByCnaePage';
-import ResetPasswordPage from './components/ResetPasswordPage'; // NOVO IMPORT
+import ResetPasswordPage from './components/ResetPasswordPage';
+import DASNForm from './components/DASNForm'; // NOVO IMPORT
 import { Offer, NewsItem, MaintenanceConfig, User, AppNotification, Transaction, Category, ConnectionConfig, Appointment, FiscalData, PollVote, CNPJResponse } from './types';
 import { supabase } from './src/integrations/supabase/client';
 import { showSuccess, showError, showLoading, dismissToast, showWarning } from './utils/toastUtils';
@@ -1271,7 +1272,7 @@ const App: React.FC = () => {
         time: t.time,
         status: t.status,
         installments: t.installments,
-        is_recurring: t.isRecurring,
+        is_recurring: t.is_recurring,
         external_api: t.external_api || false,
     };
     const { error } = await supabase
@@ -1531,7 +1532,7 @@ const App: React.FC = () => {
   }
 
   if (!user) {
-      if (activeTab === 'terms' || activeTab === 'privacy' || activeTab === 'cnpj-consult' || activeTab === 'news') {
+      if (activeTab === 'terms' || activeTab === 'privacy' || activeTab === 'cnpj-consult' || activeTab === 'news' || activeTab === 'dasn-form') {
           if (activeTab === 'news' && readingNewsId === undefined) {
               setReadingNewsId(null);
           }
@@ -1545,7 +1546,7 @@ const App: React.FC = () => {
                             className="h-8 w-auto object-contain dark:brightness-0 dark:invert"
                           />
                           <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase ml-2">
-                              {activeTab === 'terms' ? 'Termos' : activeTab === 'privacy' ? 'Privacidade' : activeTab === 'cnpj-consult' ? 'Consulta CNPJ' : 'Notícias'}
+                              {activeTab === 'terms' ? 'Termos' : activeTab === 'privacy' ? 'Privacidade' : activeTab === 'cnpj-consult' ? 'Consulta CNPJ' : activeTab === 'dasn-form' ? 'DASN 2025' : 'Notícias'}
                           </span>
                       </div>
                       <button 
@@ -1562,6 +1563,7 @@ const App: React.FC = () => {
                       {activeTab === 'terms' ? <TermsPage /> : 
                        activeTab === 'privacy' ? <PrivacyPage /> :
                        activeTab === 'cnpj-consult' ? <CnpjConsultPage onBack={handleBackToLanding} connectionConfig={connectionConfig} /> :
+                       activeTab === 'dasn-form' ? <DASNForm onBack={handleBackToLanding} /> :
                        <NewsPage news={news} readingId={readingNewsId} onSelectNews={setReadingNewsId} />
                       }
                   </main>
@@ -1584,6 +1586,7 @@ const App: React.FC = () => {
           onLogin={handleLandingLogin} 
           onViewBlog={handleViewNews} 
           onConsultCnpj={handleStartCnpjFlow}
+          onNavigate={setActiveTab}
           news={news}
       />;
   }
@@ -1785,6 +1788,7 @@ const App: React.FC = () => {
             return <MorePage onNavigate={setActiveTab} userRole={user.role} />;
           case 'terms': return <TermsPage />;
           case 'privacy': return <PrivacyPage />;
+          case 'dasn-form': return <DASNForm onBack={() => setActiveTab('dashboard')} initialCnpj={cnpj} />; // NOVO CASE
           default: return null;
       }
   };

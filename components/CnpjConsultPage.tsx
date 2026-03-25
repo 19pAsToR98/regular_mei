@@ -5,9 +5,10 @@ import { showSuccess, showError } from '../utils/toastUtils';
 interface CnpjConsultPageProps {
   onBack: () => void;
   connectionConfig: ConnectionConfig;
+  onNavigate?: (tab: string) => void; // NOVA PROP
 }
 
-// Redefining servicesData locally for CNPJPage to function independently
+// ... servicesData definition remains same ...
 const servicesData: ServiceCTA[] = [
   {
     id: 'declaracao',
@@ -53,7 +54,7 @@ const servicesData: ServiceCTA[] = [
   }
 ];
 
-// --- HOLIDAY CALCULATION HELPERS (Copied from Reminders.tsx for DAS calculation) ---
+// ... Holiday helpers remain same ...
 const getEasterDate = (year: number): Date => {
     const a = year % 19;
     const b = Math.floor(year / 100);
@@ -96,7 +97,7 @@ const getBrazilianHolidays = (year: number) => {
 
 const isHolidayOrWeekend = (date: Date): boolean => {
     const day = date.getDay();
-    if (day === 0 || day === 6) return true; // Sunday or Saturday
+    if (day === 0 || day === 6) return true;
     
     const holidays = getBrazilianHolidays(date.getFullYear());
     return holidays.some(h => 
@@ -111,14 +112,11 @@ const getNextBusinessDay = (date: Date): Date => {
     }
     return checkDate;
 };
-// --- END HOLIDAY HELPERS ---
 
-
-const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionConfig }) => {
+const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionConfig, onNavigate }) => {
   const [cnpjInput, setCnpjInput] = useState('');
-  const [cnpj, setCnpj] = useState(''); // CNPJ after validation/search
+  const [cnpj, setCnpj] = useState('');
   
-  // --- DADOS CADASTRAIS STATE ---
   const [loadingData, setLoadingData] = useState(false);
   const [lastUpdateData, setLastUpdateData] = useState('');
   const [errorData, setErrorData] = useState<string | null>(null);
@@ -134,28 +132,23 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
     naturezaJuridica: '',
   });
 
-  // --- DIAGNÓSTICO FISCAL STATE ---
   const [loadingFiscal, setLoadingFiscal] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [errorFiscal, setErrorFiscal] = useState<string | null>(null);
   const [fiscalData, setFiscalData] = useState<FiscalData | null>(null);
   
-  // RESOLUTION MODAL STATE
   const [resolveUrl, setResolveUrl] = useState<string | null>(null);
   
-  // LOGGING STATE
   const [fetchLogs, setFetchLogs] = useState<string[]>([]);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<any>(null);
 
   const [activeTab, setActiveTab] = useState<'das' | 'dasn'>('das');
 
-  // Auto-scroll logs
   useEffect(() => {
       logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [fetchLogs]);
 
-  // Timer logic
   useEffect(() => {
       if (loadingFiscal) {
           const startTime = Date.now();
@@ -175,7 +168,6 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
     setFetchLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
   };
 
-  // --- FETCH DADOS CADASTRAIS ---
   const fetchCompanyData = async (targetCnpj: string) => {
     if (!targetCnpj) return;
     
@@ -269,13 +261,12 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
     setLoadingData(false);
   };
 
-  // --- FETCH DIAGNÓSTICO FISCAL ---
   const fetchFiscalData = async (targetCnpj: string) => {
     if (!targetCnpj) return;
     
     setLoadingFiscal(true);
     setErrorFiscal(null);
-    setFetchLogs([]); // Reset logs
+    setFetchLogs([]);
     addLog("Inicializando consulta detalhada...");
     addLog("Atenção: Este processo leva cerca de 30 a 40 segundos.");
 
@@ -355,7 +346,7 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
                 addLog(`Diagnóstico processado com sucesso!`);
                 break; 
             } else {
-                addLog(`Aviso: Estrutura inesperada. Tentando processar mesmo assim...`);
+                addLog(`Aviso: Estrutura inesperada.`);
                 try {
                     processFiscalResult(rawData, cleanCnpj);
                     success = true;
@@ -432,7 +423,6 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
 
         const pendingDasnCount = processedDasn.filter((i: any) => i.status === 'pendente').length;
         
-        // --- ESTIMATION LOGIC ---
         const today = new Date();
         const currentYear = today.getFullYear();
         const averageDasValue = 75.00;
@@ -505,15 +495,16 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
   };
 
   const handleResolveDasn = () => {
-      const clean = cnpj ? cnpj.replace(/[^\d]/g, '') : '';
-      if(clean) {
-          setResolveUrl(`https://typebotapi.portalmei360.com/declara-o-anual-cl1wie5?cnpj=${clean}`);
-      } else {
-          showError('CNPJ inválido');
+      if (onNavigate) {
+          onNavigate('dasn-form'); // NAVEGAÇÃO NATIVA
       }
   };
 
   const handleServiceClick = (serviceId: string) => {
+      if (serviceId === 'declaracao' && onNavigate) {
+          onNavigate('dasn-form');
+          return;
+      }
       showError('Funcionalidade será ativada em breve!');
   };
   
@@ -529,7 +520,6 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
       setErrorFiscal(null);
       setErrorData(null);
       
-      // Fetch both data sources
       await fetchCompanyData(cleanCnpj);
       await fetchFiscalData(cleanCnpj);
   };
@@ -556,7 +546,6 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
         <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8">
             <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500 pb-12">
                 
-                {/* CNPJ Input Form */}
                 <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg p-6 md:p-8">
                     <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Diagnóstico Fiscal MEI</h2>
                     <p className="text-slate-500 mb-6">Insira o CNPJ que deseja consultar para verificar a situação cadastral e pendências fiscais (DAS e DASN).</p>
@@ -580,7 +569,6 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
                     </form>
                 </div>
 
-                {/* RESULTS SECTION */}
                 {cnpj && (loadingData || loadingFiscal) && (
                     <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-6"></div>
@@ -598,8 +586,6 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
 
                 {cnpj && !loadingData && !loadingFiscal && (
                     <div className="space-y-8">
-                        
-                        {/* SECTION 1: DADOS CADASTRAIS */}
                         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
                             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 dark:bg-slate-800/50">
                                 <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
@@ -650,7 +636,6 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
                             </div>
                         </div>
 
-                        {/* SECTION 2: DIAGNÓSTICO FISCAL */}
                         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col min-h-[400px]">
                             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 dark:bg-slate-800/50">
                                 <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
@@ -681,8 +666,6 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
 
                                 {fiscalData && !loadingFiscal && (
                                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                        
-                                        {/* Status Banner */}
                                         <div className={`p-4 rounded-xl border mb-6 flex items-start gap-4 ${
                                             fiscalData.status === 'regular' 
                                             ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-900/50' 
@@ -711,7 +694,6 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
                                             </div>
                                         </div>
 
-                                        {/* Summary Cards */}
                                         <div className="grid grid-cols-2 gap-4 mb-6">
                                             <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700 relative">
                                                 <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Dívida Total Estimada</span>
@@ -720,14 +702,11 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
                                                         R$ {fiscalData.totalDebt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                     </span>
                                                     {fiscalData.isEstimated && (
-                                                        <span className="material-icons text-yellow-500 text-lg cursor-help" title="Valor estimado. Guias de 2025 ainda não foram geradas devido à pendência da Declaração Anual.">
+                                                        <span className="material-icons text-yellow-500 text-lg cursor-help" title="Valor estimado.">
                                                             warning_amber
                                                         </span>
                                                     )}
                                                 </div>
-                                                {fiscalData.isEstimated && (
-                                                    <p className="text-[10px] text-yellow-600 dark:text-yellow-500 mt-1">* Valor projetado (DASN Pendente)</p>
-                                                )}
                                             </div>
                                             <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
                                                 <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Declarações Pendentes</span>
@@ -737,7 +716,6 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
                                             </div>
                                         </div>
 
-                                        {/* Detail Tabs */}
                                         <div className="mb-4 flex gap-2 border-b border-slate-200 dark:border-slate-800">
                                             <button 
                                                 onClick={() => setActiveTab('das')}
@@ -753,17 +731,9 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
                                             </button>
                                         </div>
 
-                                        {/* List Content */}
                                         <div className="flex-1 overflow-y-auto max-h-[400px] pr-1 custom-scrollbar">
                                             {activeTab === 'das' ? (
                                                 <div className="space-y-2">
-                                                    {fiscalData.isEstimated && (
-                                                        <div className="p-3 mb-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900/50 rounded-lg text-sm text-yellow-800 dark:text-yellow-200 flex items-start gap-2">
-                                                            <span className="material-icons text-sm mt-0.5">info</span>
-                                                            <p>As guias do ano vigente ainda não estão disponíveis no sistema da Receita Federal pois a Declaração Anual (DASN) do ano anterior está pendente.</p>
-                                                        </div>
-                                                    )}
-
                                                     {fiscalData.dasList.length === 0 ? (
                                                         <p className="text-center text-slate-400 py-4">Nenhuma guia com valor encontrada.</p>
                                                     ) : (
@@ -822,7 +792,6 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
                                     </div>
                                 )}
                                 
-                                {/* LOGS DE PROCESSAMENTO */}
                                 {fetchLogs.length > 0 && (
                                     <div className="mt-6 border-t border-slate-200 dark:border-slate-700 pt-4">
                                         <details className="group" open={loadingFiscal}>
@@ -842,7 +811,6 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
                             </div>
                         </div>
 
-                        {/* SECTION 3: SERVIÇOS CTA */}
                         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
                             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                                 <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
@@ -876,7 +844,6 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
                     </div>
                 )}
                 
-                {/* RESOLUTION MODAL */}
                 {resolveUrl && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
                         <div className="bg-white dark:bg-slate-900 w-full max-w-4xl h-[85vh] rounded-xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
@@ -905,7 +872,5 @@ const CnpjConsultPage: React.FC<CnpjConsultPageProps> = ({ onBack, connectionCon
     </div>
   );
 };
-
-// --- Helper functions (getEasterDate, getBrazilianHolidays, isHolidayOrWeekend, getNextBusinessDay) are defined above the component in the original file.
 
 export default CnpjConsultPage;
