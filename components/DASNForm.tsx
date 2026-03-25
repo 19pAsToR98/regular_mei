@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { showWarning, showError, showSuccess } from '../utils/toastUtils';
+import { showWarning, showError, showSuccess, showLoading, dismissToast } from '../utils/toastUtils';
 import { CNPJResponse } from '../types';
+import { supabase } from '../src/integrations/supabase/client';
 
 interface DASNFormProps {
   onBack: () => void;
@@ -26,6 +27,13 @@ interface ValidationError {
     message: string;
 }
 
+interface PaymentData {
+    pixQrCode: string;
+    pixCopyPaste: string;
+    invoiceUrl: string;
+    amount: number;
+}
+
 const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   const [cnpj, setCnpj] = useState(initialCnpj);
   const [step, setStep] = useState(1);
@@ -39,16 +47,19 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   const [fullCompanyData, setFullCompanyData] = useState<CNPJResponse | null>(null);
   const [pendingYears, setPendingYears] = useState<PendingYear[]>([]);
   const [activeYearIndex, setActiveYearIndex] = useState(0);
-  
-  // Form Data for each year
   const [yearsFormData, setYearsFormData] = useState<Record<string, YearData>>({});
   
+  // Payment States
+  const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
+  const [isCreatingPayment, setIsCreatingPayment] = useState(false);
+
+  const SERVICE_PRICE_PER_YEAR = 69.90; // Exemplo de valor
+
   // Validation Error State
   const [validationError, setValidationError] = useState<ValidationError | null>(null);
 
-  // Timer logic for loading
   useEffect(() => {
-    if (isLoading || isValidating) {
+    if (isLoading || isValidating || isCreatingPayment) {
         const startTime = Date.now();
         timerRef.current = setInterval(() => {
             setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
@@ -60,7 +71,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
     return () => {
         if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isLoading, isValidating]);
+  }, [isLoading, isValidating, isCreatingPayment]);
 
   const fetchCompanyData = async (cleanCnpj: string) => {
     const targetUrl = `https://publica.cnpj.ws/cnpj/${cleanCnpj}`;
@@ -212,7 +223,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   };
 
   const handleUpdateYearField = (year: string, field: keyof YearData, value: any) => {
-      setValidationError(null); // Limpa erro ao alterar valores
+      setValidationError(null);
       setYearsFormData(prev => ({
           ...prev,
           [year]: { ...prev[year], [field]: value }
@@ -232,19 +243,57 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
       }
   };
 
-  const handleFinalSubmit = async (e: React.FormEvent) => {
+  const handleGoToCheckout = async (e: React.FormEvent) => {
       e.preventDefault();
       const year = pendingYears[activeYearIndex].ano;
       
       const isValid = await validateYearLimit(year);
       if (!isValid) return;
 
-      setIsLoading(true);
-      setTimeout(() => {
-          setIsLoading(false);
-          showSuccess("Dados da declaração enviados com sucesso! Nossa equipe processará seu pedido.");
-          onBack();
-      }, 2000);
+      setIsCreatingPayment(true);
+      
+      const totalAmount = pendingYears.length * SERVICE_PRICE_PER_YEAR;
+      const description = `Declaração Anual MEI - Anos: ${pendingYears.map(p => p.ano).join(', ')}`;
+
+      try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData.session?.access_token;
+
+          const response = await fetch('https://ogwjtlkemsqmpvcikrtd.supabase.co/functions/v1/create-asaas-payment', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                  cnpj: cnpj,
+                  name: companyName,
+                  email: sessionData.session?.user?.email || 'cliente@regularmei.com.br',
+                  amount: totalAmount,
+                  description: description
+              })
+          });
+
+          if (!response.ok) {
+              const err = await response.json();
+              throw new Error(err.error || 'Falha ao gerar pagamento.');
+          }
+
+          const data = await response.json();
+          setPaymentData(data);
+          setStep(5);
+      } catch (e: any) {
+          showError(e.message);
+      } finally {
+          setIsCreatingPayment(false);
+      }
+  };
+
+  const handleCopyPix = () => {
+      if (paymentData?.pixCopyPaste) {
+          navigator.clipboard.writeText(paymentData.pixCopyPaste);
+          showSuccess("Código Pix copiado!");
+      }
   };
 
   const steps = [
@@ -252,6 +301,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
     { id: 2, label: 'CNPJ', icon: 'business' },
     { id: 3, label: 'Pendências', icon: 'fact_check' },
     { id: 4, label: 'Valores', icon: 'payments' },
+    { id: 5, label: 'Pagamento', icon: 'shopping_cart' },
   ];
 
   const activeYear = pendingYears[activeYearIndex];
@@ -482,7 +532,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                         <span className="text-xs font-bold text-slate-400 uppercase">Passo {activeYearIndex + 1} de {pendingYears.length}</span>
                     </div>
 
-                    <form onSubmit={handleFinalSubmit} className="space-y-8">
+                    <form onSubmit={handleGoToCheckout} className="space-y-8">
                         
                         {/* Serviços */}
                         <div className="bg-white dark:bg-slate-800/50 p-6 rounded-3xl border-2 border-slate-50 dark:border-slate-800 shadow-sm hover:border-primary/20 transition-colors">
@@ -561,7 +611,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             </button>
                         </div>
 
-                        {/* VALIDATION ERROR ALERT (ACCESSIBLE) */}
+                        {/* VALIDATION ERROR ALERT */}
                         {validationError && (
                             <div role="alert" className="p-6 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-900/50 rounded-[2rem] animate-in zoom-in-95 duration-300">
                                 <div className="flex items-start gap-4">
@@ -622,7 +672,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                                         setValidationError(null);
                                         setActiveYearIndex(activeYearIndex - 1);
                                     }}
-                                    disabled={isValidating}
+                                    disabled={isValidating || isCreatingPayment}
                                     className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all disabled:opacity-50"
                                 >
                                     Ano Anterior
@@ -631,7 +681,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                                 <button 
                                     type="button"
                                     onClick={() => setStep(3)}
-                                    disabled={isValidating}
+                                    disabled={isValidating || isCreatingPayment}
                                     className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all disabled:opacity-50"
                                 >
                                     Voltar
@@ -641,7 +691,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             {activeYearIndex < pendingYears.length - 1 ? (
                                 <button 
                                     type="button"
-                                    disabled={isValidating || !!validationError}
+                                    disabled={isValidating || !!validationError || isCreatingPayment}
                                     onClick={handleNextYear}
                                     className="flex-[2] bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
                                 >
@@ -650,18 +700,65 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             ) : (
                                 <button 
                                     type="submit"
-                                    disabled={isLoading || isValidating || !!validationError}
+                                    disabled={isLoading || isValidating || !!validationError || isCreatingPayment}
                                     className="flex-[2] bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2"
                                 >
-                                    {isLoading || isValidating ? (
-                                        <span className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                    {isCreatingPayment ? (
+                                        <>
+                                            <span className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>
+                                            Gerando Pagamento...
+                                        </>
                                     ) : (
-                                        <>Finalizar Declaração <span className="material-icons">check_circle</span></>
+                                        <>Finalizar e Pagar <span className="material-icons">shopping_cart</span></>
                                     )}
                                 </button>
                             )}
                         </div>
                     </form>
+                </div>
+            )}
+
+            {step === 5 && paymentData && (
+                <div className="animate-in zoom-in-95 duration-500 text-center">
+                    <div className="mb-8">
+                        <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span className="material-icons text-4xl">pix</span>
+                        </div>
+                        <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Pagamento via Pix</h3>
+                        <p className="text-slate-500 dark:text-slate-400">Escaneie o QR Code ou copie o código para pagar.</p>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-3xl border-2 border-slate-100 dark:border-slate-800 shadow-lg inline-block mb-8">
+                        <img src={`data:image/png;base64,${paymentData.pixQrCode}`} alt="QR Code Pix" className="w-64 h-64 mx-auto" />
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                            <p className="text-xs font-black text-slate-400 uppercase mb-1">Valor Total</p>
+                            <p className="text-3xl font-black text-slate-800">R$ {paymentData.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4 max-w-md mx-auto">
+                        <button 
+                            onClick={handleCopyPix}
+                            className="w-full bg-slate-800 hover:bg-slate-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg"
+                        >
+                            <span className="material-icons">content_copy</span> Copiar Código Pix
+                        </button>
+                        
+                        <a 
+                            href={paymentData.invoiceUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="block w-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-2 border-slate-100 dark:border-slate-700 py-4 rounded-2xl font-bold hover:bg-slate-50 transition-all"
+                        >
+                            Ver Fatura Completa
+                        </a>
+
+                        <div className="pt-6">
+                            <p className="text-xs text-slate-400 leading-relaxed">
+                                Após o pagamento, nossa equipe receberá a confirmação automaticamente e iniciará o processamento da sua declaração. Você receberá o comprovante por e-mail.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
