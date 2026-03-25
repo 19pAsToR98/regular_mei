@@ -23,11 +23,13 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   const [cnpj, setCnpj] = useState(initialCnpj);
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const timerRef = useRef<any>(null);
   
   // Data States
   const [companyName, setCompanyName] = useState('');
+  const [fullCompanyData, setFullCompanyData] = useState<CNPJResponse | null>(null);
   const [pendingYears, setPendingYears] = useState<PendingYear[]>([]);
   const [activeYearIndex, setActiveYearIndex] = useState(0);
   
@@ -36,7 +38,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
 
   // Timer logic for loading
   useEffect(() => {
-    if (isLoading) {
+    if (isLoading || isValidating) {
         const startTime = Date.now();
         timerRef.current = setInterval(() => {
             setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
@@ -48,7 +50,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
     return () => {
         if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isLoading]);
+  }, [isLoading, isValidating]);
 
   const fetchCompanyData = async (cleanCnpj: string) => {
     const targetUrl = `https://publica.cnpj.ws/cnpj/${cleanCnpj}`;
@@ -67,6 +69,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                 try { json = JSON.parse(json.contents); } catch (e) { continue; }
             }
             const data: CNPJResponse = json;
+            setFullCompanyData(data);
             return data.razao_social || data.estabelecimento?.nome_fantasia || 'Empresa não identificada';
         } catch (e) { console.warn(`Failed ${endpoint.type}`); }
     }
@@ -136,6 +139,62 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
     setStep(3);
   };
 
+  const validateYearLimit = async (year: string): Promise<boolean> => {
+      const data = yearsFormData[year];
+      const cleanCnpj = cnpj.replace(/[^\d]/g, '');
+      
+      setIsValidating(true);
+      
+      const webhookUrl = 'https://n8nwebhook.portalmei360.com/webhook/afa6dc8e-1a87-443f-bc69-b6918d1a9d7a';
+      
+      const payload = {
+          submittedAt: new Date().toISOString(),
+          "Group #2": "Iniciar Declaração Anual",
+          "Group #4": "Sei meu CNPJ",
+          cnpj: cleanCnpj,
+          "Group #8": "Prosseguir",
+          _anoescolhido: year,
+          _prestação: data.services || "0",
+          _comercio: data.commerce || "0",
+          _funcionário: data.hasEmployee ? "Sim" : "Não",
+          "#nome": companyName,
+          "#abertura": fullCompanyData?.estabelecimento?.data_inicio_atividade ? new Date(fullCompanyData.estabelecimento.data_inicio_atividade).toLocaleDateString('pt-BR') : "",
+          "#atividade": fullCompanyData?.estabelecimento?.atividade_principal?.descricao || "",
+          "#endereço": fullCompanyData?.estabelecimento?.logradouro || "",
+          "#bairro": fullCompanyData?.estabelecimento?.bairro || "",
+          "#cidade": fullCompanyData?.estabelecimento?.cidade?.nome || "",
+          "#estado": fullCompanyData?.estabelecimento?.estado?.sigla || "",
+          "#cep": fullCompanyData?.estabelecimento?.cep || ""
+      };
+
+      try {
+          const response = await fetch(webhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) throw new Error("Falha na validação do limite.");
+
+          const result = await response.json();
+          const validation = Array.isArray(result) ? result[0] : result;
+
+          if (validation.estaDentroDoLimite === false) {
+              showError(`Atenção: O faturamento informado (R$ ${validation.faturamentoTotal.toLocaleString('pt-BR')}) ultrapassa o limite do MEI para este período (R$ ${validation.limiteFaturamento.toLocaleString('pt-BR')}). Por favor, revise os valores.`);
+              setIsValidating(false);
+              return false;
+          }
+
+          setIsValidating(false);
+          return true;
+      } catch (e) {
+          console.error("Erro na validação:", e);
+          showError("Erro ao validar limite de faturamento. Tente novamente.");
+          setIsValidating(false);
+          return false;
+      }
+  };
+
   const handleUpdateYearField = (year: string, field: keyof YearData, value: any) => {
       setYearsFormData(prev => ({
           ...prev,
@@ -143,17 +202,25 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
       }));
   };
 
-  const handleFinalSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      const allFilled = pendingYears.every(p => {
-          const data = yearsFormData[p.ano];
-          return data.services !== '' && data.commerce !== '';
-      });
-
-      if (!allFilled) {
-          showWarning("Por favor, preencha os valores de faturamento para todos os anos pendentes.");
+  const handleNextYear = async () => {
+      const year = pendingYears[activeYearIndex].ano;
+      if (yearsFormData[year].services === '' || yearsFormData[year].commerce === '') {
+          showWarning("Preencha os valores antes de prosseguir.");
           return;
       }
+
+      const isValid = await validateYearLimit(year);
+      if (isValid) {
+          setActiveYearIndex(activeYearIndex + 1);
+      }
+  };
+
+  const handleFinalSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      const year = pendingYears[activeYearIndex].ano;
+      
+      const isValid = await validateYearLimit(year);
+      if (!isValid) return;
 
       setIsLoading(true);
       setTimeout(() => {
@@ -374,6 +441,8 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                         {pendingYears.map((p, idx) => (
                             <button
                                 key={p.ano}
+                                type="button"
+                                disabled={isValidating}
                                 onClick={() => setActiveYearIndex(idx)}
                                 className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border-2 ${
                                     activeYearIndex === idx 
@@ -418,6 +487,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                                     onChange={(e) => handleUpdateYearField(activeYear.ano, 'services', e.target.value)}
                                     className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-primary focus:bg-white dark:focus:bg-slate-900 rounded-2xl outline-none transition-all text-xl font-black text-slate-800 dark:text-white"
                                     placeholder="0,00"
+                                    disabled={isValidating}
                                 />
                             </div>
                         </div>
@@ -445,6 +515,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                                     onChange={(e) => handleUpdateYearField(activeYear.ano, 'commerce', e.target.value)}
                                     className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-primary focus:bg-white dark:focus:bg-slate-900 rounded-2xl outline-none transition-all text-xl font-black text-slate-800 dark:text-white"
                                     placeholder="0,00"
+                                    disabled={isValidating}
                                 />
                             </div>
                         </div>
@@ -462,6 +533,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             </div>
                             <button 
                                 type="button"
+                                disabled={isValidating}
                                 onClick={() => handleUpdateYearField(activeYear.ano, 'hasEmployee', !yearsFormData[activeYear.ano]?.hasEmployee)}
                                 className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shadow-inner ${yearsFormData[activeYear.ano]?.hasEmployee ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'}`}
                             >
@@ -469,12 +541,20 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             </button>
                         </div>
 
+                        {isValidating && (
+                            <div className="flex items-center justify-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-800 animate-in zoom-in-95">
+                                <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                <p className="text-sm font-bold text-blue-800 dark:text-blue-300">Validando limite de faturamento... ({elapsedTime}s)</p>
+                            </div>
+                        )}
+
                         <div className="flex flex-col sm:flex-row gap-3 pt-4">
                             {activeYearIndex > 0 ? (
                                 <button 
                                     type="button"
                                     onClick={() => setActiveYearIndex(activeYearIndex - 1)}
-                                    className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                                    disabled={isValidating}
+                                    className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all disabled:opacity-50"
                                 >
                                     Ano Anterior
                                 </button>
@@ -482,7 +562,8 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                                 <button 
                                     type="button"
                                     onClick={() => setStep(3)}
-                                    className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                                    disabled={isValidating}
+                                    className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all disabled:opacity-50"
                                 >
                                     Voltar
                                 </button>
@@ -491,24 +572,19 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             {activeYearIndex < pendingYears.length - 1 ? (
                                 <button 
                                     type="button"
-                                    onClick={() => {
-                                        if (yearsFormData[activeYear.ano].services === '' || yearsFormData[activeYear.ano].commerce === '') {
-                                            showWarning("Preencha os valores antes de prosseguir.");
-                                            return;
-                                        }
-                                        setActiveYearIndex(activeYearIndex + 1);
-                                    }}
-                                    className="flex-[2] bg-primary hover:bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
+                                    disabled={isValidating}
+                                    onClick={handleNextYear}
+                                    className="flex-[2] bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
                                 >
-                                    Próximo Ano <span className="material-icons">arrow_forward</span>
+                                    {isValidating ? 'Validando...' : <>Próximo Ano <span className="material-icons">arrow_forward</span></>}
                                 </button>
                             ) : (
                                 <button 
                                     type="submit"
-                                    disabled={isLoading}
+                                    disabled={isLoading || isValidating}
                                     className="flex-[2] bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2"
                                 >
-                                    {isLoading ? (
+                                    {isLoading || isValidating ? (
                                         <span className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
                                     ) : (
                                         <>Finalizar Declaração <span className="material-icons">check_circle</span></>
