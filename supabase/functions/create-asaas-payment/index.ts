@@ -12,9 +12,12 @@ serve(async (req) => {
   try {
     const { cnpj, name, email, amount, description } = await req.json();
 
-    // 1. Get Asaas API Key from Secrets
+    // 1. Get Asaas API Key and URL from Secrets
     const ASAAS_API_KEY = Deno.env.get('ASAAS_API_KEY');
-    const ASAAS_URL = "https://www.asaas.com/api/v3"; // Mude para sandbox se necessário
+    
+    // Se você quiser mudar para produção, configure a secret ASAAS_API_URL como "https://www.asaas.com/api/v3"
+    // Por padrão, usaremos o Sandbox para evitar cobranças reais durante o desenvolvimento.
+    const ASAAS_URL = Deno.env.get('ASAAS_API_URL') || "https://sandbox.asaas.com/api/v3";
 
     if (!ASAAS_API_KEY) {
         return new Response(JSON.stringify({ error: 'Asaas API Key not configured.' }), { 
@@ -22,8 +25,9 @@ serve(async (req) => {
         });
     }
 
+    console.log(`[create-asaas-payment] Using environment: ${ASAAS_URL}`);
+
     // 2. Find or Create Customer in Asaas
-    // First, search by CNPJ/CPF
     const searchResponse = await fetch(`${ASAAS_URL}/customers?cpfCnpj=${cnpj.replace(/[^\d]/g, '')}`, {
         headers: { 'access_token': ASAAS_API_KEY }
     });
@@ -33,7 +37,6 @@ serve(async (req) => {
     if (searchData.data && searchData.data.length > 0) {
         customerId = searchData.data[0].id;
     } else {
-        // Create new customer
         const createCustResponse = await fetch(`${ASAAS_URL}/customers`, {
             method: 'POST',
             headers: { 'access_token': ASAAS_API_KEY, 'Content-Type': 'application/json' },
