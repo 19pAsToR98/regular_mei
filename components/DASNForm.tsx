@@ -32,6 +32,7 @@ interface PaymentData {
     pixCopyPaste: string;
     invoiceUrl: string;
     amount: number;
+    billingType: 'PIX' | 'CREDIT_CARD';
 }
 
 const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
@@ -51,6 +52,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   const [yearsFormData, setYearsFormData] = useState<Record<string, YearData>>({});
   
   // Payment States
+  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD'>('PIX');
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
 
@@ -74,7 +76,6 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
     };
   }, [isLoading, isValidating, isCreatingPayment]);
 
-  // Tenta carregar o email do usuário logado se disponível
   useEffect(() => {
       const loadUserEmail = async () => {
           const { data } = await supabase.auth.getUser();
@@ -286,9 +287,10 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
               body: JSON.stringify({
                   cnpj: cnpj,
                   name: companyName,
-                  email: email, // CORRIGIDO: Agora usa o e-mail do estado local preenchido no Passo 2
+                  email: email,
                   amount: totalAmount,
-                  description: description
+                  description: description,
+                  billingType: paymentMethod // ENVIANDO O MÉTODO SELECIONADO
               })
           });
 
@@ -645,6 +647,31 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             </button>
                         </div>
 
+                        {/* SELETOR DE PAGAMENTO (Apenas no último ano) */}
+                        {activeYearIndex === pendingYears.length - 1 && (
+                            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 animate-in fade-in duration-500">
+                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">Escolha a forma de pagamento</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setPaymentMethod('PIX')}
+                                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'PIX' ? 'border-primary bg-blue-50 dark:bg-blue-900/20' : 'border-slate-100 dark:border-slate-800 hover:bg-slate-50'}`}
+                                    >
+                                        <span className={`material-icons text-3xl ${paymentMethod === 'PIX' ? 'text-primary' : 'text-slate-400'}`}>pix</span>
+                                        <span className={`text-sm font-bold ${paymentMethod === 'PIX' ? 'text-primary' : 'text-slate-500'}`}>Pix</span>
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setPaymentMethod('CREDIT_CARD')}
+                                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'CREDIT_CARD' ? 'border-primary bg-blue-50 dark:bg-blue-900/20' : 'border-slate-100 dark:border-slate-800 hover:bg-slate-50'}`}
+                                    >
+                                        <span className={`material-icons text-3xl ${paymentMethod === 'CREDIT_CARD' ? 'text-primary' : 'text-slate-400'}`}>credit_card</span>
+                                        <span className={`text-sm font-bold ${paymentMethod === 'CREDIT_CARD' ? 'text-primary' : 'text-slate-500'}`}>Cartão</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {/* VALIDATION ERROR ALERT */}
                         {validationError && (
                             <div role="alert" className="p-6 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-900/50 rounded-[2rem] animate-in zoom-in-95 duration-300">
@@ -756,27 +783,58 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                 <div className="animate-in zoom-in-95 duration-500 text-center">
                     <div className="mb-8">
                         <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <span className="material-icons text-4xl">pix</span>
+                            <span className="material-icons text-4xl">{paymentData.billingType === 'PIX' ? 'pix' : 'credit_card'}</span>
                         </div>
-                        <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Pagamento via Pix</h3>
-                        <p className="text-slate-500 dark:text-slate-400">Escaneie o QR Code ou copie o código para pagar.</p>
+                        <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">
+                            {paymentData.billingType === 'PIX' ? 'Pagamento via Pix' : 'Pagamento via Cartão'}
+                        </h3>
+                        <p className="text-slate-500 dark:text-slate-400">
+                            {paymentData.billingType === 'PIX' 
+                                ? 'Escaneie o QR Code ou copie o código para pagar.' 
+                                : 'Clique no botão abaixo para preencher os dados do cartão.'}
+                        </p>
                     </div>
 
-                    <div className="bg-white p-6 rounded-3xl border-2 border-slate-100 dark:border-slate-800 shadow-lg inline-block mb-8">
-                        <img src={`data:image/png;base64,${paymentData.pixQrCode}`} alt="QR Code Pix" className="w-64 h-64 mx-auto" />
-                        <div className="mt-4 pt-4 border-t border-slate-100">
-                            <p className="text-xs font-black text-slate-400 uppercase mb-1">Valor Total</p>
-                            <p className="text-3xl font-black text-slate-800">R$ {paymentData.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    {paymentData.billingType === 'PIX' ? (
+                        <div className="bg-white p-6 rounded-3xl border-2 border-slate-100 dark:border-slate-800 shadow-lg inline-block mb-8">
+                            <img src={`data:image/png;base64,${paymentData.pixQrCode}`} alt="QR Code Pix" className="w-64 h-64 mx-auto" />
+                            <div className="mt-4 pt-4 border-t border-slate-100">
+                                <p className="text-xs font-black text-slate-400 uppercase mb-1">Valor Total</p>
+                                <p className="text-3xl font-black text-slate-800">R$ {paymentData.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl border-2 border-slate-100 dark:border-slate-700 shadow-lg inline-block mb-8 w-full max-w-sm">
+                            <div className="text-left space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-slate-500">Serviço:</span>
+                                    <span className="text-sm font-bold text-slate-800 dark:text-white">Declaração Anual MEI</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-slate-500">Total:</span>
+                                    <span className="text-xl font-black text-primary">R$ {paymentData.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            </div>
+                            <a 
+                                href={paymentData.invoiceUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="mt-8 w-full bg-primary hover:bg-blue-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg"
+                            >
+                                <span className="material-icons">credit_card</span> Pagar com Cartão
+                            </a>
+                        </div>
+                    )}
 
                     <div className="space-y-4 max-w-md mx-auto">
-                        <button 
-                            onClick={handleCopyPix}
-                            className="w-full bg-slate-800 hover:bg-slate-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg"
-                        >
-                            <span className="material-icons">content_copy</span> Copiar Código Pix
-                        </button>
+                        {paymentData.billingType === 'PIX' && (
+                            <button 
+                                onClick={handleCopyPix}
+                                className="w-full bg-slate-800 hover:bg-slate-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg"
+                            >
+                                <span className="material-icons">content_copy</span> Copiar Código Pix
+                            </button>
+                        )}
                         
                         <a 
                             href={paymentData.invoiceUrl} 

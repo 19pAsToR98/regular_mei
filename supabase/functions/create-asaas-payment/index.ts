@@ -10,13 +10,9 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
   try {
-    const { cnpj, name, email, amount, description } = await req.json();
+    const { cnpj, name, email, amount, description, billingType } = await req.json();
 
-    // 1. Get Asaas API Key and URL from Secrets
     const ASAAS_API_KEY = Deno.env.get('ASAAS_API_KEY');
-    
-    // Se você quiser mudar para produção, configure a secret ASAAS_API_URL como "https://www.asaas.com/api/v3"
-    // Por padrão, usaremos o Sandbox para evitar cobranças reais durante o desenvolvimento.
     const ASAAS_URL = Deno.env.get('ASAAS_API_URL') || "https://sandbox.asaas.com/api/v3";
 
     if (!ASAAS_API_KEY) {
@@ -25,9 +21,7 @@ serve(async (req) => {
         });
     }
 
-    console.log(`[create-asaas-payment] Using environment: ${ASAAS_URL}`);
-
-    // 2. Find or Create Customer in Asaas
+    // 1. Find or Create Customer
     const searchResponse = await fetch(`${ASAAS_URL}/customers?cpfCnpj=${cnpj.replace(/[^\d]/g, '')}`, {
         headers: { 'access_token': ASAAS_API_KEY }
     });
@@ -52,13 +46,14 @@ serve(async (req) => {
         customerId = newCustomer.id;
     }
 
-    // 3. Create Payment (Pix)
+    // 2. Create Payment
+    // billingType pode ser 'PIX', 'CREDIT_CARD' ou 'UNDEFINED' (para deixar o cliente escolher na fatura)
     const paymentResponse = await fetch(`${ASAAS_URL}/payments`, {
         method: 'POST',
         headers: { 'access_token': ASAAS_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
             customer: customerId,
-            billingType: 'PIX',
+            billingType: billingType || 'PIX',
             value: amount,
             dueDate: new Date().toISOString().split('T')[0],
             description: description,
@@ -68,18 +63,23 @@ serve(async (req) => {
     const payment = await paymentResponse.json();
     if (payment.errors) throw new Error(payment.errors[0].description);
 
-    // 4. Get Pix QR Code
-    const pixResponse = await fetch(`${ASAAS_URL}/payments/${payment.id}/pixQrCode`, {
-        headers: { 'access_token': ASAAS_API_KEY }
-    });
-    const pixData = await pixResponse.json();
+    // 3. Get Pix QR Code (apenas se for PIX)
+    let pixData = { payload: null, encodedImage: null };
+    if (billingType === 'PIX') {
+        const pixResponse = await fetch(`${ASAAS_URL}/payments/${payment.id}/pixQrCode`, {
+            headers: { 'access_token': ASAAS_API_KEY }
+        });
+        pixData = await pixResponse.json();
+    }
 
     return new Response(JSON.stringify({ 
         paymentId: payment.id,
         invoiceUrl: payment.invoiceUrl,
+        bankSlipUrl: payment.bankSlipUrl,
         pixCopyPaste: pixData.payload,
         pixQrCode: pixData.encodedImage,
-        amount: amount
+        amount: amount,
+        billingType: billingType
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
