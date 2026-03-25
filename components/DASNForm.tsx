@@ -38,11 +38,13 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   };
 
   const fetchPendingDeclarations = async (cleanCnpj: string) => {
-    const webhookUrl = 'https://n8nwebhook.portalmei360.com/webhook/7b72bef1-f974-424e-8629-cd73aa67bd2d';
+    const targetUrl = 'https://n8nwebhook.portalmei360.com/webhook/7b72bef1-f974-424e-8629-cd73aa67bd2d';
+    // Aplicando o CORS Proxy para evitar o bloqueio do navegador
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
     
     try {
-        const response = await fetch(webhookUrl, {
-            method: 'GET', // Geralmente webhooks de consulta usam GET ou POST. Usando GET conforme padrão de headers.
+        const response = await fetch(proxyUrl, {
+            method: 'GET',
             headers: {
                 'cnpj': cleanCnpj,
                 'Content-Type': 'application/json'
