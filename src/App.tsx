@@ -142,9 +142,7 @@ const App: React.FC = () => {
   const handleUpdateCnpjData = async (data: CNPJResponse) => { if (!user) return; const { error } = await supabase.from('profiles').update({ cnpj_data: data }).eq('id', user.id); if (!error) setUser({ ...user, cnpjData: data }); };
   const handleUpdateFiscalData = async (data: FiscalData) => { if (!user) return; const { error } = await supabase.from('profiles').update({ fiscal_summary: data }).eq('id', user.id); if (!error) { setFiscalData(data); setUser({ ...user, fiscalSummary: data }); } };
 
-  if (loadingAuth) return <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark"> <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div> </div>;
-  if (isEmbedView) return <div className="w-full h-full bg-background-light dark:bg-background-dark p-4"> <NewsSlider news={news} onViewNews={handleViewNews} /> </div>;
-  if (activeTab === 'reset-password') return <ResetPasswordPage onComplete={() => setActiveTab('dashboard')} />;
+  const dashboardMetrics = useMemo(() => { const today = new Date(); const cMonth = today.getMonth(); const cYear = today.getFullYear(); const todayStr = today.toISOString().split('T')[0]; const relevantTransactions = transactions.filter(t => { const [y, m] = t.date.split('-').map(Number); const tYear = y; const tMonth = m - 1; if (tYear !== cYear) return false; if (dashboardViewMode === 'monthly') { return tMonth === cMonth; } return true; }); const realizedRevenue = relevantTransactions.filter(t => t.type === 'receita' && t.status === 'pago').reduce((acc, t) => acc + (t.amount || 0), 0); const realizedExpense = relevantTransactions.filter(t => t.type === 'despesa' && t.status === 'pago').reduce((acc, t) => acc + (t.amount || 0), 0); const caixaAtual = realizedRevenue - realizedExpense; const pendingTrans = relevantTransactions.filter(t => t.status === 'pendente'); const aReceber = pendingTrans.filter(t => t.type === 'receita').reduce((acc, curr) => acc + (curr.amount || 0), 0); const aPagar = pendingTrans.filter(t => t.type === 'despesa').reduce((acc, curr) => acc + (curr.amount || 0), 0); const totalExpectedRevenue = realizedRevenue + aReceber; const totalExpectedExpense = realizedExpense + aPagar; const caixaProjetado = totalExpectedRevenue - totalExpectedExpense; let emAtraso = 0; let aVencer = 0; pendingTrans.forEach(t => { if (t.date < todayStr) { emAtraso += t.amount || 0; } else { aVencer += t.amount || 0; } }); return { caixaAtual, aReceber, aPagar, caixaProjetado, emAtraso, aVencer, realizedRevenue, realizedExpense, totalExpectedRevenue, totalExpectedExpense, }; }, [transactions, dashboardViewMode]);
 
   const renderMainContent = () => {
       if (!user) {
@@ -196,6 +194,10 @@ const App: React.FC = () => {
       }
   };
 
+  if (loadingAuth) return <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark"> <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div> </div>;
+  if (isEmbedView) return <div className="w-full h-full bg-background-light dark:bg-background-dark p-4"> <NewsSlider news={news} onViewNews={handleViewNews} /> </div>;
+  if (activeTab === 'reset-password') return <ResetPasswordPage onComplete={() => setActiveTab('dashboard')} />;
+
   return (
     <div className="flex h-screen bg-background-light dark:bg-background-dark overflow-hidden relative">
       {user && user.isSetupComplete && <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={false} toggleSidebar={() => {}} userRole={user.role} />}
@@ -211,8 +213,18 @@ const App: React.FC = () => {
       {user && user.isSetupComplete && ( <> <VirtualAssistantButton isOpen={isAssistantOpen} onClick={() => setIsAssistantOpen(true)} gifUrl={connectionConfig.assistantGifUrl} iconSizeClass={connectionConfig.assistantIconSize} /> {isAssistantOpen && <AssistantChat onClose={() => setIsAssistantOpen(false)} onNavigate={setActiveTab} connectionConfig={connectionConfig} />} <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} userRole={user.role} /> </> )}
       {quickAddModalType && <TransactionModal isOpen={!!quickAddModalType} onClose={() => setQuickAddModalType(null)} onSave={handleAddTransaction} revenueCats={revenueCats} expenseCats={expenseCats} editingTransaction={null} forcedType={quickAddModalType} />}
       
-      <ServiceFormModal isOpen={!!activeServiceForm} onClose={handleCloseServiceForm} title={activeServiceForm === 'declaracao' ? 'Declaração Anual' : 'Serviço'}>
-        {activeServiceForm === 'declaracao' && <AnnualDeclarationForm initialCnpj={cnpj} onSuccess={handleCloseServiceForm} />}
+      {/* MODAL DE SERVIÇOS NATIVOS - AGORA FORA DE QUALQUER CONDICIONAL DE RENDERIZAÇÃO */}
+      <ServiceFormModal 
+        isOpen={!!activeServiceForm} 
+        onClose={handleCloseServiceForm}
+        title={activeServiceForm === 'declaracao' ? 'Declaração Anual' : 'Serviço'}
+      >
+        {activeServiceForm === 'declaracao' && (
+            <AnnualDeclarationForm 
+                initialCnpj={cnpj} 
+                onSuccess={handleCloseServiceForm} 
+            />
+        )}
       </ServiceFormModal>
     </div>
   );
