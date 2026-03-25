@@ -19,6 +19,13 @@ interface YearData {
     hasEmployee: boolean;
 }
 
+interface ValidationError {
+    year: string;
+    total: number;
+    limit: number;
+    message: string;
+}
+
 const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   const [cnpj, setCnpj] = useState(initialCnpj);
   const [step, setStep] = useState(1);
@@ -35,6 +42,9 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   
   // Form Data for each year
   const [yearsFormData, setYearsFormData] = useState<Record<string, YearData>>({});
+  
+  // Validation Error State
+  const [validationError, setValidationError] = useState<ValidationError | null>(null);
 
   // Timer logic for loading
   useEffect(() => {
@@ -144,6 +154,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
       const cleanCnpj = cnpj.replace(/[^\d]/g, '');
       
       setIsValidating(true);
+      setValidationError(null);
       
       const webhookUrl = 'https://n8nwebhook.portalmei360.com/webhook/afa6dc8e-1a87-443f-bc69-b6918d1a9d7a';
       
@@ -180,7 +191,12 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
           const validation = Array.isArray(result) ? result[0] : result;
 
           if (validation.estaDentroDoLimite === false) {
-              showError(`Atenção: O faturamento informado (R$ ${validation.faturamentoTotal.toLocaleString('pt-BR')}) ultrapassa o limite do MEI para este período (R$ ${validation.limiteFaturamento.toLocaleString('pt-BR')}). Por favor, revise os valores.`);
+              setValidationError({
+                  year,
+                  total: validation.faturamentoTotal,
+                  limit: validation.limiteFaturamento,
+                  message: "O faturamento informado ultrapassa o limite permitido para o MEI neste período."
+              });
               setIsValidating(false);
               return false;
           }
@@ -196,6 +212,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   };
 
   const handleUpdateYearField = (year: string, field: keyof YearData, value: any) => {
+      setValidationError(null); // Limpa erro ao alterar valores
       setYearsFormData(prev => ({
           ...prev,
           [year]: { ...prev[year], [field]: value }
@@ -443,7 +460,10 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                                 key={p.ano}
                                 type="button"
                                 disabled={isValidating}
-                                onClick={() => setActiveYearIndex(idx)}
+                                onClick={() => {
+                                    setValidationError(null);
+                                    setActiveYearIndex(idx);
+                                }}
                                 className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border-2 ${
                                     activeYearIndex === idx 
                                     ? 'bg-primary text-white border-primary shadow-md' 
@@ -541,6 +561,52 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             </button>
                         </div>
 
+                        {/* VALIDATION ERROR ALERT (ACCESSIBLE) */}
+                        {validationError && (
+                            <div role="alert" className="p-6 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-900/50 rounded-[2rem] animate-in zoom-in-95 duration-300">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-12 h-12 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-2xl flex items-center justify-center flex-shrink-0">
+                                        <span className="material-icons text-3xl">warning</span>
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="text-lg font-black text-red-800 dark:text-red-300 mb-1">Limite Excedido!</h4>
+                                        <p className="text-sm text-red-700 dark:text-red-400 leading-relaxed mb-4">
+                                            {validationError.message}
+                                        </p>
+                                        
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                                            <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-red-100 dark:border-red-900/30">
+                                                <p className="text-[10px] font-black uppercase text-red-400 tracking-widest mb-1">Faturamento Informado</p>
+                                                <p className="text-lg font-black text-red-600 dark:text-red-400">R$ {validationError.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                            </div>
+                                            <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-red-100 dark:border-red-900/30">
+                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Limite Permitido</p>
+                                                <p className="text-lg font-black text-slate-700 dark:text-slate-300">R$ {validationError.limit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <button 
+                                                type="button"
+                                                onClick={() => setValidationError(null)}
+                                                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-red-500/20"
+                                            >
+                                                Revisar Valores
+                                            </button>
+                                            <a 
+                                                href="https://wa.me/5531972366801?text=Olá! Meu faturamento ultrapassou o limite do MEI e preciso de orientação."
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex-1 bg-white dark:bg-slate-800 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 py-2.5 rounded-xl font-bold text-sm text-center hover:bg-red-50 transition-all"
+                                            >
+                                                Falar com Consultor
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {isValidating && (
                             <div className="flex items-center justify-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-800 animate-in zoom-in-95">
                                 <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -552,7 +618,10 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             {activeYearIndex > 0 ? (
                                 <button 
                                     type="button"
-                                    onClick={() => setActiveYearIndex(activeYearIndex - 1)}
+                                    onClick={() => {
+                                        setValidationError(null);
+                                        setActiveYearIndex(activeYearIndex - 1);
+                                    }}
                                     disabled={isValidating}
                                     className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all disabled:opacity-50"
                                 >
@@ -572,7 +641,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             {activeYearIndex < pendingYears.length - 1 ? (
                                 <button 
                                     type="button"
-                                    disabled={isValidating}
+                                    disabled={isValidating || !!validationError}
                                     onClick={handleNextYear}
                                     className="flex-[2] bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
                                 >
@@ -581,7 +650,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             ) : (
                                 <button 
                                     type="submit"
-                                    disabled={isLoading || isValidating}
+                                    disabled={isLoading || isValidating || !!validationError}
                                     className="flex-[2] bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2"
                                 >
                                     {isLoading || isValidating ? (
