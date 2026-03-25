@@ -10,7 +10,7 @@ interface LandingPageProps {
   onViewBlog: (id: number | null) => void;
   onConsultCnpj: () => void;
   news: NewsItem[];
-  onOpenServiceForm: (serviceKey: string) => void; // NOVO PROP
+  onOpenServiceForm: (serviceKey: string) => void;
 }
 
 const TYPEBOT_IDS: Record<string, string> = {
@@ -69,22 +69,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
     }
   };
 
-  const handleOpenService = (serviceKey: string) => {
-    // Se for declaração, usa o formulário nativo
-    if (serviceKey === 'declaracao') {
+  // Função centralizada para abrir serviços
+  const handleAction = (key: string) => {
+    if (key === 'declaracao') {
         onOpenServiceForm('declaracao');
-        setIsMenuOpen(false);
     } else {
-        // Caso contrário, mantém o Typebot por enquanto
-        const service = mainServices.find(s => s.key === serviceKey);
+        const service = mainServices.find(s => s.key === key);
         setTypebotTitle(service?.title || 'Atendimento Especializado');
-        setActiveTypebotId(TYPEBOT_IDS[serviceKey as keyof typeof TYPEBOT_IDS] || TYPEBOT_IDS['consulta']);
-        setIsMenuOpen(false);
+        setActiveTypebotId(TYPEBOT_IDS[key] || TYPEBOT_IDS['consulta']);
     }
+    setIsMenuOpen(false);
   };
-  
-  const handleCloseTypebot = () => { setActiveTypebotId(null); };
-  const handleViewBlogList = () => { onViewBlog(null); };
 
   const mainServices = [
     { key: 'declaracao', title: 'Declaração Anual do MEI', desc: 'Entrega da DASN-SIMEI obrigatória para manter seu CNPJ regular e evitar multas.', icon: 'assignment', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
@@ -93,12 +88,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
     { key: 'abertura', title: 'Abertura MEI', desc: 'Criação do seu novo CNPJ MEI de forma rápida, segura e com suporte especializado.', icon: 'rocket_launch', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
     { key: 'alterar', title: 'Alterar CNPJ MEI', desc: 'Atualize dados do seu MEI, como endereço, atividades, nome fantasia e outras informações.', icon: 'edit_note', color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-900/20' },
     { key: 'consulta', title: 'Consulta de Débitos', desc: 'Verifique pendências no CNPJ e receba orientação sobre os próximos passos.', icon: 'search', color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' }
-  ];
-
-  const tools = [
-    { title: 'Gerador de Orçamentos', desc: 'Crie propostas profissionais em PDF e envie direto pelo WhatsApp para seus clientes.', icon: 'description', color: 'bg-blue-500' },
-    { title: 'Emissor de Recibos', desc: 'Gere recibos digitais assinados em segundos após cada venda ou serviço prestado.', icon: 'receipt', color: 'bg-emerald-500' },
-    { title: 'Plaquinha de PIX', desc: 'Personalize seu QR Code de pagamento para o balcão com as cores da sua marca.', icon: 'qr_code_2', color: 'bg-cyan-500' }
   ];
 
   return (
@@ -146,7 +135,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
             <p className="text-base md:text-xl text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed"> Consulte sua situação fiscal agora. Resolvemos suas pendências e entregamos sua <b>Declaração Anual</b> com segurança e rapidez. </p>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
               <button onClick={onConsultCnpj} className="bg-primary hover:bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-base shadow-xl shadow-blue-500/30 transition-all transform active:scale-95 flex items-center justify-center gap-2"> Consultar CNPJ Grátis <span className="material-icons">search</span> </button>
-              <button onClick={() => handleOpenService('declaracao')} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 px-8 py-4 rounded-2xl font-bold text-base hover:bg-slate-50 transition-all flex items-center justify-center gap-2"> DASN 2025 <span className="material-icons text-sm">assignment</span> </button>
+              <button onClick={() => handleAction('declaracao')} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 px-8 py-4 rounded-2xl font-bold text-base hover:bg-slate-50 transition-all flex items-center justify-center gap-2"> DASN 2025 <span className="material-icons text-sm">assignment</span> </button>
             </div>
             <div className="flex items-center gap-4 md:gap-6 pt-2"> <div className="flex -space-x-3"> {[1, 2, 3, 4].map(i => ( <div key={i} className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 overflow-hidden"> <img src={`https://i.pravatar.cc/100?img=${i + 20}`} alt="Usuário Regular MEI" /> </div> ))} </div> <p className="text-xs md:text-sm text-slate-400 font-medium"> <span className="text-slate-900 dark:text-white font-bold">15 mil+</span> empreendedores </p> </div>
           </div>
@@ -165,14 +154,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
           <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16"> <h2 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white mb-4 md:mb-6"> Serviços <span className="text-primary">Especializados</span> </h2> <p className="text-base md:text-lg text-slate-500 dark:text-slate-400"> Tudo o que você precisa para manter seu CNPJ em dia e focar no crescimento do seu negócio. </p> </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {mainServices.map((service, i) => (
-              <div key={i} className="group p-6 md:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 cursor-pointer" onClick={() => handleOpenService(service.key)} >
+              <div key={i} className="group p-6 md:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 cursor-pointer" onClick={() => handleAction(service.key)} >
                 <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl ${service.bg} ${service.color} flex items-center justify-center mb-5 md:mb-6 group-hover:scale-110 transition-transform`}> <span className="material-icons text-2xl md:text-3xl">{service.icon}</span> </div>
                 <h3 className="text-lg md:text-xl font-bold text-slate-800 dark:text-white mb-2 md:mb-3 group-hover:text-primary transition-colors"> {service.title} </h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-4 md:mb-6"> {service.desc} </p>
                 <div className="flex items-center text-primary text-xs font-black uppercase tracking-widest gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity"> Acessar <span className="material-icons text-sm">arrow_forward</span> </div>
               </div>
             ))}
-            <div className="p-6 md:p-8 rounded-3xl bg-primary text-white flex flex-col justify-center items-center text-center space-y-4 shadow-xl"> <span className="material-icons text-4xl md:text-5xl">help_outline</span> <h3 className="text-xl md:text-2xl font-bold">Precisa de ajuda?</h3> <p className="text-blue-100 text-xs md:text-sm opacity-90">Nossos consultores estão prontos para te orientar em qualquer processo.</p> <button onClick={() => handleOpenService('consulta')} className="bg-white text-primary px-6 py-3 rounded-xl font-black text-sm hover:bg-blue-50 transition-colors w-full"> Falar com Consultor </button> </div>
+            <div className="p-6 md:p-8 rounded-3xl bg-primary text-white flex flex-col justify-center items-center text-center space-y-4 shadow-xl"> <span className="material-icons text-4xl md:text-5xl">help_outline</span> <h3 className="text-xl md:text-2xl font-bold">Precisa de ajuda?</h3> <p className="text-blue-100 text-xs md:text-sm opacity-90">Nossos consultores estão prontos para te orientar em qualquer processo.</p> <button onClick={() => handleAction('consulta')} className="bg-white text-primary px-6 py-3 rounded-xl font-black text-sm hover:bg-blue-50 transition-colors w-full"> Falar com Consultor </button> </div>
           </div>
         </div>
       </section>
@@ -224,7 +213,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, onView
           <div className="bg-white dark:bg-slate-900 w-full h-full md:h-[680px] md:max-w-4xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95">
             <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
               <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 uppercase text-[10px] md:text-xs tracking-widest"> <span className="material-icons text-primary text-sm">smart_toy</span> {typebotTitle} </h3>
-              <button onClick={handleCloseTypebot} className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:bg-slate-300 transition-colors" > <span className="material-icons text-xl">close</span> </button>
+              <button onClick={() => setActiveTypebotId(null)} className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:bg-slate-300 transition-colors" > <span className="material-icons text-xl">close</span> </button>
             </div>
             <div className="bg-white flex-1 relative"> <iframe src={getTypebotUrl(activeTypebotId)} className="w-full h-full border-0 absolute inset-0" title={typebotTitle} allow="camera; microphone; geolocation" ></iframe> </div>
           </div>
