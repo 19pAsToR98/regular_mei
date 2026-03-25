@@ -33,6 +33,7 @@ interface PaymentData {
     invoiceUrl: string;
     amount: number;
     billingType: 'PIX' | 'CREDIT_CARD';
+    status: string;
 }
 
 const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
@@ -55,6 +56,23 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD'>('PIX');
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
+
+  // Credit Card States
+  const [cardData, setCardData] = useState({
+      holderName: '',
+      number: '',
+      expiryMonth: '',
+      expiryYear: '',
+      ccv: ''
+  });
+
+  // Billing Address States (Required for CC)
+  const [billingInfo, setBillingInfo] = useState({
+      phone: '',
+      postalCode: '',
+      addressNumber: '',
+      addressComplement: ''
+  });
 
   const SERVICE_PRICE_PER_YEAR = 69.90;
 
@@ -81,6 +99,12 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
           const { data } = await supabase.auth.getUser();
           if (data?.user?.email) {
               setEmail(data.user.email);
+          }
+          
+          // Tenta carregar telefone do perfil
+          const { data: profile } = await supabase.from('profiles').select('phone').single();
+          if (profile?.phone) {
+              setBillingInfo(prev => ({ ...prev, phone: profile.phone }));
           }
       };
       loadUserEmail();
@@ -269,6 +293,17 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
       const isValid = await validateYearLimit(year);
       if (!isValid) return;
 
+      if (paymentMethod === 'CREDIT_CARD') {
+          if (!cardData.number || !cardData.holderName || !cardData.expiryMonth || !cardData.expiryYear || !cardData.ccv) {
+              showWarning("Preencha todos os dados do cartão.");
+              return;
+          }
+          if (!billingInfo.postalCode || !billingInfo.addressNumber) {
+              showWarning("Preencha o CEP e número para cobrança.");
+              return;
+          }
+      }
+
       setIsCreatingPayment(true);
       
       const totalAmount = pendingYears.length * SERVICE_PRICE_PER_YEAR;
@@ -278,30 +313,55 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
           const { data: sessionData } = await supabase.auth.getSession();
           const token = sessionData.session?.access_token;
 
+          const payload: any = {
+              cnpj: cnpj,
+              name: companyName,
+              email: email,
+              amount: totalAmount,
+              description: description,
+              billingType: paymentMethod
+          };
+
+          if (paymentMethod === 'CREDIT_CARD') {
+              payload.creditCard = {
+                  holderName: cardData.holderName,
+                  number: cardData.number.replace(/\s/g, ''),
+                  expiryMonth: cardData.expiryMonth,
+                  expiryYear: cardData.expiryYear,
+                  ccv: cardData.ccv
+              };
+              payload.creditCardHolderInfo = {
+                  name: companyName,
+                  email: email,
+                  cpfCnpj: cnpj.replace(/[^\d]/g, ''),
+                  postalCode: billingInfo.postalCode.replace(/[^\d]/g, ''),
+                  addressNumber: billingInfo.addressNumber,
+                  addressComplement: billingInfo.addressComplement,
+                  phone: billingInfo.phone.replace(/[^\d]/g, '')
+              };
+          }
+
           const response = await fetch('https://ogwjtlkemsqmpvcikrtd.supabase.co/functions/v1/create-asaas-payment', {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/json',
                   'Authorization': `Bearer ${token}`
               },
-              body: JSON.stringify({
-                  cnpj: cnpj,
-                  name: companyName,
-                  email: email,
-                  amount: totalAmount,
-                  description: description,
-                  billingType: paymentMethod // ENVIANDO O MÉTODO SELECIONADO
-              })
+              body: JSON.stringify(payload)
           });
 
+          const data = await response.json();
+
           if (!response.ok) {
-              const err = await response.json();
-              throw new Error(err.error || 'Falha ao gerar pagamento.');
+              throw new Error(data.error || 'Falha ao processar pagamento.');
           }
 
-          const data = await response.json();
           setPaymentData(data);
           setStep(5);
+          
+          if (paymentMethod === 'CREDIT_CARD' && data.status === 'CONFIRMED') {
+              showSuccess("Pagamento aprovado com sucesso!");
+          }
       } catch (e: any) {
           showError(e.message);
       } finally {
@@ -321,7 +381,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
     { id: 2, label: 'Dados', icon: 'business' },
     { id: 3, label: 'Pendências', icon: 'fact_check' },
     { id: 4, label: 'Valores', icon: 'payments' },
-    { id: 5, label: 'Pagamento', icon: 'shopping_cart' },
+    { id: 5, label: 'Conclusão', icon: 'shopping_cart' },
   ];
 
   const activeYear = pendingYears[activeYearIndex];
@@ -651,7 +711,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                         {activeYearIndex === pendingYears.length - 1 && (
                             <div className="pt-4 border-t border-slate-100 dark:border-slate-800 animate-in fade-in duration-500">
                                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">Escolha a forma de pagamento</label>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-4 mb-6">
                                     <button 
                                         type="button"
                                         onClick={() => setPaymentMethod('PIX')}
@@ -669,6 +729,54 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                                         <span className={`text-sm font-bold ${paymentMethod === 'CREDIT_CARD' ? 'text-primary' : 'text-slate-500'}`}>Cartão</span>
                                     </button>
                                 </div>
+
+                                {/* FORMULÁRIO DE CARTÃO (Checkout Transparente) */}
+                                {paymentMethod === 'CREDIT_CARD' && (
+                                    <div className="space-y-4 p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-200 dark:border-slate-700 animate-in slide-in-from-top-4 duration-300">
+                                        <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                            <span className="material-icons text-primary">lock</span> Dados do Cartão
+                                        </h4>
+                                        
+                                        <div className="grid grid-cols-1 gap-4">
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Nome no Cartão</label>
+                                                <input type="text" value={cardData.holderName} onChange={e => setCardData({...cardData, holderName: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 outline-none focus:border-primary" placeholder="Como está no cartão" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Número do Cartão</label>
+                                                <input type="text" value={cardData.number} onChange={e => setCardData({...cardData, number: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 outline-none focus:border-primary" placeholder="0000 0000 0000 0000" />
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <div>
+                                                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Mês</label>
+                                                    <input type="text" maxLength={2} value={cardData.expiryMonth} onChange={e => setCardData({...cardData, expiryMonth: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 outline-none focus:border-primary" placeholder="MM" />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Ano</label>
+                                                    <input type="text" maxLength={4} value={cardData.expiryYear} onChange={e => setCardData({...cardData, expiryYear: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 outline-none focus:border-primary" placeholder="AAAA" />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">CVV</label>
+                                                    <input type="text" maxLength={4} value={cardData.ccv} onChange={e => setCardData({...cardData, ccv: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 outline-none focus:border-primary" placeholder="123" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
+                                            <span className="material-icons text-primary">location_on</span> Endereço de Cobrança
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">CEP</label>
+                                                <input type="text" value={billingInfo.postalCode} onChange={e => setBillingInfo({...billingInfo, postalCode: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 outline-none focus:border-primary" placeholder="00000-000" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Número</label>
+                                                <input type="text" value={billingInfo.addressNumber} onChange={e => setBillingInfo({...billingInfo, addressNumber: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 outline-none focus:border-primary" placeholder="123" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -767,7 +875,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                                     {isCreatingPayment ? (
                                         <>
                                             <span className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>
-                                            Gerando Pagamento...
+                                            Processando...
                                         </>
                                     ) : (
                                         <>Finalizar e Pagar <span className="material-icons">shopping_cart</span></>
@@ -782,20 +890,20 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
             {step === 5 && paymentData && (
                 <div className="animate-in zoom-in-95 duration-500 text-center">
                     <div className="mb-8">
-                        <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <span className="material-icons text-4xl">{paymentData.billingType === 'PIX' ? 'pix' : 'credit_card'}</span>
+                        <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${paymentData.status === 'CONFIRMED' ? 'bg-green-50 text-green-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                            <span className="material-icons text-4xl">{paymentData.status === 'CONFIRMED' ? 'check_circle' : (paymentData.billingType === 'PIX' ? 'pix' : 'credit_card')}</span>
                         </div>
                         <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">
-                            {paymentData.billingType === 'PIX' ? 'Pagamento via Pix' : 'Pagamento via Cartão'}
+                            {paymentData.status === 'CONFIRMED' ? 'Pagamento Confirmado!' : (paymentData.billingType === 'PIX' ? 'Pagamento via Pix' : 'Pagamento via Cartão')}
                         </h3>
                         <p className="text-slate-500 dark:text-slate-400">
-                            {paymentData.billingType === 'PIX' 
-                                ? 'Escaneie o QR Code ou copie o código para pagar.' 
-                                : 'Clique no botão abaixo para preencher os dados do cartão.'}
+                            {paymentData.status === 'CONFIRMED' 
+                                ? 'Recebemos seu pagamento. Nossa equipe iniciará o processamento da sua declaração.' 
+                                : (paymentData.billingType === 'PIX' ? 'Escaneie o QR Code ou copie o código para pagar.' : 'Seu pagamento está sendo processado.')}
                         </p>
                     </div>
 
-                    {paymentData.billingType === 'PIX' ? (
+                    {paymentData.status !== 'CONFIRMED' && paymentData.billingType === 'PIX' && (
                         <div className="bg-white p-6 rounded-3xl border-2 border-slate-100 dark:border-slate-800 shadow-lg inline-block mb-8">
                             <img src={`data:image/png;base64,${paymentData.pixQrCode}`} alt="QR Code Pix" className="w-64 h-64 mx-auto" />
                             <div className="mt-4 pt-4 border-t border-slate-100">
@@ -803,31 +911,10 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                                 <p className="text-3xl font-black text-slate-800">R$ {paymentData.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                             </div>
                         </div>
-                    ) : (
-                        <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl border-2 border-slate-100 dark:border-slate-700 shadow-lg inline-block mb-8 w-full max-w-sm">
-                            <div className="text-left space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-sm text-slate-500">Serviço:</span>
-                                    <span className="text-sm font-bold text-slate-800 dark:text-white">Declaração Anual MEI</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-sm text-slate-500">Total:</span>
-                                    <span className="text-xl font-black text-primary">R$ {paymentData.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                            </div>
-                            <a 
-                                href={paymentData.invoiceUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="mt-8 w-full bg-primary hover:bg-blue-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg"
-                            >
-                                <span className="material-icons">credit_card</span> Pagar com Cartão
-                            </a>
-                        </div>
                     )}
 
                     <div className="space-y-4 max-w-md mx-auto">
-                        {paymentData.billingType === 'PIX' && (
+                        {paymentData.status !== 'CONFIRMED' && paymentData.billingType === 'PIX' && (
                             <button 
                                 onClick={handleCopyPix}
                                 className="w-full bg-slate-800 hover:bg-slate-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg"
@@ -836,18 +923,18 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             </button>
                         )}
                         
-                        <a 
-                            href={paymentData.invoiceUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="block w-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-2 border-slate-100 dark:border-slate-700 py-4 rounded-2xl font-bold hover:bg-slate-50 transition-all"
+                        <button 
+                            onClick={onBack}
+                            className="block w-full bg-primary text-white py-4 rounded-2xl font-bold hover:bg-blue-600 transition-all shadow-lg"
                         >
-                            Ver Fatura Completa
-                        </a>
+                            Voltar ao Dashboard
+                        </button>
 
                         <div className="pt-6">
                             <p className="text-xs text-slate-400 leading-relaxed">
-                                Após o pagamento, nossa equipe receberá a confirmação automaticamente e iniciará o processamento da sua declaração. Você receberá o comprovante por e-mail.
+                                {paymentData.status === 'CONFIRMED' 
+                                    ? 'Você receberá o comprovante da entrega da DASN em seu e-mail assim que o processo for concluído.' 
+                                    : 'Após o pagamento, nossa equipe receberá a confirmação automaticamente e iniciará o processamento da sua declaração.'}
                             </p>
                         </div>
                     </div>
