@@ -29,6 +29,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   // Data States
   const [companyName, setCompanyName] = useState('');
   const [pendingYears, setPendingYears] = useState<PendingYear[]>([]);
+  const [activeYearIndex, setActiveYearIndex] = useState(0);
   
   // Form Data for each year
   const [yearsFormData, setYearsFormData] = useState<Record<string, YearData>>({});
@@ -126,13 +127,12 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
     setCompanyName(nameResult || 'Empresa Identificada');
     setPendingYears(pendingResult || []);
     
-    // Initialize form data for each pending year
     const initialData: Record<string, YearData> = {};
     pendingResult.forEach(p => {
         initialData[p.ano] = { services: '', commerce: '', hasEmployee: false };
     });
     setYearsFormData(initialData);
-    
+    setActiveYearIndex(0);
     setStep(3);
   };
 
@@ -145,7 +145,6 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
 
   const handleFinalSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      // Validação básica
       const allFilled = pendingYears.every(p => {
           const data = yearsFormData[p.ano];
           return data.services !== '' && data.commerce !== '';
@@ -157,7 +156,6 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
       }
 
       setIsLoading(true);
-      // Simulação de envio
       setTimeout(() => {
           setIsLoading(false);
           showSuccess("Dados da declaração enviados com sucesso! Nossa equipe processará seu pedido.");
@@ -166,14 +164,16 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   };
 
   const steps = [
-    { id: 1, label: 'Introdução', icon: 'info' },
-    { id: 2, label: 'Identificação', icon: 'business' },
+    { id: 1, label: 'Início', icon: 'info' },
+    { id: 2, label: 'CNPJ', icon: 'business' },
     { id: 3, label: 'Pendências', icon: 'fact_check' },
     { id: 4, label: 'Valores', icon: 'payments' },
   ];
 
+  const activeYear = pendingYears[activeYearIndex];
+
   return (
-    <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-500 pb-12">
+    <div className="max-w-3xl mx-auto animate-in fade-in zoom-in-95 duration-500 pb-12">
       <button 
         onClick={onBack}
         className="mb-6 flex items-center text-slate-400 hover:text-primary transition-colors font-semibold text-sm group"
@@ -182,8 +182,9 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
         Voltar para o início
       </button>
 
-      <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl shadow-blue-500/5 border border-slate-100 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl shadow-blue-500/10 border border-slate-100 dark:border-slate-800 overflow-hidden">
         
+        {/* Progress Header */}
         <div className="bg-slate-50/50 dark:bg-slate-800/50 px-8 py-6 border-b border-slate-100 dark:border-slate-800">
             <div className="flex justify-between items-center relative">
                 <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-200 dark:bg-slate-700 -translate-y-1/2 z-0"></div>
@@ -365,98 +366,155 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                 </div>
             )}
 
-            {step === 4 && (
+            {step === 4 && activeYear && (
                 <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                    <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Valores de Faturamento</h3>
-                    <p className="text-slate-500 dark:text-slate-400 mb-8">Informe os valores brutos recebidos em cada ano pendente.</p>
+                    
+                    {/* Year Tabs / Progress */}
+                    <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+                        {pendingYears.map((p, idx) => (
+                            <button
+                                key={p.ano}
+                                onClick={() => setActiveYearIndex(idx)}
+                                className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border-2 ${
+                                    activeYearIndex === idx 
+                                    ? 'bg-primary text-white border-primary shadow-md' 
+                                    : (yearsFormData[p.ano]?.services !== '' && yearsFormData[p.ano]?.commerce !== '' 
+                                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                                        : 'bg-slate-50 text-slate-400 border-slate-100')
+                                }`}
+                            >
+                                {p.ano} {yearsFormData[p.ano]?.services !== '' && <span className="material-icons text-[10px] ml-1">check_circle</span>}
+                            </button>
+                        ))}
+                    </div>
 
-                    <form onSubmit={handleFinalSubmit} className="space-y-10">
-                        {pendingYears.map((p) => (
-                            <div key={p.ano} className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 space-y-6">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-sm">{p.ano}</span>
-                                    <h4 className="font-bold text-slate-800 dark:text-white">Ano Base {p.ano}</h4>
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Ano Base {activeYear.ano}</h3>
+                        <span className="text-xs font-bold text-slate-400 uppercase">Passo {activeYearIndex + 1} de {pendingYears.length}</span>
+                    </div>
+
+                    <form onSubmit={handleFinalSubmit} className="space-y-8">
+                        
+                        {/* Serviços */}
+                        <div className="bg-white dark:bg-slate-800/50 p-6 rounded-3xl border-2 border-slate-50 dark:border-slate-800 shadow-sm hover:border-primary/20 transition-colors">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center">
+                                    <span className="material-icons">work</span>
                                 </div>
+                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">
+                                    Prestação de Serviços
+                                </label>
+                            </div>
+                            <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                                Exceto transporte intermunicipal e interestadual. Inclua também receitas de locação e demais receitas da atividade sem incidência de ICMS e ISS.
+                            </p>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-300 text-lg">R$</span>
+                                <input 
+                                    type="number" 
+                                    step="0.01"
+                                    required
+                                    value={yearsFormData[activeYear.ano]?.services || ''}
+                                    onChange={(e) => handleUpdateYearField(activeYear.ano, 'services', e.target.value)}
+                                    className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-primary focus:bg-white dark:focus:bg-slate-900 rounded-2xl outline-none transition-all text-xl font-black text-slate-800 dark:text-white"
+                                    placeholder="0,00"
+                                />
+                            </div>
+                        </div>
 
-                                {/* Serviços */}
+                        {/* Comércio */}
+                        <div className="bg-white dark:bg-slate-800/50 p-6 rounded-3xl border-2 border-slate-50 dark:border-slate-800 shadow-sm hover:border-primary/20 transition-colors">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center">
+                                    <span className="material-icons">shopping_cart</span>
+                                </div>
+                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">
+                                    Comércio e Indústria
+                                </label>
+                            </div>
+                            <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                                Inclua também receitas de transporte intermunicipal e interestadual e fornecimento de refeições.
+                            </p>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-300 text-lg">R$</span>
+                                <input 
+                                    type="number" 
+                                    step="0.01"
+                                    required
+                                    value={yearsFormData[activeYear.ano]?.commerce || ''}
+                                    onChange={(e) => handleUpdateYearField(activeYear.ano, 'commerce', e.target.value)}
+                                    className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-primary focus:bg-white dark:focus:bg-slate-900 rounded-2xl outline-none transition-all text-xl font-black text-slate-800 dark:text-white"
+                                    placeholder="0,00"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Empregado */}
+                        <div className="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-700">
+                            <div className="flex items-center gap-4">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${yearsFormData[activeYear.ano]?.hasEmployee ? 'bg-primary text-white' : 'bg-white dark:bg-slate-700 text-slate-400'}`}>
+                                    <span className="material-icons">badge</span>
+                                </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                        Faturamento com prestação de serviços em {p.ano}
-                                    </label>
-                                    <p className="text-[10px] text-slate-500 mb-2 leading-tight">
-                                        Exceto transporte intermunicipal e interestadual. Inclua também receitas de locação e demais receitas da atividade sem incidência de ICMS e ISS.
-                                    </p>
-                                    <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">R$</span>
-                                        <input 
-                                            type="number" 
-                                            step="0.01"
-                                            required
-                                            value={yearsFormData[p.ano]?.services || ''}
-                                            onChange={(e) => handleUpdateYearField(p.ano, 'services', e.target.value)}
-                                            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary/50 font-bold"
-                                            placeholder="0,00"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Comércio */}
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                        Faturamento com comércio e indústria em {p.ano}
-                                    </label>
-                                    <p className="text-[10px] text-slate-500 mb-2 leading-tight">
-                                        Inclua também receitas de transporte intermunicipal e interestadual e fornecimento de refeições.
-                                    </p>
-                                    <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">R$</span>
-                                        <input 
-                                            type="number" 
-                                            step="0.01"
-                                            required
-                                            value={yearsFormData[p.ano]?.commerce || ''}
-                                            onChange={(e) => handleUpdateYearField(p.ano, 'commerce', e.target.value)}
-                                            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary/50 font-bold"
-                                            placeholder="0,00"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Empregado */}
-                                <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-700">
-                                    <div className="flex-1">
-                                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Possuiu empregado contratado em {p.ano}?</p>
-                                    </div>
-                                    <button 
-                                        type="button"
-                                        onClick={() => handleUpdateYearField(p.ano, 'hasEmployee', !yearsFormData[p.ano]?.hasEmployee)}
-                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${yearsFormData[p.ano]?.hasEmployee ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700'}`}
-                                    >
-                                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${yearsFormData[p.ano]?.hasEmployee ? 'translate-x-6' : 'translate-x-1'}`} />
-                                    </button>
+                                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Possuiu empregado contratado?</p>
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Ano Base {activeYear.ano}</p>
                                 </div>
                             </div>
-                        ))}
-
-                        <div className="flex flex-col sm:flex-row gap-3 pt-4">
                             <button 
                                 type="button"
-                                onClick={() => setStep(3)}
-                                className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                                onClick={() => handleUpdateYearField(activeYear.ano, 'hasEmployee', !yearsFormData[activeYear.ano]?.hasEmployee)}
+                                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shadow-inner ${yearsFormData[activeYear.ano]?.hasEmployee ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'}`}
                             >
-                                Voltar
+                                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${yearsFormData[activeYear.ano]?.hasEmployee ? 'translate-x-6' : 'translate-x-1'}`} />
                             </button>
-                            <button 
-                                type="submit"
-                                disabled={isLoading}
-                                className="flex-[2] bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2"
-                            >
-                                {isLoading ? (
-                                    <span className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
-                                ) : (
-                                    <>Finalizar Declaração <span className="material-icons">check_circle</span></>
-                                )}
-                            </button>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                            {activeYearIndex > 0 ? (
+                                <button 
+                                    type="button"
+                                    onClick={() => setActiveYearIndex(activeYearIndex - 1)}
+                                    className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                                >
+                                    Ano Anterior
+                                </button>
+                            ) : (
+                                <button 
+                                    type="button"
+                                    onClick={() => setStep(3)}
+                                    className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                                >
+                                    Voltar
+                                </button>
+                            )}
+
+                            {activeYearIndex < pendingYears.length - 1 ? (
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        if (yearsFormData[activeYear.ano].services === '' || yearsFormData[activeYear.ano].commerce === '') {
+                                            showWarning("Preencha os valores antes de prosseguir.");
+                                            return;
+                                        }
+                                        setActiveYearIndex(activeYearIndex + 1);
+                                    }}
+                                    className="flex-[2] bg-primary hover:bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
+                                >
+                                    Próximo Ano <span className="material-icons">arrow_forward</span>
+                                </button>
+                            ) : (
+                                <button 
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="flex-[2] bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2"
+                                >
+                                    {isLoading ? (
+                                        <span className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                    ) : (
+                                        <>Finalizar Declaração <span className="material-icons">check_circle</span></>
+                                    )}
+                                </button>
+                            )}
                         </div>
                     </form>
                 </div>
