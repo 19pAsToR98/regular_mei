@@ -60,7 +60,6 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
     const webhookUrl = 'https://n8nwebhook.portalmei360.com/webhook/7b72bef1-f974-424e-8629-cd73aa67bd2d';
     
     try {
-        // Seguindo o padrão de fetchFiscalData: POST com Header e Body
         const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: {
@@ -72,14 +71,26 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
 
         if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
 
-        const data = await response.json();
+        const rawData = await response.json();
         
-        // O n8n pode retornar um array direto ou dentro de um objeto 'resultado'
-        let list = Array.isArray(data) ? data : (data.resultado || []);
-        
-        if (Array.isArray(list)) {
-            return list.filter((item: any) => item.tipo === 'item' && item.hasPendentes) as PendingYear[];
+        // Padrão de extração idêntico ao CNPJPage.tsx
+        let dataToProcess = null;
+        if (Array.isArray(rawData)) {
+            dataToProcess = rawData;
+        } else if (rawData && rawData.resultado) {
+            dataToProcess = rawData.resultado;
+        } else {
+            dataToProcess = [rawData];
         }
+        
+        if (Array.isArray(dataToProcess)) {
+            // Filtra apenas os objetos do tipo 'item' que possuem pendência
+            return dataToProcess.filter((item: any) => 
+                item.tipo === 'item' && 
+                (item.hasPendentes === true || item.status === 'NaoApresentada')
+            ) as PendingYear[];
+        }
+        
         return [];
     } catch (e) {
         console.error("Erro ao buscar pendências:", e);
@@ -106,13 +117,13 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
 
     setIsLoading(false);
 
-    if (!nameResult && pendingResult.length === 0) {
+    if (!nameResult && (!pendingResult || pendingResult.length === 0)) {
         showError("Não foi possível localizar dados para este CNPJ. Verifique o número e tente novamente.");
         return;
     }
 
     setCompanyName(nameResult || 'Empresa Identificada');
-    setPendingYears(pendingResult);
+    setPendingYears(pendingResult || []);
     setStep(3);
   };
 
@@ -274,7 +285,9 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
 
                     <div className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 mb-8">
                         <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-                            O próximo passo é informar os valores de faturamento para cada ano pendente. Estamos finalizando a integração com o sistema de envio automático.
+                            {pendingYears.length > 0 
+                                ? 'O próximo passo é informar os valores de faturamento para cada ano pendente listado acima.'
+                                : 'Seu CNPJ está regularizado quanto à entrega das declarações anuais.'}
                         </p>
                     </div>
 
@@ -286,10 +299,14 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             Voltar
                         </button>
                         <button 
-                            disabled
-                            className="flex-[2] bg-slate-200 dark:bg-slate-800 text-slate-400 py-4 rounded-2xl font-bold text-lg cursor-not-allowed flex items-center justify-center gap-2"
+                            disabled={pendingYears.length === 0}
+                            className={`flex-[2] py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${
+                                pendingYears.length > 0 
+                                ? 'bg-primary hover:bg-blue-600 text-white shadow-xl shadow-blue-500/25' 
+                                : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                            }`}
                         >
-                            Preencher Valores <span className="material-icons">lock</span>
+                            Preencher Valores {pendingYears.length === 0 && <span className="material-icons">lock</span>}
                         </button>
                     </div>
                 </div>
