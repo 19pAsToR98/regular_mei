@@ -36,7 +36,7 @@ interface PaymentData {
 
 const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   const [cnpj, setCnpj] = useState(initialCnpj);
-  const [email, setEmail] = useState(''); // NOVO ESTADO PARA EMAIL
+  const [email, setEmail] = useState(''); 
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
@@ -286,7 +286,7 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
               body: JSON.stringify({
                   cnpj: cnpj,
                   name: companyName,
-                  email: email, // USANDO O EMAIL DO ESTADO
+                  email: email, // CORRIGIDO: Agora usa o e-mail do estado local preenchido no Passo 2
                   amount: totalAmount,
                   description: description
               })
