@@ -1,15 +1,67 @@
 import React, { useState } from 'react';
-import { showWarning } from '../utils/toastUtils';
+import { showWarning, showError } from '../utils/toastUtils';
+import { CNPJResponse } from '../types';
 
 interface DASNFormProps {
   onBack: () => void;
   initialCnpj?: string;
 }
 
+interface PendingYear {
+    ano: string;
+    status: string;
+    label: string;
+}
+
 const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
   const [cnpj, setCnpj] = useState(initialCnpj);
   const [step, setStep] = useState(1);
-  const [isValidating, setIsValidating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Data States
+  const [companyName, setCompanyName] = useState('');
+  const [pendingYears, setPendingYears] = useState<PendingYear[]>([]);
+
+  const fetchCompanyData = async (cleanCnpj: string) => {
+    const targetUrl = `https://publica.cnpj.ws/cnpj/${cleanCnpj}`;
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+    
+    try {
+        const response = await fetch(proxyUrl);
+        if (!response.ok) return null;
+        const data: CNPJResponse = await response.json();
+        return data.razao_social || data.estabelecimento?.nome_fantasia || 'Empresa não identificada';
+    } catch (e) {
+        console.error("Erro ao buscar dados do CNPJ:", e);
+        return null;
+    }
+  };
+
+  const fetchPendingDeclarations = async (cleanCnpj: string) => {
+    const webhookUrl = 'https://n8nwebhook.portalmei360.com/webhook/7b72bef1-f974-424e-8629-cd73aa67bd2d';
+    
+    try {
+        const response = await fetch(webhookUrl, {
+            method: 'GET', // Geralmente webhooks de consulta usam GET ou POST. Usando GET conforme padrão de headers.
+            headers: {
+                'cnpj': cleanCnpj,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) throw new Error("Falha na consulta de pendências");
+
+        const data = await response.json();
+        // Filtra apenas os itens do tipo 'item' que estão pendentes
+        if (Array.isArray(data)) {
+            return data.filter(item => item.tipo === 'item' && item.hasPendentes) as PendingYear[];
+        }
+        return [];
+    } catch (e) {
+        console.error("Erro ao buscar pendências:", e);
+        return [];
+    }
+  };
 
   const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,22 +72,34 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
       return;
     }
 
-    setIsValidating(true);
-    // Simula uma validação/busca rápida
-    await new Promise(r => setTimeout(r, 1000));
-    setIsValidating(false);
-    setStep(2);
+    setIsLoading(true);
+    
+    // Executa as duas consultas em paralelo
+    const [nameResult, pendingResult] = await Promise.all([
+        fetchCompanyData(cleanCnpj),
+        fetchPendingDeclarations(cleanCnpj)
+    ]);
+
+    setIsLoading(false);
+
+    if (!nameResult && pendingResult.length === 0) {
+        showError("Não foi possível localizar dados para este CNPJ. Verifique o número e tente novamente.");
+        return;
+    }
+
+    setCompanyName(nameResult || 'Empresa Identificada');
+    setPendingYears(pendingResult);
+    setStep(3);
   };
 
   const steps = [
     { id: 1, label: 'Introdução', icon: 'info' },
     { id: 2, label: 'Identificação', icon: 'business' },
-    { id: 3, label: 'Faturamento', icon: 'payments' },
+    { id: 3, label: 'Pendências', icon: 'fact_check' },
   ];
 
   return (
     <div className="max-w-2xl mx-auto animate-in fade-in zoom-in-95 duration-500 pb-12">
-      {/* Botão Voltar */}
       <button 
         onClick={onBack}
         className="mb-6 flex items-center text-slate-400 hover:text-primary transition-colors font-semibold text-sm group"
@@ -46,12 +110,9 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
 
       <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl shadow-blue-500/5 border border-slate-100 dark:border-slate-800 overflow-hidden">
         
-        {/* Stepper Header */}
         <div className="bg-slate-50/50 dark:bg-slate-800/50 px-8 py-6 border-b border-slate-100 dark:border-slate-800">
             <div className="flex justify-between items-center relative">
-                {/* Line Background */}
                 <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-200 dark:bg-slate-700 -translate-y-1/2 z-0"></div>
-                
                 {steps.map((s) => (
                     <div key={s.id} className="relative z-10 flex flex-col items-center gap-2">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 ${
@@ -68,7 +129,6 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
         </div>
 
         <div className="p-8 md:p-12">
-            {/* STEP 1: INTRODUÇÃO */}
             {step === 1 && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="text-center mb-10">
@@ -107,7 +167,6 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                 </div>
             )}
 
-            {/* STEP 2: CNPJ */}
             {step === 2 && (
                 <div className="animate-in fade-in slide-in-from-right-4 duration-500">
                     <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Identificação da Empresa</h3>
@@ -140,13 +199,13 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                             </button>
                             <button 
                                 type="submit"
-                                disabled={isValidating}
+                                disabled={isLoading}
                                 className="flex-[2] bg-primary hover:bg-blue-600 disabled:bg-slate-300 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
                             >
-                                {isValidating ? (
+                                {isLoading ? (
                                     <span className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
                                 ) : (
-                                    <>Próximo Passo <span className="material-icons">arrow_forward</span></>
+                                    <>Verificar Pendências <span className="material-icons">search</span></>
                                 )}
                             </button>
                         </div>
@@ -154,37 +213,65 @@ const DASNForm: React.FC<DASNFormProps> = ({ onBack, initialCnpj = '' }) => {
                 </div>
             )}
 
-            {/* STEP 3: EM BREVE */}
             {step === 3 && (
-                <div className="text-center py-6 animate-in zoom-in-95 duration-500">
-                    <div className="w-24 h-24 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-8">
-                        <span className="material-icons text-5xl">verified</span>
+                <div className="animate-in zoom-in-95 duration-500">
+                    <div className="flex items-center gap-4 mb-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-800">
+                        <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center text-primary shadow-sm">
+                            <span className="material-icons">store</span>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Empresa Identificada</p>
+                            <h4 className="font-bold text-slate-800 dark:text-white leading-tight">{companyName}</h4>
+                            <p className="text-xs text-slate-500 font-mono">{cnpj}</p>
+                        </div>
                     </div>
-                    <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-3">CNPJ Identificado!</h3>
-                    <p className="text-slate-500 dark:text-slate-400 mb-10 max-w-sm mx-auto">
-                        Estamos integrando o sistema de faturamento para que você possa preencher os valores automaticamente.
-                    </p>
+
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4">Situação das Declarações</h3>
                     
-                    <div className="p-6 rounded-3xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 text-left mb-10">
-                        <p className="text-blue-800 dark:text-blue-300 font-bold text-sm mb-2 flex items-center gap-2">
-                            <span className="material-icons text-sm">lightbulb</span> Dica Regular MEI
-                        </p>
-                        <p className="text-blue-700 dark:text-blue-400 text-xs leading-relaxed">
-                            Mantenha seu fluxo de caixa atualizado no dashboard para que sua declaração seja gerada com apenas um clique no futuro.
+                    {pendingYears.length > 0 ? (
+                        <div className="space-y-3 mb-8">
+                            {pendingYears.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-2xl">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-icons text-red-500">warning</span>
+                                        <span className="font-bold text-slate-700 dark:text-slate-200">Ano Base {item.ano}</span>
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase bg-red-100 text-red-700 px-2 py-1 rounded-md">Pendente</span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="p-8 text-center bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 rounded-3xl mb-8">
+                            <span className="material-icons text-green-500 text-4xl mb-2">check_circle</span>
+                            <p className="font-bold text-green-800 dark:text-green-300">Tudo em dia!</p>
+                            <p className="text-sm text-green-700 dark:text-green-400">Não encontramos declarações pendentes para este CNPJ.</p>
+                        </div>
+                    )}
+
+                    <div className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 mb-8">
+                        <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+                            O próximo passo é informar os valores de faturamento para cada ano pendente. Estamos finalizando a integração com o sistema de envio automático.
                         </p>
                     </div>
 
-                    <button 
-                        onClick={() => setStep(1)}
-                        className="text-primary font-bold hover:underline flex items-center justify-center gap-1 mx-auto transition-all hover:gap-2"
-                    >
-                        <span className="material-icons text-sm">restart_alt</span> Reiniciar processo
-                    </button>
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={() => setStep(2)}
+                            className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                        >
+                            Voltar
+                        </button>
+                        <button 
+                            disabled
+                            className="flex-[2] bg-slate-200 dark:bg-slate-800 text-slate-400 py-4 rounded-2xl font-bold text-lg cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                            Preencher Valores <span className="material-icons">lock</span>
+                        </button>
+                    </div>
                 </div>
             )}
         </div>
 
-        {/* Footer Info */}
         <div className="px-8 py-4 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex justify-center">
             <p className="text-[10px] text-slate-400 uppercase font-black tracking-[0.2em]">Ambiente Seguro & Criptografado</p>
         </div>
